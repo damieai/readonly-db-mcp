@@ -1,0 +1,14 @@
+/bin/
+/dist/
+/coverage.out
+/coverage.html
+/*.local.yaml
+/.env
+/.idea/
+/.vscode/
+*.log
+*.pem
+*.key
+*.crt
+*.password
+secrets/

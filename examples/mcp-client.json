@@ -1,0 +1,11 @@
+{
+  "mcpServers": {
+    "readonly-db": {
+      "command": "/absolute/path/readonly-db-mcp/bin/readonly-db-mcp",
+      "args": [
+        "-config",
+        "/absolute/path/readonly-db-mcp/config.local.yaml"
+      ]
+    }
+  }
+}
