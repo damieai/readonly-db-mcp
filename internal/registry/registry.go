@@ -12,6 +12,7 @@ import (
 	"github.com/your-org/readonly-db-mcp/internal/config"
 	"github.com/your-org/readonly-db-mcp/internal/core"
 	mysqltarget "github.com/your-org/readonly-db-mcp/internal/dialects/mysql"
+	postgresqltarget "github.com/your-org/readonly-db-mcp/internal/dialects/postgresql"
 	"github.com/your-org/readonly-db-mcp/internal/metrics"
 )
 
@@ -42,6 +43,8 @@ func Open(ctx context.Context, cfg *config.Config, auditor audit.Auditor, record
 		switch targetCfg.Engine {
 		case config.EngineMySQL:
 			target, err = mysqltarget.Open(ctx, targetCfg, cfg.Limits, controller, auditor, recorder)
+		case config.EnginePostgreSQL:
+			target, err = postgresqltarget.Open(ctx, targetCfg, cfg.Limits, controller, auditor, recorder)
 		default:
 			err = fmt.Errorf("unsupported database engine %q", targetCfg.Engine)
 		}

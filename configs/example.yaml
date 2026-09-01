@@ -50,8 +50,8 @@ targets:
       enabled: true
       allow_fresh: true
       fresh_cooldown: 1s
-      table_list_ttl: 30s
-      table_description_ttl: 5m
+      table_list_ttl: 20m
+      table_description_ttl: 20m
       negative_ttl: 5s
       max_entries: 256
       max_bytes: 8388608
@@ -87,10 +87,47 @@ targets:
       enabled: true
       allow_fresh: true
       fresh_cooldown: 1s
-      table_list_ttl: 30s
-      table_description_ttl: 5m
+      table_list_ttl: 20m
+      table_description_ttl: 20m
       negative_ttl: 5s
       max_entries: 256
       max_bytes: 8388608
     result_cache:
       enabled: false
+
+  analytics-postgresql-test:
+    engine: postgresql
+    environment: test
+    consistency: current
+    host: 127.0.0.1
+    port: 5432
+    database: analytics
+    username: analytics_mcp_ro
+    password_file: ./secrets/analytics-postgresql-test.password
+    allowed_schemas:
+      - reporting
+    connection:
+      connect_timeout: 3s
+      read_timeout: 12s
+      write_timeout: 3s
+      max_open: 2
+      max_idle: 1
+      max_lifetime: 3m
+      max_idle_time: 1m
+    postgresql:
+      application_name: readonly-db-mcp
+      statement_timeout_margin: 250ms
+      batch_isolation: repeatable-read
+      require_hot_standby: false
+      privilege_recheck_interval: 5m
+    tls:
+      mode: required
+    metadata_cache:
+      enabled: true
+      allow_fresh: true
+      fresh_cooldown: 1s
+      table_list_ttl: 20m
+      table_description_ttl: 20m
+      negative_ttl: 5s
+      max_entries: 256
+      max_bytes: 8388608

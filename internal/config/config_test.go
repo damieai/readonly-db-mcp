@@ -94,7 +94,7 @@ func validConfig() *Config {
 				Username:       "sample_ro",
 				PasswordFile:   "/tmp/sample-password",
 				AllowedSchemas: []string{"sample"},
-				MetadataCache:  MetadataCacheConfig{TableListTTL: 30 * time.Second, TableDescriptionTTL: 5 * time.Minute, NegativeTTL: 5 * time.Second, FreshCooldown: time.Second, MaxEntries: 256, MaxBytes: 8 << 20},
+				MetadataCache:  MetadataCacheConfig{TableListTTL: 20 * time.Minute, TableDescriptionTTL: 20 * time.Minute, NegativeTTL: 5 * time.Second, FreshCooldown: time.Second, MaxEntries: 256, MaxBytes: 8 << 20},
 				Connection: ConnectionConfig{
 					ConnectTimeout: 3 * time.Second,
 					ReadTimeout:    12 * time.Second,

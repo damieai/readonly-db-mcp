@@ -7,13 +7,14 @@ The project is designed to be copied into its own GitHub repository. It is a
 standalone Go module and does not import code or configuration from its parent
 repository.
 
-> Current status: MySQL 8 and stdio transport are implemented. The dialect
-> boundary is intentionally explicit so PostgreSQL can be added without using
-> MySQL validation rules.
+> Current status: MySQL 8 and PostgreSQL 15-17 are implemented. PostgreSQL
+> production rollout still requires validation against your provisioned role
+> and server build before enablement.
 
 ## What it provides
 
 - Multiple named database targets, selected explicitly on every tool call.
+- Independent MySQL and PostgreSQL dialect policies and privilege attestation.
 - Full read-only analytical SQL: CTEs, joins, subqueries, unions, aggregates,
   window functions, JSON expressions and ordinary `USE INDEX`/`FORCE INDEX`
   clauses supported by MySQL/Vitess. Optimizer comment hints are rejected.
@@ -93,6 +94,15 @@ hatch logs a startup warning and is still refused for production environments;
 credentials, SQL and results are unencrypted, so use it only on a trusted private
 network or VPN.
 
+For PostgreSQL, use a dedicated non-owning `LOGIN` role with no memberships,
+`SUPERUSER`, `CREATEDB`, `CREATEROLE`, `REPLICATION`, `BYPASSRLS`, database
+`TEMPORARY`, schema `CREATE`, sequence mutation, or executable user-function
+privileges. Grant only database `CONNECT`, allowed-schema `USAGE`, and relation
+`SELECT`. PostgreSQL targets require schema-qualified user relations and use
+`$1`, `$2`, ... parameters. Revoke inherited `PUBLIC` privileges that violate
+this scope, including `CONNECT` on other databases and `EXECUTE` on
+non-system functions; startup attestation intentionally fails closed otherwise.
+
 ### 3. Build and verify
 
 The module currently requires Go 1.26.6 or newer because of the maintained
@@ -162,6 +172,8 @@ Example query input:
 ```
 
 Encode integers larger than JavaScript's safe integer range as strings.
+MySQL parameters use `?`; PostgreSQL parameters use `$1`, `$2`, and so on. The
+selected target reports its `parameter_style`.
 
 ### Performance controls
 

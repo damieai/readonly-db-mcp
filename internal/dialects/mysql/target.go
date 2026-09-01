@@ -102,6 +102,8 @@ func Open(ctx context.Context, cfg *config.TargetConfig, limits config.Limits, c
 			Healthy:        true,
 			ReadOnlyUser:   true,
 			ServerReadOnly: identity.ServerReadOnly,
+			ParameterStyle: "?",
+			ServerVersion:  identity.Version,
 		},
 		allowedSchemas:       lowerSet(cfg.AllowedSchemas),
 		deniedTables:         lowerSet(cfg.DeniedTables),

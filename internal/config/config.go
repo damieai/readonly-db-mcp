@@ -17,6 +17,7 @@ import (
 
 const (
 	EngineMySQL         = "mysql"
+	EnginePostgreSQL    = "postgresql"
 	TransportStdio      = "stdio"
 	TLSDisabled         = "disabled"
 	TLSRequired         = "required"
@@ -85,8 +86,17 @@ type TargetConfig struct {
 	DeniedTables   []string            `yaml:"denied_tables"`
 	Connection     ConnectionConfig    `yaml:"connection"`
 	TLS            TLSConfig           `yaml:"tls"`
+	PostgreSQL     PostgreSQLConfig    `yaml:"postgresql"`
 	MetadataCache  MetadataCacheConfig `yaml:"metadata_cache"`
 	ResultCache    ResultCacheConfig   `yaml:"result_cache"`
+}
+
+type PostgreSQLConfig struct {
+	ApplicationName        string        `yaml:"application_name"`
+	StatementTimeoutMargin time.Duration `yaml:"statement_timeout_margin"`
+	BatchIsolation         string        `yaml:"batch_isolation"`
+	RequireHotStandby      bool          `yaml:"require_hot_standby"`
+	PrivilegeRecheck       time.Duration `yaml:"privilege_recheck_interval"`
 }
 
 type MetadataCacheConfig struct {
@@ -225,7 +235,11 @@ func applyDefaults(cfg *Config) {
 			target.Consistency = ConsistencyCurrent
 		}
 		if target.Port == 0 {
-			target.Port = 3306
+			if target.Engine == EnginePostgreSQL {
+				target.Port = 5432
+			} else {
+				target.Port = 3306
+			}
 		}
 		if target.Connection.ConnectTimeout == 0 {
 			target.Connection.ConnectTimeout = 3 * time.Second
@@ -251,14 +265,28 @@ func applyDefaults(cfg *Config) {
 		if target.TLS.Mode == "" {
 			target.TLS.Mode = TLSVerifyFull
 		}
+		if target.Engine == EnginePostgreSQL {
+			if target.PostgreSQL.ApplicationName == "" {
+				target.PostgreSQL.ApplicationName = "readonly-db-mcp"
+			}
+			if target.PostgreSQL.StatementTimeoutMargin == 0 {
+				target.PostgreSQL.StatementTimeoutMargin = 250 * time.Millisecond
+			}
+			if target.PostgreSQL.BatchIsolation == "" {
+				target.PostgreSQL.BatchIsolation = "repeatable-read"
+			}
+			if target.PostgreSQL.PrivilegeRecheck == 0 {
+				target.PostgreSQL.PrivilegeRecheck = 5 * time.Minute
+			}
+		}
 		if target.MetadataCache.TableListTTL == 0 {
-			target.MetadataCache.TableListTTL = 30 * time.Second
+			target.MetadataCache.TableListTTL = 20 * time.Minute
 		}
 		if target.MetadataCache.FreshCooldown == 0 {
 			target.MetadataCache.FreshCooldown = time.Second
 		}
 		if target.MetadataCache.TableDescriptionTTL == 0 {
-			target.MetadataCache.TableDescriptionTTL = 5 * time.Minute
+			target.MetadataCache.TableDescriptionTTL = 20 * time.Minute
 		}
 		if target.MetadataCache.NegativeTTL == 0 {
 			target.MetadataCache.NegativeTTL = 5 * time.Second
@@ -395,8 +423,8 @@ func validateTarget(name string, target *TargetConfig, limits Limits) []string {
 	if !safeName.MatchString(name) {
 		problems = append(problems, "name must match [a-zA-Z0-9][a-zA-Z0-9_.-]{0,63}")
 	}
-	if target.Engine != EngineMySQL {
-		problems = append(problems, "engine is not supported; currently only mysql is available")
+	if target.Engine != EngineMySQL && target.Engine != EnginePostgreSQL {
+		problems = append(problems, "engine must be mysql or postgresql")
 	}
 	if !safeName.MatchString(target.Environment) {
 		problems = append(problems, "environment is required and must be a safe identifier")
@@ -449,7 +477,7 @@ func validateTarget(name string, target *TargetConfig, limits Limits) []string {
 			databaseAllowed = true
 		}
 	}
-	if !databaseAllowed {
+	if target.Engine == EngineMySQL && !databaseAllowed {
 		problems = append(problems, "database must be included in allowed_schemas")
 	}
 	for _, selector := range target.DeniedTables {
@@ -504,6 +532,25 @@ func validateTarget(name string, target *TargetConfig, limits Limits) []string {
 	}
 	if (target.TLS.CertFile == "") != (target.TLS.KeyFile == "") {
 		problems = append(problems, "tls.cert_file and tls.key_file must be configured together")
+	}
+	if target.Engine == EngineMySQL {
+		if target.PostgreSQL != (PostgreSQLConfig{}) {
+			problems = append(problems, "postgresql settings are valid only for postgresql targets")
+		}
+	} else if target.Engine == EnginePostgreSQL {
+		pg := target.PostgreSQL
+		if !safeName.MatchString(pg.ApplicationName) {
+			problems = append(problems, "postgresql.application_name must be a safe identifier")
+		}
+		if pg.StatementTimeoutMargin < 0 || pg.StatementTimeoutMargin > 5*time.Second || pg.StatementTimeoutMargin >= limits.MaxTimeout {
+			problems = append(problems, "postgresql.statement_timeout_margin must be non-negative, below 5s and below max_timeout")
+		}
+		if pg.BatchIsolation != "repeatable-read" {
+			problems = append(problems, "postgresql.batch_isolation must be repeatable-read")
+		}
+		if pg.PrivilegeRecheck < 10*time.Second || pg.PrivilegeRecheck > time.Hour {
+			problems = append(problems, "postgresql.privilege_recheck_interval must be between 10s and 1h")
+		}
 	}
 	mc := target.MetadataCache
 	if mc.TableListTTL < time.Second || mc.TableListTTL > 24*time.Hour || mc.TableDescriptionTTL < time.Second || mc.TableDescriptionTTL > 24*time.Hour || mc.NegativeTTL < time.Second || mc.NegativeTTL > time.Minute {

@@ -15,6 +15,8 @@ type TargetInfo struct {
 	Healthy        bool     `json:"healthy"`
 	ReadOnlyUser   bool     `json:"read_only_user"`
 	ServerReadOnly bool     `json:"server_read_only"`
+	ParameterStyle string   `json:"parameter_style"`
+	ServerVersion  string   `json:"server_version,omitempty"`
 }
 
 type QueryRequest struct {
@@ -66,9 +68,14 @@ type ColumnDescription struct {
 }
 
 type IndexDescription struct {
-	Name    string   `json:"name"`
-	Unique  bool     `json:"unique"`
-	Columns []string `json:"columns"`
+	Name        string   `json:"name"`
+	Unique      bool     `json:"unique"`
+	Columns     []string `json:"columns"`
+	Primary     bool     `json:"primary,omitempty"`
+	Method      string   `json:"method,omitempty"`
+	Includes    []string `json:"includes,omitempty"`
+	Expressions []string `json:"expressions,omitempty"`
+	Predicate   string   `json:"predicate,omitempty"`
 }
 
 type TableDescription struct {

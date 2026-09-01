@@ -272,8 +272,8 @@ targets:
       enabled: true
       allow_fresh: true
       fresh_cooldown: 1s
-      table_list_ttl: 30s
-      table_description_ttl: 5m
+      table_list_ttl: 20m
+      table_description_ttl: 20m
       negative_ttl: 5s
       max_entries: 256
       max_bytes: 8388608

@@ -75,8 +75,8 @@ type DescribeTableInput struct {
 
 type QueryInput struct {
 	Target     string `json:"target" jsonschema:"Exact target alias returned by list_targets"`
-	SQL        string `json:"sql" jsonschema:"One MySQL SELECT or UNION statement; use question marks for parameters"`
-	Parameters []any  `json:"parameters,omitempty" jsonschema:"Positional JSON scalar values for question-mark placeholders"`
+	SQL        string `json:"sql" jsonschema:"One read-only SELECT in the target dialect; MySQL uses question marks and PostgreSQL uses $1, $2 placeholders"`
+	Parameters []any  `json:"parameters,omitempty" jsonschema:"Positional JSON scalar values matching the selected target's placeholder style"`
 	TimeoutMS  int    `json:"timeout_ms,omitempty" jsonschema:"Optional query timeout in milliseconds, capped by server configuration"`
 	MaxRows    int    `json:"max_rows,omitempty" jsonschema:"Optional result row cap, capped by server configuration"`
 	Purpose    string `json:"purpose,omitempty" jsonschema:"Short human-readable reason for the query; never include secrets"`
@@ -89,7 +89,7 @@ type BatchInput struct {
 }
 
 type BatchQueryInput struct {
-	SQL        string `json:"sql" jsonschema:"One MySQL SELECT or UNION statement"`
+	SQL        string `json:"sql" jsonschema:"One read-only SELECT in the selected target dialect"`
 	Parameters []any  `json:"parameters,omitempty"`
 	MaxRows    int    `json:"max_rows,omitempty"`
 	Purpose    string `json:"purpose,omitempty"`
