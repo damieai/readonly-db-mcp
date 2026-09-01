@@ -80,6 +80,13 @@ Never put a password in YAML, command arguments, an MCP client JSON file, or a
 Git repository. On Windows, prefer `password_env` because POSIX file mode checks
 are not available in the same form.
 
+Remote databases are expected to use TLS. A non-production target whose server
+cannot provide TLS can opt in to cleartext transport with both
+`tls.mode: disabled` and `tls.allow_insecure_remote: true`. This explicit escape
+hatch logs a startup warning and is still refused for production environments;
+credentials, SQL and results are unencrypted, so use it only on a trusted private
+network or VPN.
+
 ### 3. Build and verify
 
 The module currently requires Go 1.26.6 or newer because of the maintained

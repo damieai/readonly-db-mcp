@@ -38,6 +38,11 @@ func main() {
 		logger.Error("configuration rejected", "error", err)
 		os.Exit(2)
 	}
+	for name, target := range cfg.Targets {
+		if target.TLS.Mode == config.TLSDisabled && target.TLS.AllowInsecureRemote {
+			logger.Warn("remote database connection is explicitly configured without TLS", "target", name)
+		}
+	}
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
 	targets, err := registry.Open(ctx, cfg, audit.New(logger))

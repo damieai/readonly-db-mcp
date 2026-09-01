@@ -53,8 +53,32 @@ func TestValidateRejectsCleartextRemoteDatabase(t *testing.T) {
 	cfg.Targets["test"].Host = "database.internal.example"
 
 	err := cfg.Validate()
-	if err == nil || !strings.Contains(err.Error(), "loopback") {
+	if err == nil || !strings.Contains(err.Error(), "allow_insecure_remote") {
 		t.Fatalf("expected cleartext remote database rejection, got %v", err)
+	}
+}
+
+func TestValidateAllowsExplicitCleartextRemoteDatabaseForNonProduction(t *testing.T) {
+	cfg := validConfig()
+	target := cfg.Targets["test"]
+	target.Host = "database.internal.example"
+	target.TLS.AllowInsecureRemote = true
+
+	if err := cfg.Validate(); err != nil {
+		t.Fatalf("expected explicit cleartext remote opt-in to pass, got %v", err)
+	}
+}
+
+func TestValidateRejectsExplicitCleartextRemoteDatabaseForProduction(t *testing.T) {
+	cfg := validConfig()
+	target := cfg.Targets["test"]
+	target.Host = "database.internal.example"
+	target.Environment = "production"
+	target.TLS.AllowInsecureRemote = true
+
+	err := cfg.Validate()
+	if err == nil || !strings.Contains(err.Error(), "TLS cannot be disabled for production") {
+		t.Fatalf("expected production cleartext rejection, got %v", err)
 	}
 }
 
