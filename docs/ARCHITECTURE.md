@@ -13,7 +13,9 @@ exact target registry lookup
 dialect-specific AST policy
         |
         v
-global + target concurrency gates
+bounded fair admission by workload class
+        |
+        +----> target-local metadata/result caches
         |
         v
 READ ONLY transaction
@@ -32,6 +34,16 @@ dedicated SELECT-only database account
   metadata reads and bounded result collection.
 - `internal/config`: strict YAML decoding, hard ceilings and secret resolution.
 - `internal/audit`: structured, non-content audit events.
+- `internal/admission`: global/per-target bounded queues, workload fairness and
+  cancel-safe permits.
+- `internal/metrics`: content-free counters, phase durations and periodic stderr
+  summaries.
+
+Each MySQL target owns immutable normalized policy indexes and bounded caches.
+Metadata, interactive, batch and maintenance work share one admission controller;
+no runtime database operation bypasses it. Final query and batch structures are
+JSON-sized before return, and batch execution stops when another minimal result
+cannot fit the remaining response budget.
 
 ## Adding a database engine
 

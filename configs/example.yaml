@@ -1,6 +1,7 @@
 server:
   transport: stdio
   strict_startup: true
+  metrics_summary_interval: 30s
 
 limits:
   global_concurrency: 4
@@ -13,6 +14,12 @@ limits:
   max_sql_bytes: 32768
   max_batch_queries: 10
   max_parameters: 100
+  max_queued_requests: 32
+  queue_timeout: 500ms
+  workload_classes:
+    metadata_reserved: 1
+    batch_max_concurrency: 1
+    maintenance_max_concurrency: 1
 
 targets:
   inventory-test:
@@ -39,6 +46,15 @@ targets:
     tls:
       # Encrypted but certificate-unverified; use verify-full outside local tests.
       mode: required
+    metadata_cache:
+      enabled: true
+      allow_fresh: true
+      fresh_cooldown: 1s
+      table_list_ttl: 30s
+      table_description_ttl: 5m
+      negative_ttl: 5s
+      max_entries: 256
+      max_bytes: 8388608
 
   reporting-production:
     engine: mysql
@@ -67,3 +83,14 @@ targets:
       mode: verify-full
       ca_file: /etc/readonly-db-mcp/ca.pem
       server_name: reporting-replica.internal.example
+    metadata_cache:
+      enabled: true
+      allow_fresh: true
+      fresh_cooldown: 1s
+      table_list_ttl: 30s
+      table_description_ttl: 5m
+      negative_ttl: 5s
+      max_entries: 256
+      max_bytes: 8388608
+    result_cache:
+      enabled: false

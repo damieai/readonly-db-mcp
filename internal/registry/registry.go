@@ -7,10 +7,12 @@ import (
 	"sort"
 	"sync"
 
+	"github.com/your-org/readonly-db-mcp/internal/admission"
 	"github.com/your-org/readonly-db-mcp/internal/audit"
 	"github.com/your-org/readonly-db-mcp/internal/config"
 	"github.com/your-org/readonly-db-mcp/internal/core"
 	mysqltarget "github.com/your-org/readonly-db-mcp/internal/dialects/mysql"
+	"github.com/your-org/readonly-db-mcp/internal/metrics"
 )
 
 type Registry struct {
@@ -18,9 +20,16 @@ type Registry struct {
 	targets map[string]core.Target
 }
 
-func Open(ctx context.Context, cfg *config.Config, auditor audit.Auditor) (*Registry, error) {
+func Open(ctx context.Context, cfg *config.Config, auditor audit.Auditor, recorder metrics.Recorder) (*Registry, error) {
 	registry := &Registry{targets: make(map[string]core.Target, len(cfg.Targets))}
-	globalSem := make(chan struct{}, cfg.Limits.GlobalConcurrency)
+	controller := admission.New(admission.Config{
+		Global: cfg.Limits.GlobalConcurrency, PerTarget: cfg.Limits.PerTargetConcurrency,
+		MaxQueued: cfg.Limits.MaxQueuedRequests, QueueTimeout: cfg.Limits.QueueTimeout,
+		MetadataReserved: cfg.Limits.WorkloadClasses.MetadataReserved,
+		BatchMax:         cfg.Limits.WorkloadClasses.BatchMaxConcurrency,
+		MaintenanceMax:   cfg.Limits.WorkloadClasses.MaintenanceMaxConcurrency,
+	})
+	controller.SetRecorder(recorder)
 	names := make([]string, 0, len(cfg.Targets))
 	for name := range cfg.Targets {
 		names = append(names, name)
@@ -32,7 +41,7 @@ func Open(ctx context.Context, cfg *config.Config, auditor audit.Auditor) (*Regi
 		var err error
 		switch targetCfg.Engine {
 		case config.EngineMySQL:
-			target, err = mysqltarget.Open(ctx, targetCfg, cfg.Limits, globalSem, auditor)
+			target, err = mysqltarget.Open(ctx, targetCfg, cfg.Limits, controller, auditor, recorder)
 		default:
 			err = fmt.Errorf("unsupported database engine %q", targetCfg.Engine)
 		}

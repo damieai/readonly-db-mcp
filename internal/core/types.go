@@ -38,6 +38,8 @@ type QueryResult struct {
 	Truncated      bool             `json:"truncated"`
 	TruncatedCells int              `json:"truncated_cells"`
 	DurationMS     int64            `json:"duration_ms"`
+	CacheStatus    string           `json:"cache_status,omitempty"`
+	CacheAgeMS     int64            `json:"cache_age_ms,omitempty"`
 }
 
 type Column struct {
@@ -80,6 +82,7 @@ type TableDescription struct {
 type Validation struct {
 	Fingerprint string
 	Tables      []string
+	Cacheable   bool
 }
 
 type Target interface {
@@ -87,7 +90,7 @@ type Target interface {
 	ValidateQuery(sql string) (*Validation, error)
 	Query(context.Context, QueryRequest) (*QueryResult, error)
 	Explain(context.Context, QueryRequest) (*QueryResult, error)
-	ListTables(context.Context, string) ([]TableSummary, error)
-	DescribeTable(context.Context, string, string) (*TableDescription, error)
+	ListTables(context.Context, string, bool) ([]TableSummary, error)
+	DescribeTable(context.Context, string, string, bool) (*TableDescription, error)
 	Close() error
 }

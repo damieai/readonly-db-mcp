@@ -12,6 +12,7 @@ import (
 	"github.com/your-org/readonly-db-mcp/internal/audit"
 	"github.com/your-org/readonly-db-mcp/internal/config"
 	"github.com/your-org/readonly-db-mcp/internal/mcpserver"
+	"github.com/your-org/readonly-db-mcp/internal/metrics"
 	"github.com/your-org/readonly-db-mcp/internal/registry"
 )
 
@@ -38,6 +39,7 @@ func main() {
 		logger.Error("configuration rejected", "error", err)
 		os.Exit(2)
 	}
+	logger.Info("configured resource forecast", "bytes", cfg.ResourceForecastBytes())
 	for name, target := range cfg.Targets {
 		if target.TLS.Mode == config.TLSDisabled && target.TLS.AllowInsecureRemote {
 			logger.Warn("remote database connection is explicitly configured without TLS", "target", name)
@@ -45,7 +47,9 @@ func main() {
 	}
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
-	targets, err := registry.Open(ctx, cfg, audit.New(logger))
+	recorder := metrics.New(logger)
+	go recorder.Run(ctx, cfg.Server.MetricsSummaryInterval)
+	targets, err := registry.Open(ctx, cfg, audit.New(logger), recorder)
 	if err != nil {
 		logger.Error("startup safety verification failed", "error", err)
 		os.Exit(1)

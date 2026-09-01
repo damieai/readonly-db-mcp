@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/DATA-DOG/go-sqlmock"
+	"github.com/your-org/readonly-db-mcp/internal/admission"
 	"github.com/your-org/readonly-db-mcp/internal/config"
 	"github.com/your-org/readonly-db-mcp/internal/core"
 )
@@ -81,6 +82,34 @@ func TestQueryCapsRowsAndMarksTruncated(t *testing.T) {
 	}
 }
 
+func TestQueryUsesResultCacheAfterValidatedMiss(t *testing.T) {
+	db, mock, err := sqlmock.New()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.Close()
+	target := testTarget(db)
+	target.config.ResultCache.Enabled = true
+	target.resultCache = newResultCache(true, time.Minute, 10, 1<<20, 1<<20)
+	mock.ExpectBegin()
+	mock.ExpectQuery("SELECT id FROM items").WillReturnRows(sqlmock.NewRows([]string{"id"}).AddRow(1))
+	mock.ExpectRollback()
+	first, err := target.Query(context.Background(), core.QueryRequest{SQL: "SELECT id FROM items"})
+	if err != nil || first.CacheStatus != "miss" {
+		t.Fatalf("first=%#v err=%v", first, err)
+	}
+	second, err := target.Query(context.Background(), core.QueryRequest{SQL: "SELECT id FROM items"})
+	if err != nil || second.CacheStatus != "hit" {
+		t.Fatalf("second=%#v err=%v", second, err)
+	}
+	if first.QueryID == second.QueryID {
+		t.Fatal("cache hit reused query id")
+	}
+	if err := mock.ExpectationsWereMet(); err != nil {
+		t.Fatal(err)
+	}
+}
+
 func TestNormalizeValuePreservesLargeIntegerPrecision(t *testing.T) {
 	value, truncated := normalizeValue(int64(1<<53), 1024)
 	if truncated || value != "9007199254740992" {
@@ -125,12 +154,17 @@ func testTarget(db *sql.DB) *Target {
 		AllowedSchemas: []string{"inventory"},
 	}
 	return &Target{
-		config:    cfg,
-		limits:    limits,
-		db:        db,
-		policy:    NewPolicy(cfg.Database, cfg.AllowedSchemas, nil, limits.MaxSQLBytes),
-		globalSem: make(chan struct{}, limits.GlobalConcurrency),
-		targetSem: make(chan struct{}, limits.PerTargetConcurrency),
+		config:               cfg,
+		limits:               limits,
+		db:                   db,
+		policy:               NewPolicy(cfg.Database, cfg.AllowedSchemas, nil, limits.MaxSQLBytes),
+		admission:            admission.New(admission.Config{Global: 2, PerTarget: 1, MaxQueued: 10, QueueTimeout: time.Second, BatchMax: 1, MaintenanceMax: 1}),
+		allowedSchemas:       lowerSet(cfg.AllowedSchemas),
+		deniedTables:         lowerSet(cfg.DeniedTables),
+		metadataPlaceholders: "?",
+		metadataCache:        newMetadataCache(false, 1, 1024),
+		resultCache:          newResultCache(false, 0, 0, 0, 0),
+		policyRevision:       targetPolicyRevision(cfg),
 		info: core.TargetInfo{
 			Name: cfg.Name, Engine: cfg.Engine, Environment: cfg.Environment,
 			Consistency: cfg.Consistency, Database: cfg.Database,

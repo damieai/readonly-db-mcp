@@ -7,16 +7,19 @@ import (
 )
 
 type Event struct {
-	QueryID     string
-	Target      string
-	Operation   string
-	Fingerprint string
-	Tables      []string
-	Decision    string
-	Reason      string
-	Rows        int
-	Truncated   bool
-	Duration    time.Duration
+	QueryID          string
+	Target           string
+	Operation        string
+	Fingerprint      string
+	Tables           []string
+	Decision         string
+	Reason           string
+	Rows             int
+	Truncated        bool
+	Duration         time.Duration
+	ResponseBytes    int
+	CacheStatus      string
+	TruncationReason string
 }
 
 type Auditor interface {
@@ -43,5 +46,8 @@ func (a *SlogAuditor) Record(_ context.Context, event Event) {
 		"rows", event.Rows,
 		"truncated", event.Truncated,
 		"duration_ms", event.Duration.Milliseconds(),
+		"response_bytes", event.ResponseBytes,
+		"cache_status", event.CacheStatus,
+		"truncation_reason", event.TruncationReason,
 	)
 }

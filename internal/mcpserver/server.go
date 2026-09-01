@@ -58,6 +58,7 @@ type TargetOutput struct {
 type ListTablesInput struct {
 	Target  string `json:"target" jsonschema:"Exact target alias returned by list_targets"`
 	Pattern string `json:"pattern,omitempty" jsonschema:"Optional MySQL LIKE pattern for table names"`
+	Fresh   bool   `json:"fresh,omitempty" jsonschema:"Force a database metadata refresh instead of using a cached value"`
 }
 
 type ListTablesOutput struct {
@@ -69,6 +70,7 @@ type DescribeTableInput struct {
 	Target string `json:"target" jsonschema:"Exact target alias returned by list_targets"`
 	Schema string `json:"schema,omitempty" jsonschema:"Allowed schema; omitted means the target default database"`
 	Table  string `json:"table" jsonschema:"Exact table or view name"`
+	Fresh  bool   `json:"fresh,omitempty" jsonschema:"Force a database metadata refresh instead of using a cached value"`
 }
 
 type QueryInput struct {
@@ -135,7 +137,7 @@ func (s *Server) listTables(ctx context.Context, _ *mcp.CallToolRequest, input L
 	if err != nil {
 		return nil, ListTablesOutput{}, err
 	}
-	tables, err := target.ListTables(ctx, input.Pattern)
+	tables, err := target.ListTables(ctx, input.Pattern, input.Fresh)
 	if err != nil {
 		return nil, ListTablesOutput{}, err
 	}
@@ -147,7 +149,7 @@ func (s *Server) describeTable(ctx context.Context, _ *mcp.CallToolRequest, inpu
 	if err != nil {
 		return nil, core.TableDescription{}, err
 	}
-	description, err := target.DescribeTable(ctx, input.Schema, input.Table)
+	description, err := target.DescribeTable(ctx, input.Schema, input.Table, input.Fresh)
 	if err != nil {
 		return nil, core.TableDescription{}, err
 	}

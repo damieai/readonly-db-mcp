@@ -78,6 +78,9 @@ func validConfig() *Config {
 			MaxSQLBytes:          32 << 10,
 			MaxBatchQueries:      10,
 			MaxParameters:        100,
+			MaxQueuedRequests:    32,
+			QueueTimeout:         500 * time.Millisecond,
+			WorkloadClasses:      WorkloadClasses{MetadataReserved: 1, BatchMaxConcurrency: 1, MaintenanceMaxConcurrency: 1},
 		},
 		Targets: map[string]*TargetConfig{
 			"test": {
@@ -91,6 +94,7 @@ func validConfig() *Config {
 				Username:       "sample_ro",
 				PasswordFile:   "/tmp/sample-password",
 				AllowedSchemas: []string{"sample"},
+				MetadataCache:  MetadataCacheConfig{TableListTTL: 30 * time.Second, TableDescriptionTTL: 5 * time.Minute, NegativeTTL: 5 * time.Second, FreshCooldown: time.Second, MaxEntries: 256, MaxBytes: 8 << 20},
 				Connection: ConnectionConfig{
 					ConnectTimeout: 3 * time.Second,
 					ReadTimeout:    12 * time.Second,

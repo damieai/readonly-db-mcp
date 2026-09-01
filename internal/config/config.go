@@ -43,39 +43,74 @@ type Config struct {
 }
 
 type ServerConfig struct {
-	Transport     string `yaml:"transport"`
-	StrictStartup bool   `yaml:"strict_startup"`
+	Transport              string        `yaml:"transport"`
+	StrictStartup          bool          `yaml:"strict_startup"`
+	MetricsSummaryInterval time.Duration `yaml:"metrics_summary_interval"`
 }
 
 type Limits struct {
-	GlobalConcurrency    int           `yaml:"global_concurrency"`
-	PerTargetConcurrency int           `yaml:"per_target_concurrency"`
-	DefaultTimeout       time.Duration `yaml:"default_timeout"`
-	MaxTimeout           time.Duration `yaml:"max_timeout"`
-	MaxRows              int           `yaml:"max_rows"`
-	MaxResultBytes       int           `yaml:"max_result_bytes"`
-	MaxCellBytes         int           `yaml:"max_cell_bytes"`
-	MaxSQLBytes          int           `yaml:"max_sql_bytes"`
-	MaxBatchQueries      int           `yaml:"max_batch_queries"`
-	MaxParameters        int           `yaml:"max_parameters"`
+	GlobalConcurrency    int             `yaml:"global_concurrency"`
+	PerTargetConcurrency int             `yaml:"per_target_concurrency"`
+	DefaultTimeout       time.Duration   `yaml:"default_timeout"`
+	MaxTimeout           time.Duration   `yaml:"max_timeout"`
+	MaxRows              int             `yaml:"max_rows"`
+	MaxResultBytes       int             `yaml:"max_result_bytes"`
+	MaxCellBytes         int             `yaml:"max_cell_bytes"`
+	MaxSQLBytes          int             `yaml:"max_sql_bytes"`
+	MaxBatchQueries      int             `yaml:"max_batch_queries"`
+	MaxParameters        int             `yaml:"max_parameters"`
+	MaxQueuedRequests    int             `yaml:"max_queued_requests"`
+	QueueTimeout         time.Duration   `yaml:"queue_timeout"`
+	WorkloadClasses      WorkloadClasses `yaml:"workload_classes"`
+}
+
+type WorkloadClasses struct {
+	MetadataReserved          int `yaml:"metadata_reserved"`
+	BatchMaxConcurrency       int `yaml:"batch_max_concurrency"`
+	MaintenanceMaxConcurrency int `yaml:"maintenance_max_concurrency"`
 }
 
 type TargetConfig struct {
-	Name           string           `yaml:"-"`
-	Engine         string           `yaml:"engine"`
-	Environment    string           `yaml:"environment"`
-	Consistency    string           `yaml:"consistency"`
-	Host           string           `yaml:"host"`
-	Port           int              `yaml:"port"`
-	Database       string           `yaml:"database"`
-	Username       string           `yaml:"username"`
-	PasswordFile   string           `yaml:"password_file"`
-	PasswordEnv    string           `yaml:"password_env"`
-	AllowedSchemas []string         `yaml:"allowed_schemas"`
-	DeniedTables   []string         `yaml:"denied_tables"`
-	Connection     ConnectionConfig `yaml:"connection"`
-	TLS            TLSConfig        `yaml:"tls"`
+	Name           string              `yaml:"-"`
+	Engine         string              `yaml:"engine"`
+	Environment    string              `yaml:"environment"`
+	Consistency    string              `yaml:"consistency"`
+	Host           string              `yaml:"host"`
+	Port           int                 `yaml:"port"`
+	Database       string              `yaml:"database"`
+	Username       string              `yaml:"username"`
+	PasswordFile   string              `yaml:"password_file"`
+	PasswordEnv    string              `yaml:"password_env"`
+	AllowedSchemas []string            `yaml:"allowed_schemas"`
+	DeniedTables   []string            `yaml:"denied_tables"`
+	Connection     ConnectionConfig    `yaml:"connection"`
+	TLS            TLSConfig           `yaml:"tls"`
+	MetadataCache  MetadataCacheConfig `yaml:"metadata_cache"`
+	ResultCache    ResultCacheConfig   `yaml:"result_cache"`
 }
+
+type MetadataCacheConfig struct {
+	Enabled             *bool         `yaml:"enabled"`
+	AllowFresh          *bool         `yaml:"allow_fresh"`
+	FreshCooldown       time.Duration `yaml:"fresh_cooldown"`
+	TableListTTL        time.Duration `yaml:"table_list_ttl"`
+	TableDescriptionTTL time.Duration `yaml:"table_description_ttl"`
+	NegativeTTL         time.Duration `yaml:"negative_ttl"`
+	MaxEntries          int           `yaml:"max_entries"`
+	MaxBytes            int           `yaml:"max_bytes"`
+}
+
+type ResultCacheConfig struct {
+	Enabled                 bool          `yaml:"enabled"`
+	TTL                     time.Duration `yaml:"ttl"`
+	MaxEntries              int           `yaml:"max_entries"`
+	MaxBytes                int           `yaml:"max_bytes"`
+	MaxEntryBytes           int           `yaml:"max_entry_bytes"`
+	AllowCurrentConsistency bool          `yaml:"allow_current_consistency"`
+}
+
+func (c MetadataCacheConfig) IsEnabled() bool      { return c.Enabled == nil || *c.Enabled }
+func (c MetadataCacheConfig) IsFreshAllowed() bool { return c.AllowFresh == nil || *c.AllowFresh }
 
 type ConnectionConfig struct {
 	ConnectTimeout time.Duration `yaml:"connect_timeout"`
@@ -163,6 +198,21 @@ func applyDefaults(cfg *Config) {
 	if cfg.Limits.MaxParameters == 0 {
 		cfg.Limits.MaxParameters = 100
 	}
+	if cfg.Limits.MaxQueuedRequests == 0 {
+		cfg.Limits.MaxQueuedRequests = 32
+	}
+	if cfg.Limits.QueueTimeout == 0 {
+		cfg.Limits.QueueTimeout = 500 * time.Millisecond
+	}
+	if cfg.Limits.WorkloadClasses.MetadataReserved == 0 && cfg.Limits.GlobalConcurrency >= 3 {
+		cfg.Limits.WorkloadClasses.MetadataReserved = 1
+	}
+	if cfg.Limits.WorkloadClasses.BatchMaxConcurrency == 0 {
+		cfg.Limits.WorkloadClasses.BatchMaxConcurrency = (cfg.Limits.GlobalConcurrency + 3) / 4
+	}
+	if cfg.Limits.WorkloadClasses.MaintenanceMaxConcurrency == 0 {
+		cfg.Limits.WorkloadClasses.MaintenanceMaxConcurrency = 1
+	}
 
 	for _, target := range cfg.Targets {
 		if target == nil {
@@ -201,6 +251,38 @@ func applyDefaults(cfg *Config) {
 		if target.TLS.Mode == "" {
 			target.TLS.Mode = TLSVerifyFull
 		}
+		if target.MetadataCache.TableListTTL == 0 {
+			target.MetadataCache.TableListTTL = 30 * time.Second
+		}
+		if target.MetadataCache.FreshCooldown == 0 {
+			target.MetadataCache.FreshCooldown = time.Second
+		}
+		if target.MetadataCache.TableDescriptionTTL == 0 {
+			target.MetadataCache.TableDescriptionTTL = 5 * time.Minute
+		}
+		if target.MetadataCache.NegativeTTL == 0 {
+			target.MetadataCache.NegativeTTL = 5 * time.Second
+		}
+		if target.MetadataCache.MaxEntries == 0 {
+			target.MetadataCache.MaxEntries = 256
+		}
+		if target.MetadataCache.MaxBytes == 0 {
+			target.MetadataCache.MaxBytes = 8 << 20
+		}
+		if target.ResultCache.Enabled {
+			if target.ResultCache.TTL == 0 {
+				target.ResultCache.TTL = 10 * time.Second
+			}
+			if target.ResultCache.MaxEntries == 0 {
+				target.ResultCache.MaxEntries = 128
+			}
+			if target.ResultCache.MaxBytes == 0 {
+				target.ResultCache.MaxBytes = 16 << 20
+			}
+			if target.ResultCache.MaxEntryBytes == 0 {
+				target.ResultCache.MaxEntryBytes = 256 << 10
+			}
+		}
 	}
 }
 
@@ -219,6 +301,9 @@ func (cfg *Config) Validate() error {
 	}
 	if !cfg.Server.StrictStartup {
 		problems = append(problems, "server.strict_startup must be true")
+	}
+	if cfg.Server.MetricsSummaryInterval < 0 || (cfg.Server.MetricsSummaryInterval > 0 && (cfg.Server.MetricsSummaryInterval < time.Second || cfg.Server.MetricsSummaryInterval > time.Hour)) {
+		problems = append(problems, "server.metrics_summary_interval must be disabled or between 1s and 1h")
 	}
 	if len(cfg.Targets) == 0 {
 		problems = append(problems, "at least one target is required")
@@ -250,6 +335,22 @@ func (cfg *Config) Validate() error {
 	if cfg.Limits.MaxParameters < 1 || cfg.Limits.MaxParameters > 10_000 {
 		problems = append(problems, "limits.max_parameters must be between 1 and 10000")
 	}
+	if cfg.Limits.MaxQueuedRequests < 1 || cfg.Limits.MaxQueuedRequests > 1024 {
+		problems = append(problems, "limits.max_queued_requests must be between 1 and 1024")
+	}
+	if cfg.Limits.QueueTimeout < time.Millisecond || cfg.Limits.QueueTimeout > 30*time.Second || cfg.Limits.QueueTimeout > cfg.Limits.MaxTimeout {
+		problems = append(problems, "limits.queue_timeout must be between 1ms and 30s and no greater than max_timeout")
+	}
+	wc := cfg.Limits.WorkloadClasses
+	if wc.MetadataReserved < 0 || wc.MetadataReserved > cfg.Limits.GlobalConcurrency {
+		problems = append(problems, "metadata_reserved is outside global concurrency")
+	}
+	if wc.BatchMaxConcurrency < 1 || wc.BatchMaxConcurrency > cfg.Limits.GlobalConcurrency {
+		problems = append(problems, "batch_max_concurrency is outside global concurrency")
+	}
+	if wc.MaintenanceMaxConcurrency < 1 || wc.MaintenanceMaxConcurrency > cfg.Limits.GlobalConcurrency {
+		problems = append(problems, "maintenance_max_concurrency is outside global concurrency")
+	}
 
 	names := make([]string, 0, len(cfg.Targets))
 	for name := range cfg.Targets {
@@ -266,11 +367,27 @@ func (cfg *Config) Validate() error {
 			problems = append(problems, fmt.Sprintf("target %q: %s", name, problem))
 		}
 	}
+	if cfg.ResourceForecastBytes() > 1<<30 {
+		problems = append(problems, "configured cache and concurrent response forecast exceeds 1 GiB hard ceiling")
+	}
 
 	if len(problems) > 0 {
 		return fmt.Errorf("invalid configuration:\n- %s", strings.Join(problems, "\n- "))
 	}
 	return nil
+}
+
+// ResourceForecastBytes conservatively estimates configured cache storage and
+// concurrent response object/encoding copies. It excludes the Go runtime,
+// parser state, driver buffers, and database server memory.
+func (cfg *Config) ResourceForecastBytes() int64 {
+	total := int64(cfg.Limits.GlobalConcurrency) * int64(cfg.Limits.MaxResultBytes) * 3
+	for _, target := range cfg.Targets {
+		if target != nil {
+			total += int64(target.MetadataCache.MaxBytes) + int64(target.ResultCache.MaxBytes)
+		}
+	}
+	return total
 }
 
 func validateTarget(name string, target *TargetConfig, limits Limits) []string {
@@ -351,6 +468,9 @@ func validateTarget(name string, target *TargetConfig, limits Limits) []string {
 	if target.Connection.MaxIdle < 0 || target.Connection.MaxIdle > target.Connection.MaxOpen {
 		problems = append(problems, "connection.max_idle must be between 0 and max_open")
 	}
+	if target.Connection.MaxOpen < limits.PerTargetConcurrency {
+		problems = append(problems, "connection.max_open must be at least per_target_concurrency")
+	}
 	if target.Connection.ReadTimeout < limits.MaxTimeout {
 		problems = append(problems, "connection.read_timeout must be at least limits.max_timeout")
 	}
@@ -384,6 +504,25 @@ func validateTarget(name string, target *TargetConfig, limits Limits) []string {
 	}
 	if (target.TLS.CertFile == "") != (target.TLS.KeyFile == "") {
 		problems = append(problems, "tls.cert_file and tls.key_file must be configured together")
+	}
+	mc := target.MetadataCache
+	if mc.TableListTTL < time.Second || mc.TableListTTL > 24*time.Hour || mc.TableDescriptionTTL < time.Second || mc.TableDescriptionTTL > 24*time.Hour || mc.NegativeTTL < time.Second || mc.NegativeTTL > time.Minute {
+		problems = append(problems, "metadata cache TTLs are outside hard ceilings")
+	}
+	if mc.FreshCooldown < 100*time.Millisecond || mc.FreshCooldown > time.Minute {
+		problems = append(problems, "metadata fresh_cooldown must be between 100ms and 1m")
+	}
+	if mc.MaxEntries < 1 || mc.MaxEntries > 10_000 || mc.MaxBytes < 1024 || mc.MaxBytes > 256<<20 {
+		problems = append(problems, "metadata cache capacity is outside hard ceilings")
+	}
+	rc := target.ResultCache
+	if rc.Enabled {
+		if target.Consistency == ConsistencyCurrent && !rc.AllowCurrentConsistency {
+			problems = append(problems, "result cache on current consistency requires allow_current_consistency")
+		}
+		if rc.TTL <= 0 || rc.TTL > time.Hour || rc.MaxEntries < 1 || rc.MaxEntries > 10_000 || rc.MaxBytes < 1024 || rc.MaxBytes > 512<<20 || rc.MaxEntryBytes < 1024 || rc.MaxEntryBytes > rc.MaxBytes {
+			problems = append(problems, "result cache settings are outside hard ceilings")
+		}
 	}
 	return problems
 }

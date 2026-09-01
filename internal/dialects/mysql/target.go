@@ -21,24 +21,33 @@ import (
 
 	driver "github.com/go-sql-driver/mysql"
 	"github.com/google/uuid"
+	"github.com/your-org/readonly-db-mcp/internal/admission"
 	"github.com/your-org/readonly-db-mcp/internal/audit"
 	"github.com/your-org/readonly-db-mcp/internal/config"
 	"github.com/your-org/readonly-db-mcp/internal/core"
+	"github.com/your-org/readonly-db-mcp/internal/metrics"
 )
 
 type Target struct {
-	config    *config.TargetConfig
-	limits    config.Limits
-	db        *sql.DB
-	policy    *Policy
-	auditor   audit.Auditor
-	globalSem chan struct{}
-	targetSem chan struct{}
-	info      core.TargetInfo
-	tlsName   string
+	config               *config.TargetConfig
+	limits               config.Limits
+	db                   *sql.DB
+	policy               *Policy
+	auditor              audit.Auditor
+	admission            *admission.Controller
+	info                 core.TargetInfo
+	tlsName              string
+	allowedSchemas       map[string]struct{}
+	deniedTables         map[string]struct{}
+	metadataPlaceholders string
+	metadataCache        *metadataCache
+	resultCache          *resultCache
+	metrics              metrics.Recorder
+	verifiedAt           time.Time
+	policyRevision       string
 }
 
-func Open(ctx context.Context, cfg *config.TargetConfig, limits config.Limits, globalSem chan struct{}, auditor audit.Auditor) (*Target, error) {
+func Open(ctx context.Context, cfg *config.TargetConfig, limits config.Limits, controller *admission.Controller, auditor audit.Auditor, recorder metrics.Recorder) (*Target, error) {
 	password, err := cfg.Password()
 	if err != nil {
 		return nil, fmt.Errorf("target %q credentials: %w", cfg.Name, err)
@@ -81,8 +90,7 @@ func Open(ctx context.Context, cfg *config.TargetConfig, limits config.Limits, g
 		db:        db,
 		policy:    NewPolicy(cfg.Database, cfg.AllowedSchemas, cfg.DeniedTables, limits.MaxSQLBytes),
 		auditor:   auditor,
-		globalSem: globalSem,
-		targetSem: make(chan struct{}, limits.PerTargetConcurrency),
+		admission: controller,
 		tlsName:   tlsName,
 		info: core.TargetInfo{
 			Name:           cfg.Name,
@@ -95,6 +103,14 @@ func Open(ctx context.Context, cfg *config.TargetConfig, limits config.Limits, g
 			ReadOnlyUser:   true,
 			ServerReadOnly: identity.ServerReadOnly,
 		},
+		allowedSchemas:       lowerSet(cfg.AllowedSchemas),
+		deniedTables:         lowerSet(cfg.DeniedTables),
+		metadataPlaceholders: strings.TrimRight(strings.Repeat("?,", len(cfg.AllowedSchemas)), ","),
+		metadataCache:        newMetadataCache(cfg.MetadataCache.IsEnabled(), cfg.MetadataCache.MaxEntries, cfg.MetadataCache.MaxBytes),
+		resultCache:          newResultCache(cfg.ResultCache.Enabled, cfg.ResultCache.TTL, cfg.ResultCache.MaxEntries, cfg.ResultCache.MaxBytes, cfg.ResultCache.MaxEntryBytes),
+		metrics:              recorder,
+		verifiedAt:           time.Now(),
+		policyRevision:       targetPolicyRevision(cfg),
 	}
 	cleanup = false
 	return target, nil
@@ -227,12 +243,69 @@ func (t *Target) ValidateQuery(query string) (*core.Validation, error) {
 }
 
 func (t *Target) Query(ctx context.Context, request core.QueryRequest) (*core.QueryResult, error) {
+	if err := t.validateRequest(request); err != nil {
+		return nil, err
+	}
+	policyStarted := time.Now()
 	validation, err := t.policy.Validate(request.SQL)
+	t.observe("policy", time.Since(policyStarted), "query_select")
 	if err != nil {
 		t.record(ctx, audit.Event{Target: t.config.Name, Operation: "query_select", Decision: "rejected", Reason: err.Error()})
 		return nil, err
 	}
-	return t.execute(ctx, "query_select", request.SQL, request, validation)
+	cacheKey := ""
+	if t.config.ResultCache.Enabled && validation.Cacheable {
+		encoded, _ := json.Marshal(struct {
+			Fingerprint string
+			Parameters  []any
+			MaxRows     int
+			Revision    string
+		}{validation.Fingerprint, request.Parameters, request.MaxRows, t.policyRevision})
+		sum := sha256.Sum256(encoded)
+		cacheKey = hex.EncodeToString(sum[:])
+		if cached, age, ok := t.resultCache.get(cacheKey); ok {
+			t.count("cache", 1, "query_select", "hit")
+			cached.QueryID = uuid.NewString()
+			cached.CacheStatus = "hit"
+			cached.CacheAgeMS = age.Milliseconds()
+			cached.DurationMS = 0
+			if err := enforceQueryBudget(cached, t.limits.MaxResultBytes); err != nil {
+				return nil, err
+			}
+			encodedResult, _ := json.Marshal(cached)
+			t.record(ctx, audit.Event{QueryID: cached.QueryID, Target: t.config.Name, Operation: "query_select", Fingerprint: validation.Fingerprint, Tables: validation.Tables, Decision: "allowed", Rows: cached.RowCount, Truncated: cached.Truncated, ResponseBytes: len(encodedResult), CacheStatus: "hit"})
+			return cached, nil
+		}
+	}
+	result, err := t.execute(ctx, "query_select", request.SQL, request, validation)
+	if err == nil {
+		if cacheKey != "" {
+			t.count("cache", 1, "query_select", "miss")
+			result.CacheStatus = "miss"
+		} else if t.config.ResultCache.Enabled {
+			result.CacheStatus = "bypass"
+		}
+		if budgetErr := enforceQueryBudget(result, t.limits.MaxResultBytes); budgetErr != nil {
+			return nil, budgetErr
+		}
+		if cacheKey != "" {
+			t.resultCache.put(cacheKey, result)
+		}
+	}
+	return result, err
+}
+
+func (t *Target) validateRequest(request core.QueryRequest) error {
+	if request.Timeout < 0 || request.Timeout > t.limits.MaxTimeout {
+		return fmt.Errorf("requested timeout exceeds configured maximum")
+	}
+	if request.MaxRows < 0 || request.MaxRows > t.limits.MaxRows {
+		return fmt.Errorf("requested row limit exceeds configured maximum")
+	}
+	if len(request.Parameters) > t.limits.MaxParameters {
+		return fmt.Errorf("query has too many parameters")
+	}
+	return validateParameters(request.Parameters)
 }
 
 func (t *Target) Explain(ctx context.Context, request core.QueryRequest) (*core.QueryResult, error) {
@@ -270,25 +343,37 @@ func (t *Target) execute(ctx context.Context, operation, query string, request c
 
 	queryCtx, cancel := context.WithTimeout(ctx, timeout)
 	defer cancel()
-	if err := t.acquire(queryCtx); err != nil {
+	queueStarted := time.Now()
+	permit, err := t.admission.Acquire(queryCtx, t.config.Name, admission.Interactive)
+	t.observe("admission_wait", time.Since(queueStarted), operation)
+	if err != nil {
+		t.count("admission", 1, operation, "rejected")
+		t.record(queryCtx, audit.Event{QueryID: queryID, Target: t.config.Name, Operation: operation, Fingerprint: validation.Fingerprint, Tables: validation.Tables, Decision: "rejected", Reason: "admission"})
 		return nil, fmt.Errorf("query concurrency limit: %w", err)
 	}
-	defer t.release()
+	defer permit.Release()
+	defer t.recordDBStats()
 
+	dbStarted := time.Now()
 	tx, err := t.db.BeginTx(queryCtx, &sql.TxOptions{ReadOnly: true})
 	if err != nil {
+		t.record(queryCtx, audit.Event{QueryID: queryID, Target: t.config.Name, Operation: operation, Fingerprint: validation.Fingerprint, Tables: validation.Tables, Decision: "failed", Reason: "transaction_begin"})
 		return nil, sanitizeDBError(err)
 	}
 	defer tx.Rollback()
 	rows, err := tx.QueryContext(queryCtx, query, request.Parameters...)
+	t.observe("database_to_rows", time.Since(dbStarted), operation)
 	if err != nil {
 		t.record(queryCtx, audit.Event{QueryID: queryID, Target: t.config.Name, Operation: operation, Fingerprint: validation.Fingerprint, Tables: validation.Tables, Decision: "failed", Reason: errorClass(err), Duration: time.Since(started)})
 		return nil, sanitizeDBError(err)
 	}
 	defer rows.Close()
 
-	result, err := t.collectRows(rows, maxRows)
+	collectStarted := time.Now()
+	result, err := t.collectRows(rows, maxRows, t.limits.MaxResultBytes)
+	t.observe("collect", time.Since(collectStarted), operation)
 	if err != nil {
+		t.record(queryCtx, audit.Event{QueryID: queryID, Target: t.config.Name, Operation: operation, Fingerprint: validation.Fingerprint, Tables: validation.Tables, Decision: "failed", Reason: "result_collection"})
 		return nil, err
 	}
 	result.QueryID = queryID
@@ -298,11 +383,17 @@ func (t *Target) execute(ctx context.Context, operation, query string, request c
 	result.Consistency = t.config.Consistency
 	result.Database = t.config.Database
 	result.DurationMS = time.Since(started).Milliseconds()
-	t.record(queryCtx, audit.Event{QueryID: queryID, Target: t.config.Name, Operation: operation, Fingerprint: validation.Fingerprint, Tables: validation.Tables, Decision: "allowed", Rows: result.RowCount, Truncated: result.Truncated, Duration: time.Since(started)})
+	if err := enforceQueryBudget(result, t.limits.MaxResultBytes); err != nil {
+		return nil, err
+	}
+	encodedResult, _ := json.Marshal(result)
+	t.record(queryCtx, audit.Event{QueryID: queryID, Target: t.config.Name, Operation: operation, Fingerprint: validation.Fingerprint, Tables: validation.Tables, Decision: "allowed", Rows: result.RowCount, Truncated: result.Truncated, Duration: time.Since(started), ResponseBytes: len(encodedResult), CacheStatus: result.CacheStatus})
+	t.observe("total", time.Since(started), operation)
+	t.count("requests", 1, operation, "allowed")
 	return result, nil
 }
 
-func (t *Target) collectRows(rows *sql.Rows, maxRows int) (*core.QueryResult, error) {
+func (t *Target) collectRows(rows *sql.Rows, maxRows, byteBudget int) (*core.QueryResult, error) {
 	columnNames, err := rows.Columns()
 	if err != nil {
 		return nil, errors.New("read result columns")
@@ -312,6 +403,9 @@ func (t *Target) collectRows(rows *sql.Rows, maxRows int) (*core.QueryResult, er
 		return nil, errors.New("read result column types")
 	}
 	columnNames = uniqueNames(columnNames)
+	if len(columnNames) > 1024 {
+		return nil, errors.New("query result has too many columns")
+	}
 	columns := make([]core.Column, len(columnNames))
 	for i, name := range columnNames {
 		nullable, _ := columnTypes[i].Nullable()
@@ -345,7 +439,7 @@ func (t *Target) collectRows(rows *sql.Rows, maxRows int) (*core.QueryResult, er
 		if err != nil {
 			return nil, errors.New("encode query result")
 		}
-		if resultBytes+len(encoded) > t.limits.MaxResultBytes {
+		if resultBytes+len(encoded) > byteBudget {
 			result.Truncated = true
 			break
 		}
@@ -359,12 +453,88 @@ func (t *Target) collectRows(rows *sql.Rows, maxRows int) (*core.QueryResult, er
 	return result, nil
 }
 
-func (t *Target) ListTables(ctx context.Context, pattern string) ([]core.TableSummary, error) {
+func enforceQueryBudget(result *core.QueryResult, maxBytes int) error {
+	encoded, err := json.Marshal(result)
+	if err != nil {
+		return errors.New("encode query result")
+	}
+	if len(encoded) <= maxBytes {
+		return nil
+	}
+	all := result.Rows
+	low, high := 0, len(all)
+	for low < high {
+		mid := (low + high + 1) / 2
+		result.Rows = all[:mid]
+		result.RowCount = mid
+		candidate, e := json.Marshal(result)
+		if e != nil {
+			return errors.New("encode query result")
+		}
+		if len(candidate) <= maxBytes {
+			low = mid
+		} else {
+			high = mid - 1
+		}
+	}
+	result.Rows = all[:low]
+	result.RowCount = low
+	result.Truncated = true
+	encoded, err = json.Marshal(result)
+	if err != nil {
+		return errors.New("encode query result")
+	}
+	if len(encoded) > maxBytes {
+		return errors.New("query result metadata exceeds configured result-byte limit")
+	}
+	return nil
+}
+
+func (t *Target) ListTables(ctx context.Context, pattern string, fresh bool) ([]core.TableSummary, error) {
 	if len(pattern) > 128 {
 		return nil, fmt.Errorf("table pattern is too long")
 	}
-	placeholders := strings.TrimRight(strings.Repeat("?,", len(t.config.AllowedSchemas)), ",")
-	query := "SELECT TABLE_SCHEMA, TABLE_NAME, TABLE_TYPE FROM information_schema.TABLES WHERE TABLE_SCHEMA IN (" + placeholders + ")"
+	key := t.policyRevision + "\x00list\x00" + pattern
+	if fresh && !t.config.MetadataCache.IsFreshAllowed() {
+		return nil, fmt.Errorf("forced metadata refresh is disabled for this target")
+	}
+	if !fresh {
+		if cached, ok := t.metadataCache.get(key); ok {
+			t.count("cache", 1, "schema_list_tables", "hit")
+			return cached.([]core.TableSummary), nil
+		}
+	}
+	var leader bool
+	var err error
+	if fresh {
+		leader, err = t.metadataCache.leadRefresh(ctx, key, t.config.MetadataCache.FreshCooldown)
+		t.count("cache", 1, "schema_list_tables", "refresh")
+	} else {
+		leader, err = t.metadataCache.lead(ctx, key)
+		t.count("cache", 1, "schema_list_tables", "miss")
+	}
+	if err != nil {
+		if fresh {
+			t.record(ctx, audit.Event{Target: t.config.Name, Operation: "schema_list_tables", Decision: "rejected", Reason: "refresh_control"})
+		}
+		return nil, err
+	}
+	if !leader {
+		if cached, ok := t.metadataCache.get(key); ok {
+			return cached.([]core.TableSummary), nil
+		}
+		if fresh {
+			return nil, fmt.Errorf("forced metadata refresh completed without a cacheable result")
+		}
+		return t.ListTables(ctx, pattern, false)
+	}
+	cacheDone := false
+	defer func() {
+		if !cacheDone {
+			t.metadataCache.finish(key, nil, 0, false)
+		}
+	}()
+	query := "SELECT TABLE_SCHEMA, TABLE_NAME, TABLE_TYPE FROM information_schema.TABLES WHERE TABLE_SCHEMA IN (" + t.metadataPlaceholders + ")"
 	args := make([]any, 0, len(t.config.AllowedSchemas)+1)
 	for _, schema := range t.config.AllowedSchemas {
 		args = append(args, schema)
@@ -376,23 +546,28 @@ func (t *Target) ListTables(ctx context.Context, pattern string) ([]core.TableSu
 	query += " ORDER BY TABLE_SCHEMA, TABLE_NAME LIMIT 2000"
 	queryCtx, cancel := context.WithTimeout(ctx, t.limits.DefaultTimeout)
 	defer cancel()
+	permit, err := t.admission.Acquire(queryCtx, t.config.Name, admission.Metadata)
+	if err != nil {
+		return nil, fmt.Errorf("metadata concurrency limit: %w", err)
+	}
+	defer permit.Release()
+	defer t.recordDBStats()
 	rows, err := t.db.QueryContext(queryCtx, query, args...)
 	if err != nil {
 		return nil, sanitizeDBError(err)
 	}
 	defer rows.Close()
 	var tables []core.TableSummary
-	denied := lowerSet(t.config.DeniedTables)
 	for rows.Next() {
 		var table core.TableSummary
 		if err := rows.Scan(&table.Schema, &table.Name, &table.Type); err != nil {
 			return nil, errors.New("scan table metadata")
 		}
 		qualified := strings.ToLower(table.Schema + "." + table.Name)
-		if _, blocked := denied[strings.ToLower(table.Name)]; blocked {
+		if _, blocked := t.deniedTables[strings.ToLower(table.Name)]; blocked {
 			continue
 		}
-		if _, blocked := denied[qualified]; blocked {
+		if _, blocked := t.deniedTables[qualified]; blocked {
 			continue
 		}
 		tables = append(tables, table)
@@ -400,41 +575,107 @@ func (t *Target) ListTables(ctx context.Context, pattern string) ([]core.TableSu
 	if err := rows.Err(); err != nil {
 		return nil, sanitizeDBError(err)
 	}
+	t.metadataCache.finish(key, tables, t.config.MetadataCache.TableListTTL, true)
+	cacheDone = true
+	if fresh {
+		t.record(ctx, audit.Event{Target: t.config.Name, Operation: "schema_list_tables", Decision: "allowed", Reason: "refresh", Rows: len(tables)})
+	}
 	return tables, nil
 }
 
-func (t *Target) DescribeTable(ctx context.Context, schema, table string) (*core.TableDescription, error) {
+func (t *Target) DescribeTable(ctx context.Context, schema, table string, fresh bool) (*core.TableDescription, error) {
 	if schema == "" {
 		schema = t.config.Database
 	}
 	if !safeIdentifier(schema) || !safeIdentifier(table) {
 		return nil, fmt.Errorf("schema and table must be plain identifiers")
 	}
-	if _, ok := lowerSet(t.config.AllowedSchemas)[strings.ToLower(schema)]; !ok {
+	if _, ok := t.allowedSchemas[strings.ToLower(schema)]; !ok {
 		return nil, fmt.Errorf("schema is outside the selected target")
 	}
-	denied := lowerSet(t.config.DeniedTables)
-	if _, ok := denied[strings.ToLower(table)]; ok {
+	if _, ok := t.deniedTables[strings.ToLower(table)]; ok {
 		return nil, fmt.Errorf("table is denied by target policy")
 	}
-	if _, ok := denied[strings.ToLower(schema+"."+table)]; ok {
+	if _, ok := t.deniedTables[strings.ToLower(schema+"."+table)]; ok {
 		return nil, fmt.Errorf("table is denied by target policy")
 	}
 
+	// Preserve identifier case in the cache key. MySQL table-name case
+	// sensitivity depends on server configuration and filesystem semantics.
+	key := t.policyRevision + "\x00describe\x00" + schema + "\x00" + table
+	if fresh && !t.config.MetadataCache.IsFreshAllowed() {
+		return nil, fmt.Errorf("forced metadata refresh is disabled for this target")
+	}
+	if !fresh {
+		if cached, ok := t.metadataCache.get(key); ok {
+			t.count("cache", 1, "schema_describe_table", "hit")
+			if _, missing := cached.(missingDescription); missing {
+				return nil, fmt.Errorf("table is not visible to this target")
+			}
+			return cached.(*core.TableDescription), nil
+		}
+	}
+	var leader bool
+	var err error
+	if fresh {
+		leader, err = t.metadataCache.leadRefresh(ctx, key, t.config.MetadataCache.FreshCooldown)
+		t.count("cache", 1, "schema_describe_table", "refresh")
+	} else {
+		leader, err = t.metadataCache.lead(ctx, key)
+		t.count("cache", 1, "schema_describe_table", "miss")
+	}
+	if err != nil {
+		if fresh {
+			t.record(ctx, audit.Event{Target: t.config.Name, Operation: "schema_describe_table", Decision: "rejected", Reason: "refresh_control"})
+		}
+		return nil, err
+	}
+	if !leader {
+		if cached, ok := t.metadataCache.get(key); ok {
+			if _, missing := cached.(missingDescription); missing {
+				return nil, fmt.Errorf("table is not visible to this target")
+			}
+			return cached.(*core.TableDescription), nil
+		}
+		if fresh {
+			return nil, fmt.Errorf("forced metadata refresh completed without a cacheable result")
+		}
+		return t.DescribeTable(ctx, schema, table, false)
+	}
+	cacheDone := false
+	defer func() {
+		if !cacheDone {
+			t.metadataCache.finish(key, nil, 0, false)
+		}
+	}()
 	queryCtx, cancel := context.WithTimeout(ctx, t.limits.DefaultTimeout)
 	defer cancel()
+	permit, err := t.admission.Acquire(queryCtx, t.config.Name, admission.Metadata)
+	if err != nil {
+		return nil, fmt.Errorf("metadata concurrency limit: %w", err)
+	}
+	defer permit.Release()
+	defer t.recordDBStats()
 	columns, err := t.describeColumns(queryCtx, schema, table)
 	if err != nil {
 		return nil, err
 	}
 	if len(columns) == 0 {
+		t.metadataCache.finish(key, missingDescription{}, t.config.MetadataCache.NegativeTTL, true)
+		cacheDone = true
 		return nil, fmt.Errorf("table is not visible to this target")
 	}
 	indexes, err := t.describeIndexes(queryCtx, schema, table)
 	if err != nil {
 		return nil, err
 	}
-	return &core.TableDescription{Target: t.config.Name, Schema: schema, Table: table, Columns: columns, Indexes: indexes}, nil
+	result := &core.TableDescription{Target: t.config.Name, Schema: schema, Table: table, Columns: columns, Indexes: indexes}
+	t.metadataCache.finish(key, result, t.config.MetadataCache.TableDescriptionTTL, true)
+	cacheDone = true
+	if fresh {
+		t.record(ctx, audit.Event{Target: t.config.Name, Operation: "schema_describe_table", Decision: "allowed", Reason: "refresh"})
+	}
+	return result, nil
 }
 
 func (t *Target) describeColumns(ctx context.Context, schema, table string) ([]core.ColumnDescription, error) {
@@ -505,33 +746,46 @@ ORDER BY INDEX_NAME, SEQ_IN_INDEX`, schema, table)
 	return indexes, nil
 }
 
-func (t *Target) acquire(ctx context.Context) error {
-	select {
-	case t.globalSem <- struct{}{}:
-	case <-ctx.Done():
-		return ctx.Err()
-	}
-	select {
-	case t.targetSem <- struct{}{}:
-		return nil
-	case <-ctx.Done():
-		<-t.globalSem
-		return ctx.Err()
-	}
-}
-
-func (t *Target) release() {
-	<-t.targetSem
-	<-t.globalSem
-}
-
 func (t *Target) record(ctx context.Context, event audit.Event) {
 	if t.auditor != nil {
 		t.auditor.Record(ctx, event)
 	}
 }
 
+func (t *Target) observe(name string, d time.Duration, operation string) {
+	if t.metrics != nil {
+		t.metrics.Observe(name, d, operation)
+	}
+}
+
+func (t *Target) count(name string, delta int64, operation, outcome string) {
+	if t.metrics != nil {
+		t.metrics.Add(name, delta, operation, outcome)
+	}
+}
+
+func (t *Target) recordDBStats() {
+	if t.metrics == nil {
+		return
+	}
+	s := t.db.Stats()
+	t.metrics.Set("db_pool_open", int64(s.OpenConnections), "pool")
+	t.metrics.Set("db_pool_in_use", int64(s.InUse), "pool")
+	t.metrics.Set("db_pool_idle", int64(s.Idle), "pool")
+	t.metrics.Set("db_pool_wait_count", s.WaitCount, "pool")
+	t.metrics.Set("db_pool_wait_ms", s.WaitDuration.Milliseconds(), "pool")
+	t.metrics.Set("grant_verification_age_seconds", int64(time.Since(t.verifiedAt).Seconds()), "health")
+}
+
+func targetPolicyRevision(cfg *config.TargetConfig) string {
+	material := strings.Join([]string{cfg.Engine, cfg.Database, strings.Join(cfg.AllowedSchemas, "\x00"), strings.Join(cfg.DeniedTables, "\x00")}, "\x01")
+	sum := sha256.Sum256([]byte(strings.ToLower(material)))
+	return hex.EncodeToString(sum[:12])
+}
+
 func (t *Target) Close() error {
+	t.metadataCache.clear()
+	t.resultCache.clear()
 	err := t.db.Close()
 	if t.tlsName != "" {
 		driver.DeregisterTLSConfig(t.tlsName)

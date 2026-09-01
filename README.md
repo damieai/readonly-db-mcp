@@ -23,6 +23,12 @@ repository.
 - A `READ ONLY` database transaction for every free-form query.
 - Per-target and global concurrency limits, timeouts, row limits, result-byte
   limits and cell-size limits.
+- Bounded fair scheduling across metadata, interactive, batch and maintenance
+  workloads, with overload rejected before a transaction is opened.
+- Target-local bounded metadata caches and optional, explicit short-lived result
+  caches for deterministic queries.
+- Exact final-response byte enforcement and early batch stopping.
+- Phase-level performance summaries on stderr when configured.
 - Structured audit events that contain query fingerprints, never raw SQL,
   parameters, result values or credentials.
 - Structured MCP outputs over stdio.
@@ -156,6 +162,41 @@ Example query input:
 ```
 
 Encode integers larger than JavaScript's safe integer range as strings.
+
+### Performance controls
+
+Database-backed tools share one bounded admission controller. Metadata has a
+small reserved capacity by default, so schema inspection remains responsive
+while analytical queries are saturated. Queue length and wait time have hard
+limits; overload returns a bounded error instead of accumulating goroutines.
+
+Metadata caching is enabled by default with target-local TTL, entry and byte
+limits. Result caching is disabled by default. Enable it only for targets where
+the configured staleness is acceptable; volatile queries are always bypassed,
+and current-consistency targets require an additional explicit opt-in.
+
+Batch results report `truncated`, `truncation_reason` and `completed_queries`.
+When the remaining response budget cannot represent another result, the server
+does not execute that query.
+
+Set `server.metrics_summary_interval` to a positive duration to emit bounded,
+content-free performance summaries on stderr. Metrics never use SQL, parameters,
+returned values, credentials, schemas, tables or fingerprints as labels.
+
+Both `schema_list_tables` and `schema_describe_table` accept an optional
+`fresh: true` argument. A fresh request bypasses the current entry, reads the
+database, and atomically replaces the cached value. Concurrent refreshes for the
+same key are coalesced, and a configurable cooldown prevents refresh storms.
+Normal calls omit `fresh` and continue to use the cache.
+
+```json
+{
+  "target": "inventory-test",
+  "schema": "inventory",
+  "table": "items",
+  "fresh": true
+}
+```
 
 ## Adding targets
 

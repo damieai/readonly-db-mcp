@@ -4,6 +4,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
+	"regexp"
 	"sort"
 	"strings"
 
@@ -17,6 +18,8 @@ var systemSchemas = map[string]struct{}{
 	"performance_schema": {},
 	"sys":                {},
 }
+
+var volatileSQL = regexp.MustCompile(`(?i)\b(rand|random_bytes|uuid|uuid_short|now|sysdate|curdate|current_date|curtime|current_time|current_timestamp|localtime|localtimestamp|connection_id|last_insert_id)\b`)
 
 // safeGenericFunctions contains side-effect-free built-ins represented by
 // Vitess as FuncExpr. Aggregate, window, JSON and other typed AST functions are
@@ -168,7 +171,7 @@ func (p *Policy) Validate(query string) (*core.Validation, error) {
 		tables = append(tables, table)
 	}
 	sort.Strings(tables)
-	return &core.Validation{Fingerprint: fingerprint, Tables: tables}, nil
+	return &core.Validation{Fingerprint: fingerprint, Tables: tables, Cacheable: !volatileSQL.MatchString(trimmed)}, nil
 }
 
 func hashSQL(query string) string {
