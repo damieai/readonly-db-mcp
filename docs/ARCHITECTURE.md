@@ -10,7 +10,7 @@ typed MCP tool schemas
 exact target registry lookup
         |
         v
-dialect-specific AST policy
+engine-specific SQL AST or Redis command policy
         |
         v
 bounded fair admission by workload class
@@ -18,10 +18,10 @@ bounded fair admission by workload class
         +----> target-local metadata/result caches
         |
         v
-READ ONLY transaction
+READ ONLY SQL transaction / attested Redis command
         |
         v
-dedicated SELECT-only database account
+dedicated SELECT-only SQL identity / read-key-only Redis ACL
 ```
 
 ## Packages
@@ -32,6 +32,10 @@ dedicated SELECT-only database account
 - `internal/core`: engine-neutral target and result contracts.
 - `internal/dialects/mysql`: MySQL connection, grant attestation, AST policy,
   metadata reads and bounded result collection.
+- `internal/dialects/postgresql`: PostgreSQL connection, role/object privilege
+  attestation, native AST policy and metadata reads.
+- `internal/dialects/redis`: Redis ACL and live command-catalog attestation,
+  key-scope policy, RESP normalization and bounded command execution.
 - `internal/config`: strict YAML decoding, hard ceilings and secret resolution.
 - `internal/audit`: structured, non-content audit events.
 - `internal/admission`: global/per-target bounded queues, workload fairness and
@@ -47,19 +51,21 @@ cannot fit the remaining response budget.
 
 ## Adding a database engine
 
-A new engine gets its own `internal/dialects/<engine>` package. It must implement
-`core.Target` and, when possible, `core.BatchTarget`. It must not reuse the MySQL
-parser or MySQL privilege assumptions.
+A new engine gets its own `internal/dialects/<engine>` package. It implements the
+minimal `core.Target` plus `core.SQLTarget` or `core.RedisTarget`, and an
+appropriate batch capability. It must not reuse another engine's parser or
+privilege assumptions.
 
 An engine is considered complete only when it has:
 
-1. A maintained dialect parser and fail-closed statement policy.
+1. A maintained dialect parser or live command capability catalog and a
+   fail-closed side-effect policy.
 2. Effective privilege attestation for the connected identity.
-3. A database-native read-only transaction.
-4. Fixed metadata queries for schemas, tables, columns and indexes.
+3. A database-native read-only transaction or read-only ACL/key enforcement.
+4. Safe engine-specific metadata/introspection paths.
 5. Cancellation and resource-limit integration tests.
-6. A hostile SQL corpus demonstrating that public tools cannot mutate a
-   disposable database.
+6. A hostile query/command corpus demonstrating that public tools cannot mutate
+   a disposable database.
 
 ## Why target selection is stateless
 

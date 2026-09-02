@@ -131,3 +131,38 @@ targets:
       negative_ttl: 5s
       max_entries: 256
       max_bytes: 8388608
+
+  analytics-redis-test:
+    engine: redis
+    environment: test
+    consistency: current
+    host: 127.0.0.1
+    port: 6379
+    username: analytics_mcp_ro
+    password_file: ./secrets/analytics-redis-test.password
+    redis:
+      mode: standalone
+      database: 0
+      key_patterns:
+        - "analytics:*"
+      protocol: 3
+      acl_recheck_interval: 5m
+      command_catalog_max_age: 10m
+      # Prefix-scoped targets keep this disabled because scripts can issue
+      # keyless keyspace reads internally. It is supported for exact %R~* targets.
+      allow_readonly_scripts: false
+      max_script_bytes: 65536
+      max_keys_per_command: 256
+      max_argument_bytes: 262144
+      max_reply_depth: 32
+      max_reply_elements: 10000
+    connection:
+      connect_timeout: 3s
+      read_timeout: 12s
+      write_timeout: 3s
+      max_open: 2
+      max_idle: 1
+      max_lifetime: 3m
+      max_idle_time: 1m
+    tls:
+      mode: required

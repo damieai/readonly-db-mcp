@@ -13,6 +13,7 @@ import (
 	"github.com/your-org/readonly-db-mcp/internal/core"
 	mysqltarget "github.com/your-org/readonly-db-mcp/internal/dialects/mysql"
 	postgresqltarget "github.com/your-org/readonly-db-mcp/internal/dialects/postgresql"
+	redistarget "github.com/your-org/readonly-db-mcp/internal/dialects/redis"
 	"github.com/your-org/readonly-db-mcp/internal/metrics"
 )
 
@@ -45,6 +46,8 @@ func Open(ctx context.Context, cfg *config.Config, auditor audit.Auditor, record
 			target, err = mysqltarget.Open(ctx, targetCfg, cfg.Limits, controller, auditor, recorder)
 		case config.EnginePostgreSQL:
 			target, err = postgresqltarget.Open(ctx, targetCfg, cfg.Limits, controller, auditor, recorder)
+		case config.EngineRedis:
+			target, err = redistarget.Open(ctx, targetCfg, cfg.Limits, controller, auditor, recorder)
 		default:
 			err = fmt.Errorf("unsupported database engine %q", targetCfg.Engine)
 		}
@@ -55,6 +58,30 @@ func Open(ctx context.Context, cfg *config.Config, auditor audit.Auditor, record
 		registry.targets[name] = target
 	}
 	return registry, nil
+}
+
+func (r *Registry) GetSQL(name string) (core.SQLTarget, error) {
+	target, err := r.Get(name)
+	if err != nil {
+		return nil, err
+	}
+	sqlTarget, ok := target.(core.SQLTarget)
+	if !ok {
+		return nil, errors.New("selected target is not a SQL database")
+	}
+	return sqlTarget, nil
+}
+
+func (r *Registry) GetRedis(name string) (core.RedisTarget, error) {
+	target, err := r.Get(name)
+	if err != nil {
+		return nil, err
+	}
+	redisTarget, ok := target.(core.RedisTarget)
+	if !ok {
+		return nil, errors.New("selected target is not Redis")
+	}
+	return redisTarget, nil
 }
 
 func (r *Registry) Get(name string) (core.Target, error) {

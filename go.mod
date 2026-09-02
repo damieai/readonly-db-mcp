@@ -9,12 +9,14 @@ require (
 	github.com/jackc/pgx/v5 v5.10.0
 	github.com/modelcontextprotocol/go-sdk v1.6.1
 	github.com/pganalyze/pg_query_go/v6 v6.2.2
+	github.com/redis/go-redis/v9 v9.22.0
 	gopkg.in/yaml.v3 v3.0.1
 	vitess.io/vitess v0.24.2
 )
 
 require (
 	filippo.io/edwards25519 v1.1.1 // indirect
+	github.com/cespare/xxhash/v2 v2.3.0 // indirect
 	github.com/golang/glog v1.2.5 // indirect
 	github.com/google/jsonschema-go v0.4.3 // indirect
 	github.com/jackc/pgpassfile v1.0.0 // indirect
@@ -27,6 +29,7 @@ require (
 	github.com/segmentio/encoding v0.5.4 // indirect
 	github.com/spf13/pflag v1.0.10 // indirect
 	github.com/yosida95/uritemplate/v3 v3.0.2 // indirect
+	go.uber.org/atomic v1.11.0 // indirect
 	golang.org/x/oauth2 v0.36.0 // indirect
 	golang.org/x/sync v0.20.0 // indirect
 	golang.org/x/sys v0.43.0 // indirect

@@ -3,11 +3,13 @@
 ## Security objective
 
 The server must be unable to persistently modify a configured database through
-any public MCP tool, even when a caller supplies hostile SQL.
+any public MCP tool, even when a caller supplies hostile SQL or Redis commands.
 
 This objective depends on a dedicated database identity whose effective grants
-are limited to `USAGE` and `SELECT`. SQL parsing, tool annotations and read-only
-transactions are additional controls, not substitutes for database grants.
+are limited to `USAGE` and `SELECT`, or on a Redis ACL limited to attested read
+commands and `%R~` key patterns. Parsing, command classification, tool
+annotations and read-only execution modes are additional controls, not
+substitutes for database permissions.
 
 ## Trust boundaries
 
@@ -21,7 +23,8 @@ Trusted:
 Untrusted:
 
 - MCP clients and models.
-- Every tool argument, including target, SQL, parameters and purpose.
+- Every tool argument, including target, SQL, Redis command vectors, parameters
+  and purpose.
 - Every database value returned to the model. Database text may contain prompt
   injection and must be treated as data rather than instructions.
 - MCP client identity metadata, which is self-reported.
@@ -42,11 +45,19 @@ Untrusted:
    limits and byte limits reduce resource-exhaustion risk.
 7. Audit logs contain a one-way query fingerprint and table names but never raw
    SQL, parameters, returned values, passwords or DSNs.
+8. Redis startup expands the live command/subcommand catalog, verifies the
+   effective ACL and read-key patterns, rejects modules, and resolves effective
+   key access before execution.
+9. Redis ACL and command capabilities are periodically re-attested; drift marks
+   the target unhealthy and new requests fail closed.
 
 ## Known limitations
 
 - A valid SELECT can still consume database CPU before timeout or read sensitive
   data the account is allowed to see.
+- A valid Redis read can still consume server CPU beyond the client timeout.
+  Admission limits reduce amplification; exploratory keyspace-wide reads should
+  use a replica where possible.
 - Output-name-based masking cannot safely prevent transformed-column exfiltration.
   Use column grants or curated views for confidentiality boundaries.
 - A replica can return stale data. Every response reports the configured

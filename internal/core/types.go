@@ -17,6 +17,9 @@ type TargetInfo struct {
 	ServerReadOnly bool     `json:"server_read_only"`
 	ParameterStyle string   `json:"parameter_style"`
 	ServerVersion  string   `json:"server_version,omitempty"`
+	DeploymentMode string   `json:"deployment_mode,omitempty"`
+	KeyPatterns    []string `json:"key_patterns,omitempty"`
+	PolicyRevision string   `json:"policy_revision,omitempty"`
 }
 
 type QueryRequest struct {
@@ -94,10 +97,14 @@ type Validation struct {
 
 type Target interface {
 	Info() TargetInfo
+	Close() error
+}
+
+type SQLTarget interface {
+	Target
 	ValidateQuery(sql string) (*Validation, error)
 	Query(context.Context, QueryRequest) (*QueryResult, error)
 	Explain(context.Context, QueryRequest) (*QueryResult, error)
 	ListTables(context.Context, string, bool) ([]TableSummary, error)
 	DescribeTable(context.Context, string, string, bool) (*TableDescription, error)
-	Close() error
 }

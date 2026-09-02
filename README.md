@@ -7,14 +7,17 @@ The project is designed to be copied into its own GitHub repository. It is a
 standalone Go module and does not import code or configuration from its parent
 repository.
 
-> Current status: MySQL 8 and PostgreSQL 15-17 are implemented. PostgreSQL
-> production rollout still requires validation against your provisioned role
-> and server build before enablement.
+> Current status: MySQL 8 and PostgreSQL 15-17 are implemented. Standalone
+> Redis 7.2/7.4 and Redis 8.x read-only command support is implemented behind
+> strict ACL and live command-catalog attestation. Production rollout still
+> requires validation against your provisioned accounts and server builds.
 
 ## What it provides
 
 - Multiple named database targets, selected explicitly on every tool call.
 - Independent MySQL and PostgreSQL dialect policies and privilege attestation.
+- Redis command-vector tools with live read-only command, key-scope and ACL
+  attestation.
 - Full read-only analytical SQL: CTEs, joins, subqueries, unions, aggregates,
   window functions, JSON expressions and ordinary `USE INDEX`/`FORCE INDEX`
   clauses supported by MySQL/Vitess. Optimizer comment hints are rejected.
@@ -103,6 +106,15 @@ privileges. Grant only database `CONNECT`, allowed-schema `USAGE`, and relation
 this scope, including `CONNECT` on other databases and `EXECUTE` on
 non-system functions; startup attestation intentionally fails closed otherwise.
 
+For Redis, create a password-protected ACL user from `reset`, grant `%R~pattern`
+only for the configured key prefixes, start command permissions from `-@all`,
+and grant `+@read`. Startup also needs the internal-only introspection commands
+`+acl|whoami`, `+acl|getuser`, `+command`, `+command|info`,
+`+command|list`, `+command|getkeysandflags`, `+ping`, `+info`, `+module|list`, and—only when the
+configured database is nonzero—`+select`. Do not grant write-key patterns,
+channels, selectors, write/admin categories, or module commands. These
+introspection commands are never exposed through `redis_command`.
+
 ### 3. Build and verify
 
 The module currently requires Go 1.26.6 or newer because of the maintained
@@ -154,6 +166,8 @@ Use target inventory-test. Inspect the schema and verify whether transaction
 | `query_select` | Runs one validated SELECT. |
 | `query_batch` | Runs several SELECTs in one read-only transaction snapshot. |
 | `query_explain` | Runs `EXPLAIN FORMAT=JSON` on a validated SELECT. |
+| `redis_command` | Runs one attested advanced read-only Redis command vector. |
+| `redis_batch` | Runs a bounded read-only Redis pipeline or atomic batch. |
 
 Every database tool requires an exact target alias. There is deliberately no
 stateful `USE DATABASE` tool and no tool accepts a host, DSN, username or
@@ -209,6 +223,26 @@ Normal calls omit `fresh` and continue to use the cache.
   "fresh": true
 }
 ```
+
+Redis commands use an argument vector rather than a redis-cli string:
+
+```json
+{
+  "target": "analytics-redis-test",
+  "command": "ZINTER",
+  "arguments": [
+    {"string": "2"},
+    {"string": "analytics:score:daily"},
+    {"string": "analytics:score:verified"},
+    {"string": "WITHSCORES"}
+  ],
+  "max_elements": 1000,
+  "purpose": "compare verified daily scores"
+}
+```
+
+Use `{"base64":"..."}` instead of `string` for binary arguments. Each argument
+must contain exactly one representation.
 
 ## Adding targets
 

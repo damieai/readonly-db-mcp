@@ -18,6 +18,7 @@ import (
 const (
 	EngineMySQL         = "mysql"
 	EnginePostgreSQL    = "postgresql"
+	EngineRedis         = "redis"
 	TransportStdio      = "stdio"
 	TLSDisabled         = "disabled"
 	TLSRequired         = "required"
@@ -87,6 +88,7 @@ type TargetConfig struct {
 	Connection     ConnectionConfig    `yaml:"connection"`
 	TLS            TLSConfig           `yaml:"tls"`
 	PostgreSQL     PostgreSQLConfig    `yaml:"postgresql"`
+	Redis          RedisConfig         `yaml:"redis"`
 	MetadataCache  MetadataCacheConfig `yaml:"metadata_cache"`
 	ResultCache    ResultCacheConfig   `yaml:"result_cache"`
 }
@@ -97,6 +99,21 @@ type PostgreSQLConfig struct {
 	BatchIsolation         string        `yaml:"batch_isolation"`
 	RequireHotStandby      bool          `yaml:"require_hot_standby"`
 	PrivilegeRecheck       time.Duration `yaml:"privilege_recheck_interval"`
+}
+
+type RedisConfig struct {
+	Mode                 string        `yaml:"mode"`
+	Database             int           `yaml:"database"`
+	KeyPatterns          []string      `yaml:"key_patterns"`
+	Protocol             int           `yaml:"protocol"`
+	ACLRecheck           time.Duration `yaml:"acl_recheck_interval"`
+	CatalogMaxAge        time.Duration `yaml:"command_catalog_max_age"`
+	AllowReadonlyScripts bool          `yaml:"allow_readonly_scripts"`
+	MaxScriptBytes       int           `yaml:"max_script_bytes"`
+	MaxKeysPerCommand    int           `yaml:"max_keys_per_command"`
+	MaxArgumentBytes     int           `yaml:"max_argument_bytes"`
+	MaxReplyDepth        int           `yaml:"max_reply_depth"`
+	MaxReplyElements     int           `yaml:"max_reply_elements"`
 }
 
 type MetadataCacheConfig struct {
@@ -237,6 +254,8 @@ func applyDefaults(cfg *Config) {
 		if target.Port == 0 {
 			if target.Engine == EnginePostgreSQL {
 				target.Port = 5432
+			} else if target.Engine == EngineRedis {
+				target.Port = 6379
 			} else {
 				target.Port = 3306
 			}
@@ -279,23 +298,54 @@ func applyDefaults(cfg *Config) {
 				target.PostgreSQL.PrivilegeRecheck = 5 * time.Minute
 			}
 		}
-		if target.MetadataCache.TableListTTL == 0 {
-			target.MetadataCache.TableListTTL = 20 * time.Minute
+		if target.Engine == EngineRedis {
+			if target.Redis.Mode == "" {
+				target.Redis.Mode = "standalone"
+			}
+			if target.Redis.Protocol == 0 {
+				target.Redis.Protocol = 3
+			}
+			if target.Redis.ACLRecheck == 0 {
+				target.Redis.ACLRecheck = 5 * time.Minute
+			}
+			if target.Redis.CatalogMaxAge == 0 {
+				target.Redis.CatalogMaxAge = 10 * time.Minute
+			}
+			if target.Redis.MaxScriptBytes == 0 {
+				target.Redis.MaxScriptBytes = 64 << 10
+			}
+			if target.Redis.MaxKeysPerCommand == 0 {
+				target.Redis.MaxKeysPerCommand = 256
+			}
+			if target.Redis.MaxArgumentBytes == 0 {
+				target.Redis.MaxArgumentBytes = 256 << 10
+			}
+			if target.Redis.MaxReplyDepth == 0 {
+				target.Redis.MaxReplyDepth = 32
+			}
+			if target.Redis.MaxReplyElements == 0 {
+				target.Redis.MaxReplyElements = 10_000
+			}
 		}
-		if target.MetadataCache.FreshCooldown == 0 {
-			target.MetadataCache.FreshCooldown = time.Second
-		}
-		if target.MetadataCache.TableDescriptionTTL == 0 {
-			target.MetadataCache.TableDescriptionTTL = 20 * time.Minute
-		}
-		if target.MetadataCache.NegativeTTL == 0 {
-			target.MetadataCache.NegativeTTL = 5 * time.Second
-		}
-		if target.MetadataCache.MaxEntries == 0 {
-			target.MetadataCache.MaxEntries = 256
-		}
-		if target.MetadataCache.MaxBytes == 0 {
-			target.MetadataCache.MaxBytes = 8 << 20
+		if target.Engine != EngineRedis {
+			if target.MetadataCache.TableListTTL == 0 {
+				target.MetadataCache.TableListTTL = 20 * time.Minute
+			}
+			if target.MetadataCache.FreshCooldown == 0 {
+				target.MetadataCache.FreshCooldown = time.Second
+			}
+			if target.MetadataCache.TableDescriptionTTL == 0 {
+				target.MetadataCache.TableDescriptionTTL = 20 * time.Minute
+			}
+			if target.MetadataCache.NegativeTTL == 0 {
+				target.MetadataCache.NegativeTTL = 5 * time.Second
+			}
+			if target.MetadataCache.MaxEntries == 0 {
+				target.MetadataCache.MaxEntries = 256
+			}
+			if target.MetadataCache.MaxBytes == 0 {
+				target.MetadataCache.MaxBytes = 8 << 20
+			}
 		}
 		if target.ResultCache.Enabled {
 			if target.ResultCache.TTL == 0 {
@@ -412,7 +462,9 @@ func (cfg *Config) ResourceForecastBytes() int64 {
 	total := int64(cfg.Limits.GlobalConcurrency) * int64(cfg.Limits.MaxResultBytes) * 3
 	for _, target := range cfg.Targets {
 		if target != nil {
-			total += int64(target.MetadataCache.MaxBytes) + int64(target.ResultCache.MaxBytes)
+			if target.Engine != EngineRedis {
+				total += int64(target.MetadataCache.MaxBytes) + int64(target.ResultCache.MaxBytes)
+			}
 		}
 	}
 	return total
@@ -423,8 +475,8 @@ func validateTarget(name string, target *TargetConfig, limits Limits) []string {
 	if !safeName.MatchString(name) {
 		problems = append(problems, "name must match [a-zA-Z0-9][a-zA-Z0-9_.-]{0,63}")
 	}
-	if target.Engine != EngineMySQL && target.Engine != EnginePostgreSQL {
-		problems = append(problems, "engine must be mysql or postgresql")
+	if target.Engine != EngineMySQL && target.Engine != EnginePostgreSQL && target.Engine != EngineRedis {
+		problems = append(problems, "engine must be mysql, postgresql, or redis")
 	}
 	if !safeName.MatchString(target.Environment) {
 		problems = append(problems, "environment is required and must be a safe identifier")
@@ -438,10 +490,10 @@ func validateTarget(name string, target *TargetConfig, limits Limits) []string {
 	if target.Port < 1 || target.Port > 65535 {
 		problems = append(problems, "port is invalid")
 	}
-	if !safeIdentifier.MatchString(target.Database) {
+	if target.Engine != EngineRedis && !safeIdentifier.MatchString(target.Database) {
 		problems = append(problems, "database is required and must be a safe identifier")
 	}
-	if _, system := systemSchemaNames[strings.ToLower(target.Database)]; system {
+	if _, system := systemSchemaNames[strings.ToLower(target.Database)]; system && target.Engine != EngineRedis {
 		problems = append(problems, "database must not be a system schema")
 	}
 	if strings.TrimSpace(target.Username) == "" {
@@ -456,7 +508,7 @@ func validateTarget(name string, target *TargetConfig, limits Limits) []string {
 	if target.PasswordEnv != "" && !regexp.MustCompile(`^[A-Z][A-Z0-9_]{2,127}$`).MatchString(target.PasswordEnv) {
 		problems = append(problems, "password_env must name an uppercase environment variable")
 	}
-	if len(target.AllowedSchemas) == 0 {
+	if target.Engine != EngineRedis && len(target.AllowedSchemas) == 0 {
 		problems = append(problems, "allowed_schemas must not be empty")
 	}
 	seenSchemas := make(map[string]struct{}, len(target.AllowedSchemas))
@@ -537,7 +589,13 @@ func validateTarget(name string, target *TargetConfig, limits Limits) []string {
 		if target.PostgreSQL != (PostgreSQLConfig{}) {
 			problems = append(problems, "postgresql settings are valid only for postgresql targets")
 		}
+		if !redisConfigEmpty(target.Redis) {
+			problems = append(problems, "redis settings are valid only for redis targets")
+		}
 	} else if target.Engine == EnginePostgreSQL {
+		if !redisConfigEmpty(target.Redis) {
+			problems = append(problems, "redis settings are valid only for redis targets")
+		}
 		pg := target.PostgreSQL
 		if !safeName.MatchString(pg.ApplicationName) {
 			problems = append(problems, "postgresql.application_name must be a safe identifier")
@@ -551,16 +609,55 @@ func validateTarget(name string, target *TargetConfig, limits Limits) []string {
 		if pg.PrivilegeRecheck < 10*time.Second || pg.PrivilegeRecheck > time.Hour {
 			problems = append(problems, "postgresql.privilege_recheck_interval must be between 10s and 1h")
 		}
+	} else if target.Engine == EngineRedis {
+		if target.PostgreSQL != (PostgreSQLConfig{}) {
+			problems = append(problems, "postgresql settings are valid only for postgresql targets")
+		}
+		r := target.Redis
+		if strings.EqualFold(target.Username, "default") {
+			problems = append(problems, "Redis targets require a dedicated ACL user, not default")
+		}
+		if target.MetadataCache != (MetadataCacheConfig{}) || target.ResultCache != (ResultCacheConfig{}) {
+			problems = append(problems, "SQL metadata/result cache settings are not valid for Redis targets")
+		}
+		if r.Mode != "standalone" {
+			problems = append(problems, "redis.mode currently must be standalone")
+		}
+		if r.Database < 0 || r.Database > 15 {
+			problems = append(problems, "redis.database must be between 0 and 15")
+		}
+		if r.Protocol != 3 {
+			problems = append(problems, "redis.protocol must be 3")
+		}
+		if len(r.KeyPatterns) == 0 {
+			problems = append(problems, "redis.key_patterns must not be empty")
+		}
+		for _, pattern := range r.KeyPatterns {
+			if !validRedisKeyPattern(pattern) {
+				problems = append(problems, fmt.Sprintf("redis key pattern %q must be a non-empty literal prefix ending in *", pattern))
+			}
+		}
+		if r.ACLRecheck < 10*time.Second || r.ACLRecheck > time.Hour || r.CatalogMaxAge < r.ACLRecheck || r.CatalogMaxAge > 2*time.Hour {
+			problems = append(problems, "redis attestation intervals are invalid")
+		}
+		if r.MaxScriptBytes < 1024 || r.MaxScriptBytes > 1<<20 || r.MaxKeysPerCommand < 1 || r.MaxKeysPerCommand > 10_000 || r.MaxArgumentBytes < 1024 || r.MaxArgumentBytes > 16<<20 {
+			problems = append(problems, "redis request ceilings are invalid")
+		}
+		if r.MaxReplyDepth < 1 || r.MaxReplyDepth > 128 || r.MaxReplyElements < 1 || r.MaxReplyElements > 1_000_000 {
+			problems = append(problems, "redis reply ceilings are invalid")
+		}
 	}
-	mc := target.MetadataCache
-	if mc.TableListTTL < time.Second || mc.TableListTTL > 24*time.Hour || mc.TableDescriptionTTL < time.Second || mc.TableDescriptionTTL > 24*time.Hour || mc.NegativeTTL < time.Second || mc.NegativeTTL > time.Minute {
-		problems = append(problems, "metadata cache TTLs are outside hard ceilings")
-	}
-	if mc.FreshCooldown < 100*time.Millisecond || mc.FreshCooldown > time.Minute {
-		problems = append(problems, "metadata fresh_cooldown must be between 100ms and 1m")
-	}
-	if mc.MaxEntries < 1 || mc.MaxEntries > 10_000 || mc.MaxBytes < 1024 || mc.MaxBytes > 256<<20 {
-		problems = append(problems, "metadata cache capacity is outside hard ceilings")
+	if target.Engine != EngineRedis {
+		mc := target.MetadataCache
+		if mc.TableListTTL < time.Second || mc.TableListTTL > 24*time.Hour || mc.TableDescriptionTTL < time.Second || mc.TableDescriptionTTL > 24*time.Hour || mc.NegativeTTL < time.Second || mc.NegativeTTL > time.Minute {
+			problems = append(problems, "metadata cache TTLs are outside hard ceilings")
+		}
+		if mc.FreshCooldown < 100*time.Millisecond || mc.FreshCooldown > time.Minute {
+			problems = append(problems, "metadata fresh_cooldown must be between 100ms and 1m")
+		}
+		if mc.MaxEntries < 1 || mc.MaxEntries > 10_000 || mc.MaxBytes < 1024 || mc.MaxBytes > 256<<20 {
+			problems = append(problems, "metadata cache capacity is outside hard ceilings")
+		}
 	}
 	rc := target.ResultCache
 	if rc.Enabled {
@@ -572,6 +669,20 @@ func validateTarget(name string, target *TargetConfig, limits Limits) []string {
 		}
 	}
 	return problems
+}
+
+func redisConfigEmpty(r RedisConfig) bool {
+	return r.Mode == "" && r.Database == 0 && len(r.KeyPatterns) == 0 && r.Protocol == 0 && r.ACLRecheck == 0 && r.CatalogMaxAge == 0 && !r.AllowReadonlyScripts && r.MaxScriptBytes == 0 && r.MaxKeysPerCommand == 0 && r.MaxArgumentBytes == 0 && r.MaxReplyDepth == 0 && r.MaxReplyElements == 0
+}
+
+func validRedisKeyPattern(pattern string) bool {
+	if pattern == "*" {
+		return true
+	}
+	if len(pattern) < 2 || !strings.HasSuffix(pattern, "*") || strings.ContainsAny(strings.TrimSuffix(pattern, "*"), "*?[]\\") {
+		return false
+	}
+	return !strings.ContainsAny(pattern, "\x00\r\n")
 }
 
 func isProductionEnvironment(value string) bool {
