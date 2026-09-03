@@ -5,11 +5,12 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
+	"strconv"
+	"time"
+
 	"github.com/google/uuid"
 	"github.com/your-org/readonly-db-mcp/internal/admission"
 	"github.com/your-org/readonly-db-mcp/internal/core"
-	"strconv"
-	"time"
 )
 
 func (t *Target) BatchQuery(ctx context.Context, r core.BatchRequest) (*core.BatchResult, error) {
@@ -30,13 +31,24 @@ func (t *Target) BatchQuery(ctx context.Context, r core.BatchRequest) (*core.Bat
 		return nil, fmt.Errorf("requested timeout exceeds configured maximum")
 	}
 	valid := make([]*core.Validation, len(r.Queries))
+	batchParameterBytes := 0
 	for i, q := range r.Queries {
-		v, err := t.policy.Validate(q.SQL, len(q.Parameters))
+		v, err := t.policy.Load().Validate(q.SQL, len(q.Parameters))
 		if err != nil {
 			return nil, fmt.Errorf("batch query %d: %w", i+1, err)
 		}
 		if q.MaxRows < 0 || q.MaxRows > t.limits.MaxRows {
 			return nil, fmt.Errorf("batch query %d row limit exceeds configured maximum", i+1)
+		}
+		if len(q.Parameters) > t.limits.MaxParameters {
+			return nil, fmt.Errorf("batch query %d has too many parameters", i+1)
+		}
+		if err := validateParameters(q.Parameters, t.limits.MaxParameterBytes, t.limits.MaxParameterValueBytes); err != nil {
+			return nil, fmt.Errorf("batch query %d: %w", i+1, err)
+		}
+		batchParameterBytes += parameterBytes(q.Parameters)
+		if batchParameterBytes > t.limits.MaxParameterBytes {
+			return nil, fmt.Errorf("batch SQL parameters exceed the total byte limit")
 		}
 		valid[i] = v
 	}
@@ -47,6 +59,11 @@ func (t *Target) BatchQuery(ctx context.Context, r core.BatchRequest) (*core.Bat
 		return nil, fmt.Errorf("query concurrency limit: %w", err)
 	}
 	defer permit.Release()
+	t.gate.RLock()
+	defer t.gate.RUnlock()
+	if err := t.requireHealthy(); err != nil {
+		return nil, err
+	}
 	tx, err := t.db.BeginTx(qctx, &sql.TxOptions{ReadOnly: true, Isolation: sql.LevelRepeatableRead})
 	if err != nil {
 		return nil, sanitize(err)
@@ -63,10 +80,10 @@ func (t *Target) BatchQuery(ctx context.Context, r core.BatchRequest) (*core.Bat
 	id := uuid.NewString()
 	out := &core.BatchResult{BatchID: id, Target: t.cfg.Name, Engine: t.cfg.Engine, Environment: t.cfg.Environment, Consistency: t.cfg.Consistency, Database: t.cfg.Database, Results: make([]*core.QueryResult, 0, len(r.Queries))}
 	for i, q := range r.Queries {
-		minimal := *out
-		minimal.Results = append(append([]*core.QueryResult(nil), out.Results...), &core.QueryResult{Target: t.cfg.Name})
-		b, _ := json.Marshal(&minimal)
-		if len(b) > t.limits.MaxResultBytes {
+		current, _ := json.Marshal(out)
+		placeholder, _ := json.Marshal(&core.QueryResult{QueryID: fmt.Sprintf("%s/%d", id, i+1), Target: t.cfg.Name, Engine: t.cfg.Engine, Environment: t.cfg.Environment, Consistency: t.cfg.Consistency, Database: t.cfg.Database})
+		remaining := t.limits.MaxResultBytes - len(current) - len(placeholder) - 1
+		if remaining < 1 {
 			out.Truncated = true
 			out.TruncationReason = "result_byte_limit"
 			break
@@ -79,7 +96,7 @@ func (t *Target) BatchQuery(ctx context.Context, r core.BatchRequest) (*core.Bat
 		if err != nil {
 			return nil, sanitize(err)
 		}
-		qr, err := t.collect(rows, maxRows)
+		qr, err := t.collect(rows, maxRows, remaining)
 		rows.Close()
 		if err != nil {
 			return nil, err

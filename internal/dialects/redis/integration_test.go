@@ -45,3 +45,39 @@ func TestRedisIntegrationReadAndWriteBoundary(t *testing.T) {
 		t.Fatal("write command passed application policy")
 	}
 }
+
+func TestRedisMultiNodeIntegrationReadAndWriteBoundary(t *testing.T) {
+	for _, test := range []struct {
+		mode, configEnv, targetEnv, keyEnv string
+	}{
+		{"sentinel", "READONLY_DB_MCP_REDIS_SENTINEL_CONFIG", "READONLY_DB_MCP_REDIS_SENTINEL_TARGET", "READONLY_DB_MCP_REDIS_SENTINEL_KEY"},
+		{"cluster", "READONLY_DB_MCP_REDIS_CLUSTER_CONFIG", "READONLY_DB_MCP_REDIS_CLUSTER_TARGET", "READONLY_DB_MCP_REDIS_CLUSTER_KEY"},
+	} {
+		t.Run(test.mode, func(t *testing.T) {
+			path, name, key := os.Getenv(test.configEnv), os.Getenv(test.targetEnv), os.Getenv(test.keyEnv)
+			if path == "" || name == "" || key == "" {
+				t.Skip("multi-node Redis integration environment is not configured")
+			}
+			loaded, err := config.Load(path)
+			if err != nil {
+				t.Fatal(err)
+			}
+			cfg := loaded.Targets[name]
+			if cfg == nil || cfg.Engine != config.EngineRedis || cfg.Redis.Mode != test.mode {
+				t.Fatalf("target %q is not a Redis %s target", name, test.mode)
+			}
+			controller := admission.New(admission.Config{Global: loaded.Limits.GlobalConcurrency, PerTarget: loaded.Limits.PerTargetConcurrency, MaxQueued: loaded.Limits.MaxQueuedRequests, QueueTimeout: loaded.Limits.QueueTimeout, BatchMax: loaded.Limits.WorkloadClasses.BatchMaxConcurrency, MaintenanceMax: loaded.Limits.WorkloadClasses.MaintenanceMaxConcurrency})
+			target, err := Open(context.Background(), cfg, loaded.Limits, controller, nil, nil)
+			if err != nil {
+				t.Fatal(err)
+			}
+			defer target.Close()
+			if _, err := target.RedisCommand(context.Background(), core.RedisRequest{Command: "GET", Arguments: []core.RedisArgument{arg(key)}}); err != nil {
+				t.Fatal(err)
+			}
+			if _, err := target.RedisCommand(context.Background(), core.RedisRequest{Command: "SET", Arguments: []core.RedisArgument{arg(key), arg("must-not-write")}}); err == nil {
+				t.Fatal("write command passed application policy")
+			}
+		})
+	}
+}

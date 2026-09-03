@@ -3,12 +3,14 @@ package config
 import (
 	"errors"
 	"fmt"
+	"io"
 	"net"
 	"os"
 	"path/filepath"
 	"regexp"
 	"runtime"
 	"sort"
+	"strconv"
 	"strings"
 	"time"
 
@@ -51,19 +53,21 @@ type ServerConfig struct {
 }
 
 type Limits struct {
-	GlobalConcurrency    int             `yaml:"global_concurrency"`
-	PerTargetConcurrency int             `yaml:"per_target_concurrency"`
-	DefaultTimeout       time.Duration   `yaml:"default_timeout"`
-	MaxTimeout           time.Duration   `yaml:"max_timeout"`
-	MaxRows              int             `yaml:"max_rows"`
-	MaxResultBytes       int             `yaml:"max_result_bytes"`
-	MaxCellBytes         int             `yaml:"max_cell_bytes"`
-	MaxSQLBytes          int             `yaml:"max_sql_bytes"`
-	MaxBatchQueries      int             `yaml:"max_batch_queries"`
-	MaxParameters        int             `yaml:"max_parameters"`
-	MaxQueuedRequests    int             `yaml:"max_queued_requests"`
-	QueueTimeout         time.Duration   `yaml:"queue_timeout"`
-	WorkloadClasses      WorkloadClasses `yaml:"workload_classes"`
+	GlobalConcurrency      int             `yaml:"global_concurrency"`
+	PerTargetConcurrency   int             `yaml:"per_target_concurrency"`
+	DefaultTimeout         time.Duration   `yaml:"default_timeout"`
+	MaxTimeout             time.Duration   `yaml:"max_timeout"`
+	MaxRows                int             `yaml:"max_rows"`
+	MaxResultBytes         int             `yaml:"max_result_bytes"`
+	MaxCellBytes           int             `yaml:"max_cell_bytes"`
+	MaxSQLBytes            int             `yaml:"max_sql_bytes"`
+	MaxBatchQueries        int             `yaml:"max_batch_queries"`
+	MaxParameters          int             `yaml:"max_parameters"`
+	MaxParameterBytes      int             `yaml:"max_parameter_bytes"`
+	MaxParameterValueBytes int             `yaml:"max_parameter_value_bytes"`
+	MaxQueuedRequests      int             `yaml:"max_queued_requests"`
+	QueueTimeout           time.Duration   `yaml:"queue_timeout"`
+	WorkloadClasses        WorkloadClasses `yaml:"workload_classes"`
 }
 
 type WorkloadClasses struct {
@@ -87,10 +91,15 @@ type TargetConfig struct {
 	DeniedTables   []string            `yaml:"denied_tables"`
 	Connection     ConnectionConfig    `yaml:"connection"`
 	TLS            TLSConfig           `yaml:"tls"`
+	MySQL          MySQLConfig         `yaml:"mysql"`
 	PostgreSQL     PostgreSQLConfig    `yaml:"postgresql"`
 	Redis          RedisConfig         `yaml:"redis"`
 	MetadataCache  MetadataCacheConfig `yaml:"metadata_cache"`
 	ResultCache    ResultCacheConfig   `yaml:"result_cache"`
+}
+
+type MySQLConfig struct {
+	PrivilegeRecheck time.Duration `yaml:"privilege_recheck_interval"`
 }
 
 type PostgreSQLConfig struct {
@@ -102,18 +111,53 @@ type PostgreSQLConfig struct {
 }
 
 type RedisConfig struct {
-	Mode                 string        `yaml:"mode"`
-	Database             int           `yaml:"database"`
-	KeyPatterns          []string      `yaml:"key_patterns"`
-	Protocol             int           `yaml:"protocol"`
-	ACLRecheck           time.Duration `yaml:"acl_recheck_interval"`
-	CatalogMaxAge        time.Duration `yaml:"command_catalog_max_age"`
-	AllowReadonlyScripts bool          `yaml:"allow_readonly_scripts"`
-	MaxScriptBytes       int           `yaml:"max_script_bytes"`
-	MaxKeysPerCommand    int           `yaml:"max_keys_per_command"`
-	MaxArgumentBytes     int           `yaml:"max_argument_bytes"`
-	MaxReplyDepth        int           `yaml:"max_reply_depth"`
-	MaxReplyElements     int           `yaml:"max_reply_elements"`
+	Mode                 string              `yaml:"mode"`
+	Database             int                 `yaml:"database"`
+	KeyPatterns          []string            `yaml:"key_patterns"`
+	Protocol             int                 `yaml:"protocol"`
+	ACLRecheck           time.Duration       `yaml:"acl_recheck_interval"`
+	CatalogMaxAge        time.Duration       `yaml:"command_catalog_max_age"`
+	AllowReadonlyScripts bool                `yaml:"allow_readonly_scripts"`
+	MaxScriptBytes       int                 `yaml:"max_script_bytes"`
+	MaxKeysPerCommand    int                 `yaml:"max_keys_per_command"`
+	MaxArgumentBytes     int                 `yaml:"max_argument_bytes"`
+	MaxReplyDepth        int                 `yaml:"max_reply_depth"`
+	MaxReplyElements     int                 `yaml:"max_reply_elements"`
+	Sentinel             RedisSentinelConfig `yaml:"sentinel"`
+	Cluster              RedisClusterConfig  `yaml:"cluster"`
+	ModuleProfiles       []string            `yaml:"module_profiles"`
+	TrustedProfileKeys   map[string]string   `yaml:"trusted_profile_keys"`
+	ModuleObjectPatterns map[string][]string `yaml:"module_object_patterns"`
+}
+
+type RedisSentinelConfig struct {
+	ServiceName         string                 `yaml:"service_name"`
+	Addresses           []string               `yaml:"addresses"`
+	Username            string                 `yaml:"username"`
+	PasswordFile        string                 `yaml:"password_file"`
+	PasswordEnv         string                 `yaml:"password_env"`
+	MinAgreement        int                    `yaml:"min_agreement"`
+	DiscoveryTimeout    time.Duration          `yaml:"discovery_timeout"`
+	RefreshInterval     time.Duration          `yaml:"refresh_interval"`
+	ReadRole            string                 `yaml:"read_role"`
+	EndpointAllowlist   RedisEndpointAllowlist `yaml:"endpoint_allowlist"`
+	RequireMasterLinkUp *bool                  `yaml:"require_master_link_up"`
+	MaxReplicaLagBytes  int64                  `yaml:"max_replica_lag_bytes"`
+}
+
+type RedisClusterConfig struct {
+	SeedAddresses           []string               `yaml:"seed_addresses"`
+	ReadRole                string                 `yaml:"read_role"`
+	TopologyRefresh         time.Duration          `yaml:"topology_refresh_interval"`
+	TopologyMaxAge          time.Duration          `yaml:"topology_max_age"`
+	RedirectLimit           int                    `yaml:"redirect_limit"`
+	RequireFullSlotCoverage *bool                  `yaml:"require_full_slot_coverage"`
+	EndpointAllowlist       RedisEndpointAllowlist `yaml:"endpoint_allowlist"`
+}
+
+type RedisEndpointAllowlist struct {
+	DNSSuffixes []string `yaml:"dns_suffixes"`
+	CIDRs       []string `yaml:"cidrs"`
 }
 
 type MetadataCacheConfig struct {
@@ -162,7 +206,7 @@ func Load(path string) (*Config, error) {
 	if path == "" {
 		return nil, errors.New("configuration path is required")
 	}
-	b, err := os.ReadFile(path)
+	b, err := readFileLimited(path, 4<<20)
 	if err != nil {
 		return nil, fmt.Errorf("read configuration: %w", err)
 	}
@@ -171,6 +215,13 @@ func Load(path string) (*Config, error) {
 	dec := yaml.NewDecoder(strings.NewReader(string(b)))
 	dec.KnownFields(true)
 	if err := dec.Decode(&cfg); err != nil {
+		return nil, fmt.Errorf("decode configuration: %w", err)
+	}
+	var extra any
+	if err := dec.Decode(&extra); err != io.EOF {
+		if err == nil {
+			return nil, errors.New("configuration must contain exactly one YAML document")
+		}
 		return nil, fmt.Errorf("decode configuration: %w", err)
 	}
 
@@ -225,6 +276,12 @@ func applyDefaults(cfg *Config) {
 	if cfg.Limits.MaxParameters == 0 {
 		cfg.Limits.MaxParameters = 100
 	}
+	if cfg.Limits.MaxParameterBytes == 0 {
+		cfg.Limits.MaxParameterBytes = 1 << 20
+	}
+	if cfg.Limits.MaxParameterValueBytes == 0 {
+		cfg.Limits.MaxParameterValueBytes = 256 << 10
+	}
 	if cfg.Limits.MaxQueuedRequests == 0 {
 		cfg.Limits.MaxQueuedRequests = 32
 	}
@@ -255,7 +312,9 @@ func applyDefaults(cfg *Config) {
 			if target.Engine == EnginePostgreSQL {
 				target.Port = 5432
 			} else if target.Engine == EngineRedis {
-				target.Port = 6379
+				if target.Redis.Mode != "sentinel" && target.Redis.Mode != "cluster" {
+					target.Port = 6379
+				}
 			} else {
 				target.Port = 3306
 			}
@@ -298,6 +357,9 @@ func applyDefaults(cfg *Config) {
 				target.PostgreSQL.PrivilegeRecheck = 5 * time.Minute
 			}
 		}
+		if target.Engine == EngineMySQL && target.MySQL.PrivilegeRecheck == 0 {
+			target.MySQL.PrivilegeRecheck = 5 * time.Minute
+		}
 		if target.Engine == EngineRedis {
 			if target.Redis.Mode == "" {
 				target.Redis.Mode = "standalone"
@@ -325,6 +387,41 @@ func applyDefaults(cfg *Config) {
 			}
 			if target.Redis.MaxReplyElements == 0 {
 				target.Redis.MaxReplyElements = 10_000
+			}
+			if target.Redis.Sentinel.MinAgreement == 0 {
+				target.Redis.Sentinel.MinAgreement = 2
+			}
+			if target.Redis.Sentinel.DiscoveryTimeout == 0 {
+				target.Redis.Sentinel.DiscoveryTimeout = 750 * time.Millisecond
+			}
+			if target.Redis.Sentinel.RefreshInterval == 0 {
+				target.Redis.Sentinel.RefreshInterval = 5 * time.Second
+			}
+			if target.Redis.Sentinel.ReadRole == "" {
+				target.Redis.Sentinel.ReadRole = "primary"
+			}
+			if target.Redis.Sentinel.RequireMasterLinkUp == nil {
+				value := true
+				target.Redis.Sentinel.RequireMasterLinkUp = &value
+			}
+			if target.Redis.Sentinel.MaxReplicaLagBytes == 0 {
+				target.Redis.Sentinel.MaxReplicaLagBytes = 16 << 20
+			}
+			if target.Redis.Cluster.ReadRole == "" {
+				target.Redis.Cluster.ReadRole = "primary"
+			}
+			if target.Redis.Cluster.TopologyRefresh == 0 {
+				target.Redis.Cluster.TopologyRefresh = 5 * time.Second
+			}
+			if target.Redis.Cluster.TopologyMaxAge == 0 {
+				target.Redis.Cluster.TopologyMaxAge = 30 * time.Second
+			}
+			if target.Redis.Cluster.RedirectLimit == 0 {
+				target.Redis.Cluster.RedirectLimit = 3
+			}
+			if target.Redis.Cluster.RequireFullSlotCoverage == nil {
+				value := true
+				target.Redis.Cluster.RequireFullSlotCoverage = &value
 			}
 		}
 		if target.Engine != EngineRedis {
@@ -365,9 +462,14 @@ func applyDefaults(cfg *Config) {
 }
 
 func resolveRelativePaths(target *TargetConfig, configDir string) {
-	for _, path := range []*string{&target.PasswordFile, &target.TLS.CAFile, &target.TLS.CertFile, &target.TLS.KeyFile} {
+	for _, path := range []*string{&target.PasswordFile, &target.TLS.CAFile, &target.TLS.CertFile, &target.TLS.KeyFile, &target.Redis.Sentinel.PasswordFile} {
 		if *path != "" && !filepath.IsAbs(*path) {
 			*path = filepath.Join(configDir, *path)
+		}
+	}
+	for i := range target.Redis.ModuleProfiles {
+		if !filepath.IsAbs(target.Redis.ModuleProfiles[i]) {
+			target.Redis.ModuleProfiles[i] = filepath.Join(configDir, target.Redis.ModuleProfiles[i])
 		}
 	}
 }
@@ -385,6 +487,9 @@ func (cfg *Config) Validate() error {
 	}
 	if len(cfg.Targets) == 0 {
 		problems = append(problems, "at least one target is required")
+	}
+	if len(cfg.Targets) > 64 {
+		problems = append(problems, "targets must not contain more than 64 entries")
 	}
 	if cfg.Limits.GlobalConcurrency < 1 || cfg.Limits.GlobalConcurrency > 32 {
 		problems = append(problems, "limits.global_concurrency must be between 1 and 32")
@@ -413,6 +518,9 @@ func (cfg *Config) Validate() error {
 	if cfg.Limits.MaxParameters < 1 || cfg.Limits.MaxParameters > 10_000 {
 		problems = append(problems, "limits.max_parameters must be between 1 and 10000")
 	}
+	if cfg.Limits.MaxParameterValueBytes < 1024 || cfg.Limits.MaxParameterValueBytes > 16<<20 || cfg.Limits.MaxParameterBytes < cfg.Limits.MaxParameterValueBytes || cfg.Limits.MaxParameterBytes > 64<<20 {
+		problems = append(problems, "SQL parameter byte limits are invalid")
+	}
 	if cfg.Limits.MaxQueuedRequests < 1 || cfg.Limits.MaxQueuedRequests > 1024 {
 		problems = append(problems, "limits.max_queued_requests must be between 1 and 1024")
 	}
@@ -431,6 +539,7 @@ func (cfg *Config) Validate() error {
 	}
 
 	names := make([]string, 0, len(cfg.Targets))
+	totalMaxOpen, totalMaxIdle := 0, 0
 	for name := range cfg.Targets {
 		names = append(names, name)
 	}
@@ -441,9 +550,14 @@ func (cfg *Config) Validate() error {
 			problems = append(problems, fmt.Sprintf("target %q is null", name))
 			continue
 		}
+		totalMaxOpen += target.Connection.MaxOpen
+		totalMaxIdle += target.Connection.MaxIdle
 		for _, problem := range validateTarget(name, target, cfg.Limits) {
 			problems = append(problems, fmt.Sprintf("target %q: %s", name, problem))
 		}
+	}
+	if totalMaxOpen > 256 || totalMaxIdle > 128 {
+		problems = append(problems, "aggregate target connection pools exceed 256 open or 128 idle connections")
 	}
 	if cfg.ResourceForecastBytes() > 1<<30 {
 		problems = append(problems, "configured cache and concurrent response forecast exceeds 1 GiB hard ceiling")
@@ -459,11 +573,14 @@ func (cfg *Config) Validate() error {
 // concurrent response object/encoding copies. It excludes the Go runtime,
 // parser state, driver buffers, and database server memory.
 func (cfg *Config) ResourceForecastBytes() int64 {
-	total := int64(cfg.Limits.GlobalConcurrency) * int64(cfg.Limits.MaxResultBytes) * 3
+	total := int64(cfg.Limits.GlobalConcurrency) * (int64(cfg.Limits.MaxResultBytes)*3 + int64(cfg.Limits.MaxParameterBytes))
 	for _, target := range cfg.Targets {
 		if target != nil {
 			if target.Engine != EngineRedis {
 				total += int64(target.MetadataCache.MaxBytes) + int64(target.ResultCache.MaxBytes)
+			}
+			if target.Engine == EngineRedis && target.Redis.Mode == "cluster" {
+				total += 2 * 256 * 64 << 10
 			}
 		}
 	}
@@ -484,11 +601,15 @@ func validateTarget(name string, target *TargetConfig, limits Limits) []string {
 	if target.Consistency != ConsistencyCurrent && target.Consistency != ConsistencyEventual {
 		problems = append(problems, "consistency must be current or eventual")
 	}
-	if strings.TrimSpace(target.Host) == "" {
-		problems = append(problems, "host is required")
-	}
-	if target.Port < 1 || target.Port > 65535 {
-		problems = append(problems, "port is invalid")
+	if target.Engine != EngineRedis || target.Redis.Mode == "standalone" {
+		if strings.TrimSpace(target.Host) == "" {
+			problems = append(problems, "host is required")
+		}
+		if target.Port < 1 || target.Port > 65535 {
+			problems = append(problems, "port is invalid")
+		}
+	} else if target.Host != "" || target.Port != 0 {
+		problems = append(problems, "top-level host/port must be omitted for Redis Sentinel and Cluster targets")
 	}
 	if target.Engine != EngineRedis && !safeIdentifier.MatchString(target.Database) {
 		problems = append(problems, "database is required and must be a safe identifier")
@@ -556,7 +677,7 @@ func validateTarget(name string, target *TargetConfig, limits Limits) []string {
 	}
 	switch target.TLS.Mode {
 	case TLSDisabled:
-		if !isLoopbackHost(target.Host) && !target.TLS.AllowInsecureRemote {
+		if !redisTargetIsLoopback(target) && !target.TLS.AllowInsecureRemote {
 			problems = append(problems, "TLS may be disabled for a remote database only when tls.allow_insecure_remote is true")
 		}
 		if isProductionEnvironment(target.Environment) {
@@ -586,6 +707,9 @@ func validateTarget(name string, target *TargetConfig, limits Limits) []string {
 		problems = append(problems, "tls.cert_file and tls.key_file must be configured together")
 	}
 	if target.Engine == EngineMySQL {
+		if target.MySQL.PrivilegeRecheck < 10*time.Second || target.MySQL.PrivilegeRecheck > time.Hour {
+			problems = append(problems, "mysql.privilege_recheck_interval must be between 10s and 1h")
+		}
 		if target.PostgreSQL != (PostgreSQLConfig{}) {
 			problems = append(problems, "postgresql settings are valid only for postgresql targets")
 		}
@@ -593,6 +717,9 @@ func validateTarget(name string, target *TargetConfig, limits Limits) []string {
 			problems = append(problems, "redis settings are valid only for redis targets")
 		}
 	} else if target.Engine == EnginePostgreSQL {
+		if target.MySQL != (MySQLConfig{}) {
+			problems = append(problems, "mysql settings are valid only for mysql targets")
+		}
 		if !redisConfigEmpty(target.Redis) {
 			problems = append(problems, "redis settings are valid only for redis targets")
 		}
@@ -610,6 +737,9 @@ func validateTarget(name string, target *TargetConfig, limits Limits) []string {
 			problems = append(problems, "postgresql.privilege_recheck_interval must be between 10s and 1h")
 		}
 	} else if target.Engine == EngineRedis {
+		if target.MySQL != (MySQLConfig{}) {
+			problems = append(problems, "mysql settings are valid only for mysql targets")
+		}
 		if target.PostgreSQL != (PostgreSQLConfig{}) {
 			problems = append(problems, "postgresql settings are valid only for postgresql targets")
 		}
@@ -620,8 +750,8 @@ func validateTarget(name string, target *TargetConfig, limits Limits) []string {
 		if target.MetadataCache != (MetadataCacheConfig{}) || target.ResultCache != (ResultCacheConfig{}) {
 			problems = append(problems, "SQL metadata/result cache settings are not valid for Redis targets")
 		}
-		if r.Mode != "standalone" {
-			problems = append(problems, "redis.mode currently must be standalone")
+		if r.Mode != "standalone" && r.Mode != "sentinel" && r.Mode != "cluster" {
+			problems = append(problems, "redis.mode must be standalone, sentinel, or cluster")
 		}
 		if r.Database < 0 || r.Database > 15 {
 			problems = append(problems, "redis.database must be between 0 and 15")
@@ -645,6 +775,96 @@ func validateTarget(name string, target *TargetConfig, limits Limits) []string {
 		}
 		if r.MaxReplyDepth < 1 || r.MaxReplyDepth > 128 || r.MaxReplyElements < 1 || r.MaxReplyElements > 1_000_000 {
 			problems = append(problems, "redis reply ceilings are invalid")
+		}
+		switch r.Mode {
+		case "standalone":
+			if len(r.Sentinel.Addresses) != 0 || r.Sentinel.ServiceName != "" || len(r.Cluster.SeedAddresses) != 0 {
+				problems = append(problems, "Sentinel/Cluster endpoints are not valid in standalone mode")
+			}
+		case "sentinel":
+			if !safeName.MatchString(r.Sentinel.ServiceName) {
+				problems = append(problems, "redis.sentinel.service_name is invalid")
+			}
+			if len(r.Sentinel.Addresses) < 2 || len(r.Sentinel.Addresses) > 16 {
+				problems = append(problems, "redis.sentinel.addresses must contain 2-16 endpoints")
+			}
+			for _, address := range r.Sentinel.Addresses {
+				if !validHostPort(address) {
+					problems = append(problems, fmt.Sprintf("invalid Redis Sentinel address %q", address))
+				}
+			}
+			if (r.Sentinel.PasswordFile == "") == (r.Sentinel.PasswordEnv == "") {
+				problems = append(problems, "configure exactly one Redis Sentinel password source")
+			}
+			if r.Sentinel.MinAgreement < 2 || r.Sentinel.MinAgreement > len(r.Sentinel.Addresses) {
+				problems = append(problems, "redis.sentinel.min_agreement is invalid")
+			}
+			if r.Sentinel.DiscoveryTimeout < 100*time.Millisecond || r.Sentinel.DiscoveryTimeout > 5*time.Second || r.Sentinel.RefreshInterval < time.Second || r.Sentinel.RefreshInterval > time.Minute {
+				problems = append(problems, "Redis Sentinel discovery intervals are invalid")
+			}
+			if r.Sentinel.ReadRole != "primary" && r.Sentinel.ReadRole != "replica" {
+				problems = append(problems, "redis.sentinel.read_role must be primary or replica")
+			}
+			if r.Sentinel.ReadRole == "replica" && target.Consistency != ConsistencyEventual {
+				problems = append(problems, "Redis Sentinel replica reads require eventual consistency")
+			}
+			if len(r.Sentinel.EndpointAllowlist.CIDRs) == 0 {
+				problems = append(problems, "redis.sentinel.endpoint_allowlist.cidrs must not be empty")
+			}
+			problems = append(problems, validateEndpointAllowlist(r.Sentinel.EndpointAllowlist)...)
+			if r.Sentinel.RequireMasterLinkUp == nil || !*r.Sentinel.RequireMasterLinkUp {
+				problems = append(problems, "Redis Sentinel requires master link verification")
+			}
+			if r.Sentinel.MaxReplicaLagBytes < 1 || r.Sentinel.MaxReplicaLagBytes > 1<<30 {
+				problems = append(problems, "redis.sentinel.max_replica_lag_bytes must be between 1 byte and 1 GiB")
+			}
+			if len(r.Cluster.SeedAddresses) != 0 {
+				problems = append(problems, "Redis Cluster settings are not valid in Sentinel mode")
+			}
+		case "cluster":
+			if r.Database != 0 {
+				problems = append(problems, "Redis Cluster database must be zero")
+			}
+			if len(r.Cluster.SeedAddresses) < 1 || len(r.Cluster.SeedAddresses) > 32 {
+				problems = append(problems, "redis.cluster.seed_addresses must contain 1-32 endpoints")
+			}
+			for _, address := range r.Cluster.SeedAddresses {
+				if !validHostPort(address) {
+					problems = append(problems, fmt.Sprintf("invalid Redis Cluster seed address %q", address))
+				}
+			}
+			if r.Cluster.ReadRole != "primary" && r.Cluster.ReadRole != "replica" {
+				problems = append(problems, "redis.cluster.read_role must be primary or replica")
+			}
+			if r.Cluster.ReadRole == "replica" && target.Consistency != ConsistencyEventual {
+				problems = append(problems, "Redis Cluster replica reads require eventual consistency")
+			}
+			if r.Cluster.TopologyRefresh < time.Second || r.Cluster.TopologyRefresh > time.Minute || r.Cluster.TopologyMaxAge < r.Cluster.TopologyRefresh || r.Cluster.TopologyMaxAge > 5*time.Minute {
+				problems = append(problems, "Redis Cluster topology intervals are invalid")
+			}
+			if r.Cluster.RedirectLimit < 1 || r.Cluster.RedirectLimit > 8 || r.Cluster.RequireFullSlotCoverage == nil || !*r.Cluster.RequireFullSlotCoverage {
+				problems = append(problems, "Redis Cluster requires 1-8 redirects and full slot coverage")
+			}
+			if len(r.Cluster.EndpointAllowlist.CIDRs) == 0 {
+				problems = append(problems, "redis.cluster.endpoint_allowlist.cidrs must not be empty")
+			}
+			problems = append(problems, validateEndpointAllowlist(r.Cluster.EndpointAllowlist)...)
+			if len(r.Sentinel.Addresses) != 0 || r.Sentinel.ServiceName != "" {
+				problems = append(problems, "Redis Sentinel settings are not valid in Cluster mode")
+			}
+		}
+		if len(r.ModuleProfiles) > 0 && len(r.TrustedProfileKeys) == 0 {
+			problems = append(problems, "Redis module profiles require trusted_profile_keys")
+		}
+		for command, patterns := range r.ModuleObjectPatterns {
+			if command == "" || strings.ToUpper(command) != command || len(patterns) == 0 {
+				problems = append(problems, "redis.module_object_patterns requires uppercase command names and non-empty scopes")
+			}
+			for _, pattern := range patterns {
+				if !validRedisKeyPattern(pattern) {
+					problems = append(problems, fmt.Sprintf("Redis module object pattern %q is invalid", pattern))
+				}
+			}
 		}
 	}
 	if target.Engine != EngineRedis {
@@ -672,7 +892,50 @@ func validateTarget(name string, target *TargetConfig, limits Limits) []string {
 }
 
 func redisConfigEmpty(r RedisConfig) bool {
-	return r.Mode == "" && r.Database == 0 && len(r.KeyPatterns) == 0 && r.Protocol == 0 && r.ACLRecheck == 0 && r.CatalogMaxAge == 0 && !r.AllowReadonlyScripts && r.MaxScriptBytes == 0 && r.MaxKeysPerCommand == 0 && r.MaxArgumentBytes == 0 && r.MaxReplyDepth == 0 && r.MaxReplyElements == 0
+	return r.Mode == "" && r.Database == 0 && len(r.KeyPatterns) == 0 && r.Protocol == 0 && r.ACLRecheck == 0 && r.CatalogMaxAge == 0 && !r.AllowReadonlyScripts && r.MaxScriptBytes == 0 && r.MaxKeysPerCommand == 0 && r.MaxArgumentBytes == 0 && r.MaxReplyDepth == 0 && r.MaxReplyElements == 0 && len(r.Sentinel.Addresses) == 0 && r.Sentinel.ServiceName == "" && len(r.Cluster.SeedAddresses) == 0 && len(r.ModuleProfiles) == 0 && len(r.TrustedProfileKeys) == 0 && len(r.ModuleObjectPatterns) == 0
+}
+
+func validHostPort(value string) bool {
+	host, port, err := net.SplitHostPort(value)
+	if err != nil || strings.TrimSpace(host) == "" {
+		return false
+	}
+	n, err := strconv.Atoi(port)
+	return err == nil && n > 0 && n <= 65535
+}
+
+func validateEndpointAllowlist(value RedisEndpointAllowlist) []string {
+	var problems []string
+	for _, suffix := range value.DNSSuffixes {
+		if len(suffix) < 2 || suffix[0] != '.' || strings.ContainsAny(suffix, " /\\\t\r\n") {
+			problems = append(problems, fmt.Sprintf("invalid Redis endpoint DNS suffix %q", suffix))
+		}
+	}
+	for _, cidr := range value.CIDRs {
+		if _, _, err := net.ParseCIDR(cidr); err != nil {
+			problems = append(problems, fmt.Sprintf("invalid Redis endpoint CIDR %q", cidr))
+		}
+	}
+	return problems
+}
+
+func redisTargetIsLoopback(target *TargetConfig) bool {
+	if target.Engine != EngineRedis || target.Redis.Mode == "standalone" {
+		return isLoopbackHost(target.Host)
+	}
+	var addresses []string
+	if target.Redis.Mode == "sentinel" {
+		addresses = target.Redis.Sentinel.Addresses
+	} else {
+		addresses = target.Redis.Cluster.SeedAddresses
+	}
+	for _, address := range addresses {
+		host, _, err := net.SplitHostPort(address)
+		if err != nil || !isLoopbackHost(host) {
+			return false
+		}
+	}
+	return len(addresses) > 0
 }
 
 func validRedisKeyPattern(pattern string) bool {
@@ -701,27 +964,69 @@ func isLoopbackHost(host string) bool {
 }
 
 func (target *TargetConfig) Password() (string, error) {
-	if target.PasswordEnv != "" {
-		value, ok := os.LookupEnv(target.PasswordEnv)
+	return readSecret(target.PasswordFile, target.PasswordEnv)
+}
+
+func (target *TargetConfig) RedisSentinelPassword() (string, error) {
+	return readSecret(target.Redis.Sentinel.PasswordFile, target.Redis.Sentinel.PasswordEnv)
+}
+
+func readSecret(passwordFile, passwordEnv string) (string, error) {
+	if passwordEnv != "" {
+		value, ok := os.LookupEnv(passwordEnv)
 		if !ok || value == "" {
-			return "", fmt.Errorf("password environment variable %q is empty", target.PasswordEnv)
+			return "", fmt.Errorf("password environment variable %q is empty", passwordEnv)
 		}
 		return value, nil
 	}
-	info, err := os.Stat(target.PasswordFile)
+	file, err := os.Open(passwordFile)
+	if err != nil {
+		return "", fmt.Errorf("open password file: %w", err)
+	}
+	defer file.Close()
+	info, err := file.Stat()
 	if err != nil {
 		return "", fmt.Errorf("stat password file: %w", err)
 	}
-	if runtime.GOOS != "windows" && info.Mode().Perm()&0o077 != 0 {
-		return "", fmt.Errorf("password file %q must not be accessible by group or others", target.PasswordFile)
+	if !info.Mode().IsRegular() || info.Size() > 64<<10 {
+		return "", errors.New("password file must be a regular file no larger than 64 KiB")
 	}
-	b, err := os.ReadFile(target.PasswordFile)
+	if runtime.GOOS != "windows" && info.Mode().Perm()&0o077 != 0 {
+		return "", fmt.Errorf("password file %q must not be accessible by group or others", passwordFile)
+	}
+	b, err := io.ReadAll(io.LimitReader(file, (64<<10)+1))
 	if err != nil {
 		return "", fmt.Errorf("read password file: %w", err)
+	}
+	if len(b) > 64<<10 {
+		return "", errors.New("password file exceeds 64 KiB")
 	}
 	password := strings.TrimRight(string(b), "\r\n")
 	if password == "" {
 		return "", errors.New("password file is empty")
 	}
 	return password, nil
+}
+
+func readFileLimited(path string, maximum int64) ([]byte, error) {
+	file, err := os.Open(path)
+	if err != nil {
+		return nil, err
+	}
+	defer file.Close()
+	info, err := file.Stat()
+	if err != nil {
+		return nil, err
+	}
+	if !info.Mode().IsRegular() || info.Size() > maximum {
+		return nil, fmt.Errorf("file must be regular and no larger than %d bytes", maximum)
+	}
+	data, err := io.ReadAll(io.LimitReader(file, maximum+1))
+	if err != nil {
+		return nil, err
+	}
+	if int64(len(data)) > maximum {
+		return nil, fmt.Errorf("file exceeds %d bytes", maximum)
+	}
+	return data, nil
 }

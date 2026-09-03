@@ -14,6 +14,8 @@ limits:
   max_sql_bytes: 32768
   max_batch_queries: 10
   max_parameters: 100
+  max_parameter_bytes: 1048576
+  max_parameter_value_bytes: 262144
   max_queued_requests: 32
   queue_timeout: 500ms
   workload_classes:
@@ -35,6 +37,8 @@ targets:
     password_file: ./secrets/inventory-test.password
     allowed_schemas:
       - inventory
+    mysql:
+      privilege_recheck_interval: 5m
     connection:
       connect_timeout: 3s
       read_timeout: 12s
@@ -71,6 +75,8 @@ targets:
     denied_tables:
       - internal_credentials
       - reporting_safe.raw_customer_exports
+    mysql:
+      privilege_recheck_interval: 5m
     connection:
       connect_timeout: 3s
       read_timeout: 12s
@@ -156,6 +162,36 @@ targets:
       max_argument_bytes: 262144
       max_reply_depth: 32
       max_reply_elements: 10000
+      # Sentinel/Cluster targets omit top-level host/port. Their discovered
+      # data nodes must match endpoint_allowlist.dns_suffixes or cidrs.
+      # sentinel:
+      #   service_name: analytics-cache
+      #   addresses: ["sentinel-a.internal:26379", "sentinel-b.internal:26379"]
+      #   username: readonly_discovery
+      #   password_file: ./secrets/redis-sentinel.password
+      #   min_agreement: 2
+      #   discovery_timeout: 750ms
+      #   refresh_interval: 5s
+      #   read_role: primary
+      #   require_master_link_up: true
+      #   max_replica_lag_bytes: 16777216
+      #   endpoint_allowlist:
+      #     dns_suffixes: [".internal"]
+      #     cidrs: ["10.20.0.0/16"]
+      # cluster:
+      #   seed_addresses: ["redis-a.internal:6379"]
+      #   read_role: primary
+      #   topology_refresh_interval: 5s
+      #   topology_max_age: 30s
+      #   redirect_limit: 3
+      #   require_full_slot_coverage: true
+      #   endpoint_allowlist:
+      #     cidrs: ["10.30.0.0/16"]
+      # Signed module envelopes and base64 Ed25519 public keys are configured
+      # with module_profiles and trusted_profile_keys. Logical module object
+      # scopes use uppercase command names, for example:
+      # module_object_patterns:
+      #   FT.SEARCH: ["tenant-42:*"]
     connection:
       connect_timeout: 3s
       read_timeout: 12s

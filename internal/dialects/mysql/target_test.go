@@ -117,6 +117,23 @@ func TestNormalizeValuePreservesLargeIntegerPrecision(t *testing.T) {
 	}
 }
 
+func TestValidateParametersEnforcesByteBudgets(t *testing.T) {
+	if err := validateParameters([]any{"12345"}, 16, 4); err == nil {
+		t.Fatal("expected per-value byte limit rejection")
+	}
+	if err := validateParameters([]any{"1234", "5678"}, 7, 4); err == nil {
+		t.Fatal("expected total byte limit rejection")
+	}
+}
+
+func TestMetadataRequiresHealthyTarget(t *testing.T) {
+	target := testTarget(nil)
+	target.healthy.Store(false)
+	if _, err := target.ListTables(context.Background(), "", false); err == nil {
+		t.Fatal("expected unhealthy metadata request rejection")
+	}
+}
+
 func FuzzPolicyDoesNotPanic(f *testing.F) {
 	policy := NewPolicy("inventory", []string{"inventory"}, nil, 32<<10)
 	for _, seed := range []string{
@@ -153,7 +170,7 @@ func testTarget(db *sql.DB) *Target {
 		Database:       "inventory",
 		AllowedSchemas: []string{"inventory"},
 	}
-	return &Target{
+	target := &Target{
 		config:               cfg,
 		limits:               limits,
 		db:                   db,
@@ -170,4 +187,6 @@ func testTarget(db *sql.DB) *Target {
 			Consistency: cfg.Consistency, Database: cfg.Database,
 		},
 	}
+	target.healthy.Store(true)
+	return target
 }

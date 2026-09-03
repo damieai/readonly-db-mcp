@@ -56,7 +56,7 @@ func attestACL(value any, cfg config.RedisConfig, catalog map[string]*redisdrive
 func attestCommandRules(rules string, catalog map[string]*redisdriver.CommandInfo) error {
 	fields := strings.Fields(strings.ToLower(rules))
 	hasReset := false
-	internal := map[string]struct{}{"acl|getuser": {}, "acl|whoami": {}, "command": {}, "command|info": {}, "command|list": {}, "command|getkeysandflags": {}, "info": {}, "module|list": {}, "ping": {}, "select": {}}
+	internal := map[string]struct{}{"acl|getuser": {}, "acl|whoami": {}, "cluster|slots": {}, "command": {}, "command|info": {}, "command|list": {}, "command|getkeysandflags": {}, "info": {}, "module|list": {}, "ping": {}, "readonly": {}, "role": {}, "select": {}}
 	for _, rule := range fields {
 		if rule == "-@all" {
 			hasReset = true

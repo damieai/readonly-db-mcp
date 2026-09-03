@@ -10,6 +10,7 @@ func TestPostgreSQLDefaultsAndValidation(t *testing.T) {
 	target := cfg.Targets["test"]
 	target.Engine = EnginePostgreSQL
 	target.Port = 5432
+	target.MySQL = MySQLConfig{}
 	target.PostgreSQL = PostgreSQLConfig{ApplicationName: "readonly-db-mcp", StatementTimeoutMargin: 250 * time.Millisecond, BatchIsolation: "repeatable-read", PrivilegeRecheck: 5 * time.Minute}
 	if err := cfg.Validate(); err != nil {
 		t.Fatal(err)

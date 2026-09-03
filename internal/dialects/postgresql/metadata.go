@@ -3,6 +3,7 @@ package postgresql
 import (
 	"context"
 	"database/sql"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"strings"
@@ -50,6 +51,11 @@ func (t *Target) ListTables(ctx context.Context, pattern string, fresh bool) ([]
 		return nil, fmt.Errorf("metadata concurrency limit: %w", err)
 	}
 	defer permit.Release()
+	t.gate.RLock()
+	defer t.gate.RUnlock()
+	if err := t.requireHealthy(); err != nil {
+		return nil, err
+	}
 	args := make([]any, len(t.cfg.AllowedSchemas))
 	holders := make([]string, len(args))
 	for i, s := range t.cfg.AllowedSchemas {
@@ -84,6 +90,9 @@ func (t *Target) ListTables(ctx context.Context, pattern string, fresh bool) ([]
 	}
 	if rows.Err() != nil {
 		return nil, sanitize(rows.Err())
+	}
+	if err := enforceMetadataBudget(out, t.limits.MaxResultBytes); err != nil {
+		return nil, err
 	}
 	t.cache.finish(key, out, t.cfg.MetadataCache.TableListTTL, true)
 	done = true
@@ -137,6 +146,11 @@ func (t *Target) DescribeTable(ctx context.Context, schema, table string, fresh 
 		return nil, fmt.Errorf("metadata concurrency limit: %w", err)
 	}
 	defer permit.Release()
+	t.gate.RLock()
+	defer t.gate.RUnlock()
+	if err := t.requireHealthy(); err != nil {
+		return nil, err
+	}
 	rows, err := t.db.QueryContext(qctx, `SELECT a.attname,pg_catalog.format_type(a.atttypid,a.atttypmod),NOT a.attnotnull,pg_catalog.pg_get_expr(d.adbin,d.adrelid),CASE WHEN a.attidentity<>'' THEN 'identity' WHEN a.attgenerated<>'' THEN 'generated' ELSE '' END,pg_catalog.col_description(a.attrelid,a.attnum) FROM pg_catalog.pg_attribute a JOIN pg_catalog.pg_class c ON c.oid=a.attrelid JOIN pg_catalog.pg_namespace n ON n.oid=c.relnamespace LEFT JOIN pg_catalog.pg_attrdef d ON d.adrelid=a.attrelid AND d.adnum=a.attnum WHERE n.nspname=$1 AND c.relname=$2 AND a.attnum>0 AND NOT a.attisdropped ORDER BY a.attnum`, schema, table)
 	if err != nil {
 		return nil, sanitize(err)
@@ -178,7 +192,21 @@ func (t *Target) DescribeTable(ctx context.Context, schema, table string, fresh 
 		indexes = append(indexes, x)
 	}
 	result := &core.TableDescription{Target: t.cfg.Name, Schema: schema, Table: table, Columns: cols, Indexes: indexes}
+	if err := enforceMetadataBudget(result, t.limits.MaxResultBytes); err != nil {
+		return nil, err
+	}
 	t.cache.finish(key, result, t.cfg.MetadataCache.TableDescriptionTTL, true)
 	done = true
 	return result, nil
+}
+
+func enforceMetadataBudget(value any, maximum int) error {
+	encoded, err := json.Marshal(value)
+	if err != nil {
+		return errors.New("encode metadata result")
+	}
+	if len(encoded) > maximum {
+		return errors.New("metadata result exceeds configured result-byte limit")
+	}
+	return nil
 }

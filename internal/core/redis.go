@@ -24,6 +24,7 @@ type RedisValidation struct {
 	KeyFingerprints []string
 	KeyCount        int
 	ArgumentBytes   int
+	KeySlots        []int `json:"-"`
 }
 
 type RedisResult struct {

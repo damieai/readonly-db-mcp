@@ -34,7 +34,7 @@ type Target struct {
 	cfg             *config.TargetConfig
 	limits          config.Limits
 	db              *sql.DB
-	policy          *Policy
+	policy          atomic.Pointer[Policy]
 	admission       *admission.Controller
 	auditor         audit.Auditor
 	metrics         metrics.Recorder
@@ -43,6 +43,8 @@ type Target struct {
 	cache           *metadataCache
 	policyRevision  string
 	healthy         atomic.Bool
+	lastAttested    atomic.Int64
+	gate            sync.RWMutex
 	maintenanceStop context.CancelFunc
 	maintenanceWG   sync.WaitGroup
 }
@@ -72,8 +74,10 @@ func Open(ctx context.Context, cfg *config.TargetConfig, limits config.Limits, c
 	if err != nil {
 		return nil, fmt.Errorf("target %q startup verification failed: %w", cfg.Name, err)
 	}
-	t := &Target{cfg: cfg, limits: limits, db: db, policy: NewPolicy(cfg.AllowedSchemas, cfg.DeniedTables, limits.MaxSQLBytes, identity.safeFunctions), admission: controller, auditor: auditor, metrics: recorder, allowed: lowerSet(cfg.AllowedSchemas), denied: lowerSet(cfg.DeniedTables), cache: newMetadataCache(cfg.MetadataCache.IsEnabled(), cfg.MetadataCache.MaxEntries, cfg.MetadataCache.MaxBytes), policyRevision: postgresPolicyRevision(cfg), info: core.TargetInfo{Name: cfg.Name, Engine: cfg.Engine, Environment: cfg.Environment, Consistency: cfg.Consistency, Database: cfg.Database, Schemas: append([]string(nil), cfg.AllowedSchemas...), Healthy: true, ReadOnlyUser: true, ServerReadOnly: identity.readOnly, ParameterStyle: "$1", ServerVersion: identity.version}}
+	t := &Target{cfg: cfg, limits: limits, db: db, admission: controller, auditor: auditor, metrics: recorder, allowed: lowerSet(cfg.AllowedSchemas), denied: lowerSet(cfg.DeniedTables), cache: newMetadataCache(cfg.MetadataCache.IsEnabled(), cfg.MetadataCache.MaxEntries, cfg.MetadataCache.MaxBytes), policyRevision: postgresPolicyRevision(cfg), info: core.TargetInfo{Name: cfg.Name, Engine: cfg.Engine, Environment: cfg.Environment, Consistency: cfg.Consistency, Database: cfg.Database, Schemas: append([]string(nil), cfg.AllowedSchemas...), Healthy: true, ReadOnlyUser: true, ServerReadOnly: identity.readOnly, ParameterStyle: "$1", ServerVersion: identity.version}}
+	t.policy.Store(NewPolicy(cfg.AllowedSchemas, cfg.DeniedTables, limits.MaxSQLBytes, identity.safeFunctions))
 	t.healthy.Store(true)
+	t.lastAttested.Store(time.Now().UnixNano())
 	t.startPrivilegeRecheck()
 	cleanup = false
 	return t, nil
@@ -291,13 +295,15 @@ func verifyIdentityAndPrivileges(ctx context.Context, db *sql.DB, c *config.Targ
 }
 func (t *Target) Info() core.TargetInfo {
 	x := t.info
-	x.Healthy = t.healthy.Load()
+	x.Healthy = t.requireHealthy() == nil
 	x.Schemas = append([]string(nil), x.Schemas...)
 	return x
 }
-func (t *Target) ValidateQuery(q string) (*core.Validation, error) { return t.policy.Validate(q, -1) }
+func (t *Target) ValidateQuery(q string) (*core.Validation, error) {
+	return t.policy.Load().Validate(q, -1)
+}
 func (t *Target) Query(ctx context.Context, r core.QueryRequest) (*core.QueryResult, error) {
-	v, err := t.policy.Validate(r.SQL, len(r.Parameters))
+	v, err := t.policy.Load().Validate(r.SQL, len(r.Parameters))
 	if err != nil {
 		t.audit(ctx, audit.Event{Target: t.cfg.Name, Operation: "query_select", Decision: "rejected", Reason: err.Error()})
 		return nil, err
@@ -305,7 +311,7 @@ func (t *Target) Query(ctx context.Context, r core.QueryRequest) (*core.QueryRes
 	return t.execute(ctx, "query_select", r.SQL, r, v)
 }
 func (t *Target) Explain(ctx context.Context, r core.QueryRequest) (*core.QueryResult, error) {
-	v, err := t.policy.Validate(r.SQL, len(r.Parameters))
+	v, err := t.policy.Load().Validate(r.SQL, len(r.Parameters))
 	if err != nil {
 		return nil, err
 	}
@@ -333,6 +339,9 @@ func (t *Target) execute(ctx context.Context, op, q string, r core.QueryRequest,
 	if len(r.Parameters) > t.limits.MaxParameters {
 		return nil, fmt.Errorf("query has too many parameters")
 	}
+	if err := validateParameters(r.Parameters, t.limits.MaxParameterBytes, t.limits.MaxParameterValueBytes); err != nil {
+		return nil, err
+	}
 	qctx, cancel := context.WithTimeout(ctx, timeout)
 	defer cancel()
 	permit, err := t.admission.Acquire(qctx, t.cfg.Name, admission.Interactive)
@@ -340,6 +349,11 @@ func (t *Target) execute(ctx context.Context, op, q string, r core.QueryRequest,
 		return nil, fmt.Errorf("query concurrency limit: %w", err)
 	}
 	defer permit.Release()
+	t.gate.RLock()
+	defer t.gate.RUnlock()
+	if err := t.requireHealthy(); err != nil {
+		return nil, err
+	}
 	tx, err := t.db.BeginTx(qctx, &sql.TxOptions{ReadOnly: true})
 	if err != nil {
 		return nil, sanitize(err)
@@ -357,7 +371,7 @@ func (t *Target) execute(ctx context.Context, op, q string, r core.QueryRequest,
 		return nil, sanitize(err)
 	}
 	defer rows.Close()
-	result, err := t.collect(rows, maxRows)
+	result, err := t.collect(rows, maxRows, t.limits.MaxResultBytes)
 	if err != nil {
 		return nil, err
 	}
@@ -375,7 +389,7 @@ func (t *Target) execute(ctx context.Context, op, q string, r core.QueryRequest,
 	t.audit(qctx, audit.Event{QueryID: result.QueryID, Target: t.cfg.Name, Operation: op, Fingerprint: v.Fingerprint, Tables: v.Tables, Decision: "allowed", Rows: result.RowCount, Truncated: result.Truncated, Duration: time.Since(started), ResponseBytes: len(encoded)})
 	return result, nil
 }
-func (t *Target) collect(rows *sql.Rows, maxRows int) (*core.QueryResult, error) {
+func (t *Target) collect(rows *sql.Rows, maxRows, byteBudget int) (*core.QueryResult, error) {
 	names, err := rows.Columns()
 	if err != nil {
 		return nil, errors.New("read result columns")
@@ -414,7 +428,7 @@ func (t *Target) collect(rows *sql.Rows, maxRows int) (*core.QueryResult, error)
 			row[names[i]] = n
 		}
 		b, _ := json.Marshal(row)
-		if used+len(b) > t.limits.MaxResultBytes {
+		if used+len(b) > byteBudget {
 			out.Truncated = true
 			break
 		}
@@ -526,6 +540,12 @@ func (t *Target) requireHealthy() error {
 	if !t.healthy.Load() {
 		return errors.New("PostgreSQL target failed its latest privilege attestation")
 	}
+	if interval := t.cfg.PostgreSQL.PrivilegeRecheck; interval > 0 {
+		lastAttested := t.lastAttested.Load()
+		if lastAttested == 0 || time.Since(time.Unix(0, lastAttested)) > 2*interval {
+			return errors.New("PostgreSQL target failed its latest privilege attestation")
+		}
+	}
 	return nil
 }
 
@@ -545,14 +565,60 @@ func (t *Target) startPrivilegeRecheck() {
 				checkCtx, checkCancel := context.WithTimeout(ctx, t.cfg.Connection.ConnectTimeout)
 				permit, err := t.admission.Acquire(checkCtx, t.cfg.Name, admission.Maintenance)
 				if err == nil {
-					_, err = verifyIdentityAndPrivileges(checkCtx, t.db, t.cfg)
+					t.gate.Lock()
+					identity, verifyErr := verifyIdentityAndPrivileges(checkCtx, t.db, t.cfg)
+					err = verifyErr
+					if err == nil {
+						t.policy.Store(NewPolicy(t.cfg.AllowedSchemas, t.cfg.DeniedTables, t.limits.MaxSQLBytes, identity.safeFunctions))
+						t.lastAttested.Store(time.Now().UnixNano())
+						t.healthy.Store(true)
+					} else {
+						t.healthy.Store(false)
+					}
+					t.gate.Unlock()
 					permit.Release()
+				} else {
+					t.healthy.Store(false)
 				}
-				t.healthy.Store(err == nil)
 				checkCancel()
 			}
 		}
 	}()
+}
+
+func validateParameters(parameters []any, totalLimit, valueLimit int) error {
+	used := 0
+	for _, value := range parameters {
+		size := 0
+		switch x := value.(type) {
+		case nil, bool, float64:
+			size = 8
+		case string:
+			size = len(x)
+		default:
+			return errors.New("parameters must be JSON scalars; encode large integers as strings")
+		}
+		if valueLimit > 0 && size > valueLimit {
+			return errors.New("SQL parameter exceeds the per-value byte limit")
+		}
+		used += size
+		if totalLimit > 0 && used > totalLimit {
+			return errors.New("SQL parameters exceed the total byte limit")
+		}
+	}
+	return nil
+}
+func parameterBytes(parameters []any) int {
+	total := 0
+	for _, value := range parameters {
+		switch x := value.(type) {
+		case string:
+			total += len(x)
+		case nil, bool, float64:
+			total += 8
+		}
+	}
+	return total
 }
 
 func (t *Target) Close() error {

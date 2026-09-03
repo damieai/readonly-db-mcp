@@ -16,6 +16,8 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"sync"
+	"sync/atomic"
 	"time"
 	"unicode/utf8"
 
@@ -43,8 +45,12 @@ type Target struct {
 	metadataCache        *metadataCache
 	resultCache          *resultCache
 	metrics              metrics.Recorder
-	verifiedAt           time.Time
+	verifiedAt           atomic.Int64
 	policyRevision       string
+	healthy              atomic.Bool
+	gate                 sync.RWMutex
+	maintenanceStop      context.CancelFunc
+	maintenanceWG        sync.WaitGroup
 }
 
 func Open(ctx context.Context, cfg *config.TargetConfig, limits config.Limits, controller *admission.Controller, auditor audit.Auditor, recorder metrics.Recorder) (*Target, error) {
@@ -111,9 +117,11 @@ func Open(ctx context.Context, cfg *config.TargetConfig, limits config.Limits, c
 		metadataCache:        newMetadataCache(cfg.MetadataCache.IsEnabled(), cfg.MetadataCache.MaxEntries, cfg.MetadataCache.MaxBytes),
 		resultCache:          newResultCache(cfg.ResultCache.Enabled, cfg.ResultCache.TTL, cfg.ResultCache.MaxEntries, cfg.ResultCache.MaxBytes, cfg.ResultCache.MaxEntryBytes),
 		metrics:              recorder,
-		verifiedAt:           time.Now(),
 		policyRevision:       targetPolicyRevision(cfg),
 	}
+	target.verifiedAt.Store(time.Now().UnixNano())
+	target.healthy.Store(true)
+	target.startPrivilegeRecheck()
 	cleanup = false
 	return target, nil
 }
@@ -236,6 +244,7 @@ func inspectIdentity(ctx context.Context, db *sql.DB) (identity, []string, error
 
 func (t *Target) Info() core.TargetInfo {
 	info := t.info
+	info.Healthy = t.requireHealthy() == nil
 	info.Schemas = append([]string(nil), t.info.Schemas...)
 	return info
 }
@@ -245,6 +254,9 @@ func (t *Target) ValidateQuery(query string) (*core.Validation, error) {
 }
 
 func (t *Target) Query(ctx context.Context, request core.QueryRequest) (*core.QueryResult, error) {
+	if err := t.requireHealthy(); err != nil {
+		return nil, err
+	}
 	if err := t.validateRequest(request); err != nil {
 		return nil, err
 	}
@@ -307,7 +319,7 @@ func (t *Target) validateRequest(request core.QueryRequest) error {
 	if len(request.Parameters) > t.limits.MaxParameters {
 		return fmt.Errorf("query has too many parameters")
 	}
-	return validateParameters(request.Parameters)
+	return validateParameters(request.Parameters, t.limits.MaxParameterBytes, t.limits.MaxParameterValueBytes)
 }
 
 func (t *Target) Explain(ctx context.Context, request core.QueryRequest) (*core.QueryResult, error) {
@@ -339,7 +351,7 @@ func (t *Target) execute(ctx context.Context, operation, query string, request c
 	if len(request.Parameters) > t.limits.MaxParameters {
 		return nil, fmt.Errorf("query has too many parameters")
 	}
-	if err := validateParameters(request.Parameters); err != nil {
+	if err := validateParameters(request.Parameters, t.limits.MaxParameterBytes, t.limits.MaxParameterValueBytes); err != nil {
 		return nil, err
 	}
 
@@ -354,6 +366,11 @@ func (t *Target) execute(ctx context.Context, operation, query string, request c
 		return nil, fmt.Errorf("query concurrency limit: %w", err)
 	}
 	defer permit.Release()
+	t.gate.RLock()
+	defer t.gate.RUnlock()
+	if err := t.requireHealthy(); err != nil {
+		return nil, err
+	}
 	defer t.recordDBStats()
 
 	dbStarted := time.Now()
@@ -493,6 +510,9 @@ func enforceQueryBudget(result *core.QueryResult, maxBytes int) error {
 }
 
 func (t *Target) ListTables(ctx context.Context, pattern string, fresh bool) ([]core.TableSummary, error) {
+	if err := t.requireHealthy(); err != nil {
+		return nil, err
+	}
 	if len(pattern) > 128 {
 		return nil, fmt.Errorf("table pattern is too long")
 	}
@@ -553,6 +573,11 @@ func (t *Target) ListTables(ctx context.Context, pattern string, fresh bool) ([]
 		return nil, fmt.Errorf("metadata concurrency limit: %w", err)
 	}
 	defer permit.Release()
+	t.gate.RLock()
+	defer t.gate.RUnlock()
+	if err := t.requireHealthy(); err != nil {
+		return nil, err
+	}
 	defer t.recordDBStats()
 	rows, err := t.db.QueryContext(queryCtx, query, args...)
 	if err != nil {
@@ -577,6 +602,9 @@ func (t *Target) ListTables(ctx context.Context, pattern string, fresh bool) ([]
 	if err := rows.Err(); err != nil {
 		return nil, sanitizeDBError(err)
 	}
+	if err := enforceMetadataBudget(tables, t.limits.MaxResultBytes); err != nil {
+		return nil, err
+	}
 	t.metadataCache.finish(key, tables, t.config.MetadataCache.TableListTTL, true)
 	cacheDone = true
 	if fresh {
@@ -586,6 +614,9 @@ func (t *Target) ListTables(ctx context.Context, pattern string, fresh bool) ([]
 }
 
 func (t *Target) DescribeTable(ctx context.Context, schema, table string, fresh bool) (*core.TableDescription, error) {
+	if err := t.requireHealthy(); err != nil {
+		return nil, err
+	}
 	if schema == "" {
 		schema = t.config.Database
 	}
@@ -657,6 +688,11 @@ func (t *Target) DescribeTable(ctx context.Context, schema, table string, fresh 
 		return nil, fmt.Errorf("metadata concurrency limit: %w", err)
 	}
 	defer permit.Release()
+	t.gate.RLock()
+	defer t.gate.RUnlock()
+	if err := t.requireHealthy(); err != nil {
+		return nil, err
+	}
 	defer t.recordDBStats()
 	columns, err := t.describeColumns(queryCtx, schema, table)
 	if err != nil {
@@ -672,12 +708,26 @@ func (t *Target) DescribeTable(ctx context.Context, schema, table string, fresh 
 		return nil, err
 	}
 	result := &core.TableDescription{Target: t.config.Name, Schema: schema, Table: table, Columns: columns, Indexes: indexes}
+	if err := enforceMetadataBudget(result, t.limits.MaxResultBytes); err != nil {
+		return nil, err
+	}
 	t.metadataCache.finish(key, result, t.config.MetadataCache.TableDescriptionTTL, true)
 	cacheDone = true
 	if fresh {
 		t.record(ctx, audit.Event{Target: t.config.Name, Operation: "schema_describe_table", Decision: "allowed", Reason: "refresh"})
 	}
 	return result, nil
+}
+
+func enforceMetadataBudget(value any, maximum int) error {
+	encoded, err := json.Marshal(value)
+	if err != nil {
+		return errors.New("encode metadata result")
+	}
+	if len(encoded) > maximum {
+		return errors.New("metadata result exceeds configured result-byte limit")
+	}
+	return nil
 }
 
 func (t *Target) describeColumns(ctx context.Context, schema, table string) ([]core.ColumnDescription, error) {
@@ -776,7 +826,7 @@ func (t *Target) recordDBStats() {
 	t.metrics.Set("db_pool_idle", int64(s.Idle), "pool")
 	t.metrics.Set("db_pool_wait_count", s.WaitCount, "pool")
 	t.metrics.Set("db_pool_wait_ms", s.WaitDuration.Milliseconds(), "pool")
-	t.metrics.Set("grant_verification_age_seconds", int64(time.Since(t.verifiedAt).Seconds()), "health")
+	t.metrics.Set("grant_verification_age_seconds", int64(time.Since(time.Unix(0, t.verifiedAt.Load())).Seconds()), "health")
 }
 
 func targetPolicyRevision(cfg *config.TargetConfig) string {
@@ -786,6 +836,10 @@ func targetPolicyRevision(cfg *config.TargetConfig) string {
 }
 
 func (t *Target) Close() error {
+	if t.maintenanceStop != nil {
+		t.maintenanceStop()
+		t.maintenanceWG.Wait()
+	}
 	t.metadataCache.clear()
 	t.resultCache.clear()
 	err := t.db.Close()
@@ -795,15 +849,99 @@ func (t *Target) Close() error {
 	return err
 }
 
-func validateParameters(parameters []any) error {
-	for _, value := range parameters {
-		switch value.(type) {
-		case nil, bool, float64, string:
-		default:
-			return fmt.Errorf("parameters must be JSON scalars; encode large integers as strings")
+func (t *Target) requireHealthy() error {
+	if !t.healthy.Load() {
+		return errors.New("MySQL target privilege attestation is unhealthy or stale")
+	}
+	if interval := t.config.MySQL.PrivilegeRecheck; interval > 0 {
+		verifiedAt := t.verifiedAt.Load()
+		if verifiedAt == 0 || time.Since(time.Unix(0, verifiedAt)) > 2*interval {
+			return errors.New("MySQL target privilege attestation is unhealthy or stale")
 		}
 	}
 	return nil
+}
+
+func (t *Target) startPrivilegeRecheck() {
+	ctx, cancel := context.WithCancel(context.Background())
+	t.maintenanceStop = cancel
+	t.maintenanceWG.Add(1)
+	go func() {
+		defer t.maintenanceWG.Done()
+		ticker := time.NewTicker(t.config.MySQL.PrivilegeRecheck)
+		defer ticker.Stop()
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case <-ticker.C:
+				checkCtx, stop := context.WithTimeout(ctx, t.config.Connection.ConnectTimeout)
+				permit, err := t.admission.Acquire(checkCtx, t.config.Name, admission.Maintenance)
+				if err == nil {
+					t.gate.Lock()
+					_, grants, inspectErr := inspectIdentity(checkCtx, t.db)
+					err = inspectErr
+					if err == nil {
+						err = ValidateGrants(grants, t.config.AllowedSchemas)
+					}
+					if err == nil {
+						t.verifiedAt.Store(time.Now().UnixNano())
+						t.healthy.Store(true)
+					} else {
+						t.healthy.Store(false)
+					}
+					t.gate.Unlock()
+					permit.Release()
+				} else {
+					t.healthy.Store(false)
+				}
+				stop()
+			}
+		}
+	}()
+}
+
+func validateParameters(parameters []any, limits ...int) error {
+	total, maxValue := 0, 0
+	if len(limits) > 0 {
+		total = limits[0]
+	}
+	if len(limits) > 1 {
+		maxValue = limits[1]
+	}
+	used := 0
+	for _, value := range parameters {
+		size := 0
+		switch value.(type) {
+		case nil, bool, float64:
+			size = 8
+		case string:
+			size = len(value.(string))
+		default:
+			return fmt.Errorf("parameters must be JSON scalars; encode large integers as strings")
+		}
+		if maxValue > 0 && size > maxValue {
+			return fmt.Errorf("SQL parameter exceeds the per-value byte limit")
+		}
+		used += size
+		if total > 0 && used > total {
+			return fmt.Errorf("SQL parameters exceed the total byte limit")
+		}
+	}
+	return nil
+}
+
+func parameterBytes(parameters []any) int {
+	total := 0
+	for _, value := range parameters {
+		switch x := value.(type) {
+		case string:
+			total += len(x)
+		case nil, bool, float64:
+			total += 8
+		}
+	}
+	return total
 }
 
 func uniqueNames(names []string) []string {

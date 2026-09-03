@@ -208,6 +208,9 @@ func (s *Server) queryExplain(ctx context.Context, _ *mcp.CallToolRequest, input
 }
 
 func (s *Server) queryBatch(ctx context.Context, _ *mcp.CallToolRequest, input BatchInput) (*mcp.CallToolResult, core.BatchResult, error) {
+	if err := validateBatchCount(len(input.Queries)); err != nil {
+		return nil, core.BatchResult{}, err
+	}
 	target, err := s.registry.GetSQL(input.Target)
 	if err != nil {
 		return nil, core.BatchResult{}, err
@@ -216,10 +219,11 @@ func (s *Server) queryBatch(ctx context.Context, _ *mcp.CallToolRequest, input B
 	if !ok {
 		return nil, core.BatchResult{}, fmt.Errorf("target engine does not support batch snapshots")
 	}
-	if input.TimeoutMS < 0 {
-		return nil, core.BatchResult{}, fmt.Errorf("timeout_ms must not be negative")
+	timeout, err := durationMilliseconds(input.TimeoutMS)
+	if err != nil {
+		return nil, core.BatchResult{}, err
 	}
-	request := core.BatchRequest{Timeout: time.Duration(input.TimeoutMS) * time.Millisecond}
+	request := core.BatchRequest{Timeout: timeout}
 	request.Queries = make([]core.QueryRequest, 0, len(input.Queries))
 	for i, query := range input.Queries {
 		converted, err := queryRequest(query.SQL, query.Parameters, 0, query.MaxRows, query.Purpose)
@@ -252,14 +256,18 @@ func (s *Server) redisCommand(ctx context.Context, _ *mcp.CallToolRequest, input
 }
 
 func (s *Server) redisBatch(ctx context.Context, _ *mcp.CallToolRequest, input RedisBatchInput) (*mcp.CallToolResult, core.RedisBatchResult, error) {
+	if err := validateBatchCount(len(input.Commands)); err != nil {
+		return nil, core.RedisBatchResult{}, err
+	}
 	target, err := s.registry.GetRedis(input.Target)
 	if err != nil {
 		return nil, core.RedisBatchResult{}, err
 	}
-	if input.TimeoutMS < 0 {
-		return nil, core.RedisBatchResult{}, fmt.Errorf("timeout_ms must not be negative")
+	timeout, err := durationMilliseconds(input.TimeoutMS)
+	if err != nil {
+		return nil, core.RedisBatchResult{}, err
 	}
-	request := core.RedisBatchRequest{Atomic: input.Atomic, Timeout: time.Duration(input.TimeoutMS) * time.Millisecond, Commands: make([]core.RedisRequest, 0, len(input.Commands))}
+	request := core.RedisBatchRequest{Atomic: input.Atomic, Timeout: timeout, Commands: make([]core.RedisRequest, 0, len(input.Commands))}
 	for i, command := range input.Commands {
 		if command.Target != "" && command.Target != input.Target {
 			return nil, core.RedisBatchResult{}, fmt.Errorf("Redis batch command %d target must be omitted or match the batch target", i+1)
@@ -279,8 +287,9 @@ func (s *Server) redisBatch(ctx context.Context, _ *mcp.CallToolRequest, input R
 }
 
 func redisRequest(input RedisCommandInput) (core.RedisRequest, error) {
-	if input.TimeoutMS < 0 {
-		return core.RedisRequest{}, fmt.Errorf("timeout_ms must not be negative")
+	timeout, err := durationMilliseconds(input.TimeoutMS)
+	if err != nil {
+		return core.RedisRequest{}, err
 	}
 	if input.MaxElements < 0 {
 		return core.RedisRequest{}, fmt.Errorf("max_elements must not be negative")
@@ -288,12 +297,13 @@ func redisRequest(input RedisCommandInput) (core.RedisRequest, error) {
 	if len(input.Purpose) > 256 || strings.ContainsAny(input.Purpose, "\r\n") {
 		return core.RedisRequest{}, fmt.Errorf("purpose must be one line and at most 256 bytes")
 	}
-	return core.RedisRequest{Command: input.Command, Arguments: input.Arguments, Timeout: time.Duration(input.TimeoutMS) * time.Millisecond, MaxElements: input.MaxElements, Purpose: input.Purpose}, nil
+	return core.RedisRequest{Command: input.Command, Arguments: input.Arguments, Timeout: timeout, MaxElements: input.MaxElements, Purpose: input.Purpose}, nil
 }
 
 func queryRequest(sql string, parameters []any, timeoutMS, maxRows int, purpose string) (core.QueryRequest, error) {
-	if timeoutMS < 0 {
-		return core.QueryRequest{}, fmt.Errorf("timeout_ms must not be negative")
+	timeout, err := durationMilliseconds(timeoutMS)
+	if err != nil {
+		return core.QueryRequest{}, err
 	}
 	if maxRows < 0 {
 		return core.QueryRequest{}, fmt.Errorf("max_rows must not be negative")
@@ -307,8 +317,30 @@ func queryRequest(sql string, parameters []any, timeoutMS, maxRows int, purpose 
 	return core.QueryRequest{
 		SQL:        sql,
 		Parameters: parameters,
-		Timeout:    time.Duration(timeoutMS) * time.Millisecond,
+		Timeout:    timeout,
 		MaxRows:    maxRows,
 		Purpose:    purpose,
 	}, nil
+}
+
+func durationMilliseconds(value int) (time.Duration, error) {
+	if value < 0 {
+		return 0, fmt.Errorf("timeout_ms must not be negative")
+	}
+	if uint64(value) > uint64(^uint64(0)>>1)/uint64(time.Millisecond) {
+		return 0, fmt.Errorf("timeout_ms is too large")
+	}
+	return time.Duration(value) * time.Millisecond, nil
+}
+
+func validateBatchCount(count int) error {
+	if count < 1 {
+		return fmt.Errorf("batch must contain at least one operation")
+	}
+	// Configuration validation never permits a target limit above 100. Keep
+	// this transport-level ceiling ahead of conversion and allocation work.
+	if count > 100 {
+		return fmt.Errorf("batch contains too many operations")
+	}
+	return nil
 }

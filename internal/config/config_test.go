@@ -64,23 +64,35 @@ func TestExampleConfigLoads(t *testing.T) {
 	}
 }
 
+func TestLoadRejectsMultipleYAMLDocuments(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "config.yaml")
+	if err := os.WriteFile(path, []byte("server:\n  transport: stdio\n---\nserver:\n  transport: stdio\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := Load(path); err == nil {
+		t.Fatal("expected multiple YAML documents to be rejected")
+	}
+}
+
 func validConfig() *Config {
 	return &Config{
 		Server: ServerConfig{Transport: TransportStdio, StrictStartup: true},
 		Limits: Limits{
-			GlobalConcurrency:    4,
-			PerTargetConcurrency: 2,
-			DefaultTimeout:       3 * time.Second,
-			MaxTimeout:           10 * time.Second,
-			MaxRows:              500,
-			MaxResultBytes:       1 << 20,
-			MaxCellBytes:         64 << 10,
-			MaxSQLBytes:          32 << 10,
-			MaxBatchQueries:      10,
-			MaxParameters:        100,
-			MaxQueuedRequests:    32,
-			QueueTimeout:         500 * time.Millisecond,
-			WorkloadClasses:      WorkloadClasses{MetadataReserved: 1, BatchMaxConcurrency: 1, MaintenanceMaxConcurrency: 1},
+			GlobalConcurrency:      4,
+			PerTargetConcurrency:   2,
+			DefaultTimeout:         3 * time.Second,
+			MaxTimeout:             10 * time.Second,
+			MaxRows:                500,
+			MaxResultBytes:         1 << 20,
+			MaxCellBytes:           64 << 10,
+			MaxSQLBytes:            32 << 10,
+			MaxBatchQueries:        10,
+			MaxParameters:          100,
+			MaxParameterBytes:      1 << 20,
+			MaxParameterValueBytes: 256 << 10,
+			MaxQueuedRequests:      32,
+			QueueTimeout:           500 * time.Millisecond,
+			WorkloadClasses:        WorkloadClasses{MetadataReserved: 1, BatchMaxConcurrency: 1, MaintenanceMaxConcurrency: 1},
 		},
 		Targets: map[string]*TargetConfig{
 			"test": {
@@ -104,7 +116,8 @@ func validConfig() *Config {
 					MaxLifetime:    3 * time.Minute,
 					MaxIdleTime:    time.Minute,
 				},
-				TLS: TLSConfig{Mode: TLSDisabled},
+				TLS:   TLSConfig{Mode: TLSDisabled},
+				MySQL: MySQLConfig{PrivilegeRecheck: 5 * time.Minute},
 			},
 		},
 	}

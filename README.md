@@ -7,26 +7,30 @@ The project is designed to be copied into its own GitHub repository. It is a
 standalone Go module and does not import code or configuration from its parent
 repository.
 
-> Current status: MySQL 8 and PostgreSQL 15-17 are implemented. Standalone
-> Redis 7.2/7.4 and Redis 8.x read-only command support is implemented behind
-> strict ACL and live command-catalog attestation. Production rollout still
+> Current status: MySQL 8 and PostgreSQL 15-17 are implemented. Redis 7.2/7.4
+> and Redis 8.x standalone, Sentinel and Cluster read-only command support is
+> implemented behind strict ACL, topology and live command-catalog attestation.
+> Third-party modules require exact, Ed25519-signed module profiles and a locally
+> verifiable module artifact. Module index-prefix introspection fails closed
+> until a dedicated verifier is available. Production rollout still
 > requires validation against your provisioned accounts and server builds.
 
 ## What it provides
 
 - Multiple named database targets, selected explicitly on every tool call.
 - Independent MySQL and PostgreSQL dialect policies and privilege attestation.
-- Redis command-vector tools with live read-only command, key-scope and ACL
-  attestation.
+- Redis command-vector tools with live read-only command, key-scope, ACL,
+  Sentinel quorum, Cluster slot-map and signed module attestation.
 - Full read-only analytical SQL: CTEs, joins, subqueries, unions, aggregates,
   window functions, JSON expressions and ordinary `USE INDEX`/`FORCE INDEX`
   clauses supported by MySQL/Vitess. Optimizer comment hints are rejected.
-- Database-account privilege attestation during startup.
+- Database-account privilege attestation during startup and periodic fail-closed
+  rechecks for MySQL and PostgreSQL.
 - AST validation that rejects mutations, locks, file access, variables,
   executable comments, optimizer hints and unknown extension functions.
 - A `READ ONLY` database transaction for every free-form query.
-- Per-target and global concurrency limits, timeouts, row limits, result-byte
-  limits and cell-size limits.
+- Per-target and global concurrency limits, timeouts, row limits, SQL parameter
+  byte limits, result-byte limits and cell-size limits.
 - Bounded fair scheduling across metadata, interactive, batch and maintenance
   workloads, with overload rejected before a transaction is opened.
 - Target-local bounded metadata caches and optional, explicit short-lived result
@@ -110,10 +114,21 @@ For Redis, create a password-protected ACL user from `reset`, grant `%R~pattern`
 only for the configured key prefixes, start command permissions from `-@all`,
 and grant `+@read`. Startup also needs the internal-only introspection commands
 `+acl|whoami`, `+acl|getuser`, `+command`, `+command|info`,
-`+command|list`, `+command|getkeysandflags`, `+ping`, `+info`, `+module|list`, and—only when the
+`+command|list`, `+command|getkeysandflags`, `+ping`, `+info`, `+module|list`, `+role`, and—only when the
 configured database is nonzero—`+select`. Do not grant write-key patterns,
-channels, selectors, write/admin categories, or module commands. These
+channels, selectors, write/admin categories, or unprofiled module commands. A
+profiled module also needs `COMMAND LIST FILTERBY MODULE` visibility and ACL
+grants for only the approved read commands. These
 introspection commands are never exposed through `redis_command`.
+
+Sentinel mode uses separate discovery credentials, requires agreement from at
+least two configured Sentinels, verifies the discovered node's `ROLE`, and
+admits only endpoints whose resolved IPs remain inside configured CIDRs (and,
+for hostnames, match configured DNS suffixes). Cluster mode
+validates exact coverage of all 16,384 slots and attests every route-eligible
+node before publishing a client generation. Unknown redirect endpoints are
+refused. See [RFC-0004](docs/RFC-0004-redis-sentinel-cluster-modules.md) for the
+configuration and signed module-profile format.
 
 ### 3. Build and verify
 
@@ -167,7 +182,7 @@ Use target inventory-test. Inspect the schema and verify whether transaction
 | `query_batch` | Runs several SELECTs in one read-only transaction snapshot. |
 | `query_explain` | Runs `EXPLAIN FORMAT=JSON` on a validated SELECT. |
 | `redis_command` | Runs one attested advanced read-only Redis command vector. |
-| `redis_batch` | Runs a bounded read-only Redis pipeline or atomic batch. |
+| `redis_batch` | Runs a bounded read-only Redis batch; non-atomic commands execute sequentially to bound retained reply memory. |
 
 Every database tool requires an exact target alias. There is deliberately no
 stateful `USE DATABASE` tool and no tool accepts a host, DSN, username or
@@ -204,6 +219,15 @@ and current-consistency targets require an additional explicit opt-in.
 Batch results report `truncated`, `truncation_reason` and `completed_queries`.
 When the remaining response budget cannot represent another result, the server
 does not execute that query.
+
+Redis Sentinel discovery and Cluster topology are probed on their short refresh
+intervals. An unchanged, fully allowed routing snapshot refreshes only its
+freshness timestamp; node catalogs, ACLs, module artifacts and connection pools
+are rebuilt on their slower attestation interval or immediately after topology
+drift. This avoids periodic connection and artifact-hashing storms. Redis reply byte limits apply
+to normalized MCP output; operators must also configure Redis/server and
+container memory ceilings because the Redis client necessarily decodes one
+server reply before application-level truncation.
 
 Set `server.metrics_summary_interval` to a positive duration to emit bounded,
 content-free performance summaries on stderr. Metrics never use SQL, parameters,
@@ -289,8 +313,17 @@ make build
 
 Unit tests cover the SQL security policy, privilege validation, secret-file
 permissions, read-only transaction execution, batch output limits and result
-truncation. Real database integration tests should use a disposable MySQL 8 instance and a separately
-provisioned SELECT-only account.
+truncation. Real integration tests should use disposable MySQL 8, PostgreSQL,
+Redis standalone, Sentinel and Cluster deployments with separately provisioned
+read-only accounts. Multi-node failover and third-party module certification
+remain release-gate tests because a unit-test double cannot prove real routing,
+replication or server-module behavior.
+
+The Redis integration suite accepts operator-owned configurations through
+`READONLY_DB_MCP_REDIS_SENTINEL_CONFIG`/`_TARGET`/`_KEY` and
+`READONLY_DB_MCP_REDIS_CLUSTER_CONFIG`/`_TARGET`/`_KEY`. Tests are skipped when
+these variables are absent and should be run against disposable deployments
+during release qualification.
 
 ## License
 

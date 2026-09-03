@@ -7,11 +7,13 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"strconv"
 	"strings"
 
 	redisdriver "github.com/redis/go-redis/v9"
 	"github.com/your-org/readonly-db-mcp/internal/config"
 	"github.com/your-org/readonly-db-mcp/internal/core"
+	modulepolicy "github.com/your-org/readonly-db-mcp/internal/dialects/redis/modules"
 )
 
 var forbiddenCommands = map[string]struct{}{
@@ -35,16 +37,18 @@ type catalogEntry struct {
 }
 
 type Policy struct {
-	cfg     config.RedisConfig
-	catalog map[string]catalogEntry
-	keySalt []byte
+	cfg                   config.RedisConfig
+	catalog               map[string]catalogEntry
+	keySalt               []byte
+	trustedModuleCommands map[string]modulepolicy.CommandRule
+	moduleCommands        map[string]struct{}
 }
 
 type keyResolver interface {
 	CommandGetKeysAndFlags(context.Context, ...interface{}) *redisdriver.KeyFlagsCmd
 }
 
-func newPolicy(cfg config.RedisConfig, commands map[string]*redisdriver.CommandInfo, salt []byte) *Policy {
+func newPolicy(cfg config.RedisConfig, commands map[string]*redisdriver.CommandInfo, salt []byte, trustedModuleCommands map[string]modulepolicy.CommandRule, moduleCommands map[string]struct{}) *Policy {
 	catalog := make(map[string]catalogEntry, len(commands))
 	for name, info := range commands {
 		flags := make(map[string]struct{}, len(info.Flags))
@@ -53,13 +57,16 @@ func newPolicy(cfg config.RedisConfig, commands map[string]*redisdriver.CommandI
 		}
 		catalog[strings.ToLower(name)] = catalogEntry{name: strings.ToUpper(name), readonly: info.ReadOnly, flags: flags, firstKey: info.FirstKeyPos}
 	}
-	return &Policy{cfg: cfg, catalog: catalog, keySalt: append([]byte(nil), salt...)}
+	return &Policy{cfg: cfg, catalog: catalog, keySalt: append([]byte(nil), salt...), trustedModuleCommands: trustedModuleCommands, moduleCommands: moduleCommands}
 }
 
 func (p *Policy) validate(ctx context.Context, client keyResolver, req core.RedisRequest) (*core.RedisValidation, []any, error) {
 	command := strings.ToLower(strings.TrimSpace(req.Command))
 	if command == "" || strings.ContainsAny(command, " \t\r\n\x00") {
 		return nil, nil, errors.New("Redis command must be one command name")
+	}
+	if len(req.Arguments) > 10_000 {
+		return nil, nil, errors.New("Redis command has too many arguments")
 	}
 	entry, ok := p.catalog[command]
 	if len(req.Arguments) > 0 {
@@ -74,6 +81,11 @@ func (p *Policy) validate(ctx context.Context, client keyResolver, req core.Redi
 	}
 	if _, forbidden := forbiddenCommands[command]; forbidden {
 		return nil, nil, errors.New("Redis command changes forbidden data or server state")
+	}
+	if _, moduleCommand := p.moduleCommands[command]; moduleCommand {
+		if _, trusted := p.trustedModuleCommands[command]; !trusted {
+			return nil, nil, errors.New("Redis module command is not admitted by its signed profile")
+		}
 	}
 	if !entry.readonly {
 		return nil, nil, errors.New("Redis command is not proven read-only")
@@ -91,6 +103,13 @@ func (p *Policy) validate(ctx context.Context, client keyResolver, req core.Redi
 	args = append(args, strings.ToUpper(command))
 	argumentBytes := 0
 	for _, argument := range req.Arguments {
+		remaining := p.cfg.MaxArgumentBytes - argumentBytes
+		if argument.String != nil && len(*argument.String) > remaining {
+			return nil, nil, errors.New("Redis arguments exceed the configured byte limit")
+		}
+		if argument.Base64 != nil && base64.StdEncoding.DecodedLen(len(*argument.Base64)) > remaining+2 {
+			return nil, nil, errors.New("Redis arguments exceed the configured byte limit")
+		}
 		value, err := decodeArgument(argument)
 		if err != nil {
 			return nil, nil, err
@@ -122,6 +141,7 @@ func (p *Policy) validate(ctx context.Context, client keyResolver, req core.Redi
 		return nil, nil, errors.New("keyless Redis command cannot be proven inside the configured target")
 	}
 	keyFingerprints := make([]string, 0, len(keyFlags))
+	keySlots := make([]int, 0, len(keyFlags))
 	for _, key := range keyFlags {
 		if !readOnlyFlags(key.Flags) {
 			return nil, nil, errors.New("Redis command may modify key data or metadata")
@@ -130,10 +150,32 @@ func (p *Policy) validate(ctx context.Context, client keyResolver, req core.Redi
 			return nil, nil, errors.New("Redis key is outside the configured target")
 		}
 		keyFingerprints = append(keyFingerprints, p.fingerprintKey(key.Key))
+		keySlots = append(keySlots, redisKeySlot(key.Key))
 	}
 	fingerprintInput := entry.name + "\x00" + fmt.Sprint(len(req.Arguments)) + "\x00" + fmt.Sprint(argumentBytes)
 	sum := sha256.Sum256([]byte(fingerprintInput))
-	return &core.RedisValidation{Command: entry.name, Fingerprint: hex.EncodeToString(sum[:12]), KeyFingerprints: keyFingerprints, KeyCount: len(keyFlags), ArgumentBytes: argumentBytes}, args, nil
+	return &core.RedisValidation{Command: entry.name, Fingerprint: hex.EncodeToString(sum[:12]), KeyFingerprints: keyFingerprints, KeyCount: len(keyFlags), ArgumentBytes: argumentBytes, KeySlots: keySlots}, args, nil
+}
+
+func redisKeySlot(key string) int {
+	tagged := key
+	if start := strings.IndexByte(key, '{'); start >= 0 {
+		if end := strings.IndexByte(key[start+1:], '}'); end > 0 {
+			tagged = key[start+1 : start+1+end]
+		}
+	}
+	var crc uint16
+	for i := 0; i < len(tagged); i++ {
+		crc ^= uint16(tagged[i]) << 8
+		for bit := 0; bit < 8; bit++ {
+			if crc&0x8000 != 0 {
+				crc = crc<<1 ^ 0x1021
+			} else {
+				crc <<= 1
+			}
+		}
+	}
+	return int(crc % 16384)
 }
 
 func needsKeyPreflight(command string, entry catalogEntry) bool {
@@ -149,6 +191,14 @@ func needsKeyPreflight(command string, entry catalogEntry) bool {
 }
 
 func (p *Policy) keylessInvocationAllowed(command string, args []core.RedisArgument) bool {
+	if rule, ok := p.trustedModuleCommands[command]; ok {
+		switch rule.KeyModel {
+		case "keyless-safe":
+			return true
+		case "index-name", "index-prefix-attested":
+			return p.moduleObjectAllowed(strings.ToUpper(command), args)
+		}
+	}
 	allKeys := p.hasAllKeyScope()
 	switch command {
 	case "ping", "echo", "time":
@@ -162,19 +212,75 @@ func (p *Policy) keylessInvocationAllowed(command string, args []core.RedisArgum
 		pattern, err := decodeArgument(args[0])
 		return err == nil && p.patternInsideScope(string(pattern))
 	case "scan":
-		for i := 1; i+1 < len(args); i++ {
-			name, err := decodeArgument(args[i])
-			if err == nil && strings.EqualFold(string(name), "MATCH") {
-				pattern, err := decodeArgument(args[i+1])
-				return err == nil && p.patternInsideScope(string(pattern))
-			}
-		}
-		return allKeys
+		return p.scanInsideScope(args, allKeys)
 	case "eval_ro", "evalsha_ro", "fcall_ro":
 		return true
 	default:
 		return false
 	}
+}
+
+func (p *Policy) scanInsideScope(args []core.RedisArgument, allKeys bool) bool {
+	if len(args) == 0 {
+		return false
+	}
+	if _, err := decodeArgument(args[0]); err != nil {
+		return false
+	}
+	matched, counted, typed := false, false, false
+	for i := 1; i < len(args); i += 2 {
+		if i+1 >= len(args) {
+			return false
+		}
+		option, err := decodeArgument(args[i])
+		if err != nil {
+			return false
+		}
+		value, err := decodeArgument(args[i+1])
+		if err != nil {
+			return false
+		}
+		switch strings.ToLower(string(option)) {
+		case "match":
+			if matched || !p.patternInsideScope(string(value)) {
+				return false
+			}
+			matched = true
+		case "count":
+			if counted {
+				return false
+			}
+			count, err := strconv.ParseUint(string(value), 10, 31)
+			if err != nil || count == 0 || count > uint64(p.cfg.MaxReplyElements) {
+				return false
+			}
+			counted = true
+		case "type":
+			if typed || len(value) == 0 || len(value) > 64 || strings.ContainsAny(string(value), "\x00\r\n \t") {
+				return false
+			}
+			typed = true
+		default:
+			return false
+		}
+	}
+	return matched || allKeys
+}
+
+func (p *Policy) moduleObjectAllowed(command string, args []core.RedisArgument) bool {
+	if len(args) == 0 {
+		return false
+	}
+	object, err := decodeArgument(args[0])
+	if err != nil {
+		return false
+	}
+	for _, pattern := range p.cfg.ModuleObjectPatterns[command] {
+		if strings.HasPrefix(string(object), strings.TrimSuffix(pattern, "*")) {
+			return true
+		}
+	}
+	return false
 }
 
 func (p *Policy) hasAllKeyScope() bool {
