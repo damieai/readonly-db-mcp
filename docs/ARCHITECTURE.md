@@ -10,7 +10,7 @@ typed MCP tool schemas
 exact target registry lookup
         |
         v
-engine-specific SQL AST or Redis command policy
+engine-specific SQL policy or Redis command policy
         |
         v
 bounded fair admission by workload class
@@ -18,7 +18,7 @@ bounded fair admission by workload class
         +----> target-local metadata/result caches
         |
         v
-READ ONLY SQL transaction / attested Redis command
+native read-only transaction or SQL Server SHOWPLAN proof / attested Redis command
         |
         v
 dedicated SELECT-only SQL identity / read-key-only Redis ACL
@@ -34,6 +34,9 @@ dedicated SELECT-only SQL identity / read-key-only Redis ACL
   metadata reads and bounded result collection.
 - `internal/dialects/postgresql`: PostgreSQL connection, role/object privilege
   attestation, native AST policy and metadata reads.
+- `internal/dialects/sqlserver`: SQL Server connection, effective-permission
+  attestation, T-SQL safety scan, mandatory `SHOWPLAN_XML` proof, snapshot
+  batches, and catalog metadata reads.
 - `internal/dialects/redis`: Redis ACL and live command-catalog attestation,
   key-scope policy, RESP normalization and bounded command execution.
 - `internal/config`: strict YAML decoding, hard ceilings and secret resolution.

@@ -138,6 +138,49 @@ targets:
       max_entries: 256
       max_bytes: 8388608
 
+  finance-sqlserver-test:
+    engine: sqlserver
+    environment: test
+    consistency: current
+    host: 127.0.0.1
+    port: 1433
+    database: Finance
+    username: finance_mcp_ro
+    password_file: ./secrets/finance-sqlserver-test.password
+    allowed_schemas:
+      - reporting
+    denied_tables:
+      - reporting.raw_payroll
+    connection:
+      connect_timeout: 3s
+      read_timeout: 12s
+      write_timeout: 3s
+      # SHOWPLAN preflight completes before execution, so no extra pool slot
+      # is required beyond ordinary target concurrency.
+      max_open: 2
+      max_idle: 1
+      max_lifetime: 3m
+      max_idle_time: 1m
+    sqlserver:
+      application_name: readonly-db-mcp
+      application_intent: read-only
+      require_read_only_replica: false
+      lock_timeout: 1500ms
+      batch_isolation: snapshot
+      require_snapshot_isolation: true
+      privilege_recheck_interval: 5m
+    tls:
+      mode: required
+    metadata_cache:
+      enabled: true
+      allow_fresh: true
+      fresh_cooldown: 1s
+      table_list_ttl: 20m
+      table_description_ttl: 20m
+      negative_ttl: 5s
+      max_entries: 256
+      max_bytes: 8388608
+
   analytics-redis-test:
     engine: redis
     environment: test

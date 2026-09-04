@@ -20,6 +20,7 @@ import (
 const (
 	EngineMySQL         = "mysql"
 	EnginePostgreSQL    = "postgresql"
+	EngineSQLServer     = "sqlserver"
 	EngineRedis         = "redis"
 	TransportStdio      = "stdio"
 	TLSDisabled         = "disabled"
@@ -93,6 +94,7 @@ type TargetConfig struct {
 	TLS            TLSConfig           `yaml:"tls"`
 	MySQL          MySQLConfig         `yaml:"mysql"`
 	PostgreSQL     PostgreSQLConfig    `yaml:"postgresql"`
+	SQLServer      SQLServerConfig     `yaml:"sqlserver"`
 	Redis          RedisConfig         `yaml:"redis"`
 	MetadataCache  MetadataCacheConfig `yaml:"metadata_cache"`
 	ResultCache    ResultCacheConfig   `yaml:"result_cache"`
@@ -107,6 +109,16 @@ type PostgreSQLConfig struct {
 	StatementTimeoutMargin time.Duration `yaml:"statement_timeout_margin"`
 	BatchIsolation         string        `yaml:"batch_isolation"`
 	RequireHotStandby      bool          `yaml:"require_hot_standby"`
+	PrivilegeRecheck       time.Duration `yaml:"privilege_recheck_interval"`
+}
+
+type SQLServerConfig struct {
+	ApplicationName        string        `yaml:"application_name"`
+	ApplicationIntent      string        `yaml:"application_intent"`
+	RequireReadOnlyReplica bool          `yaml:"require_read_only_replica"`
+	LockTimeout            time.Duration `yaml:"lock_timeout"`
+	BatchIsolation         string        `yaml:"batch_isolation"`
+	RequireSnapshot        *bool         `yaml:"require_snapshot_isolation"`
 	PrivilegeRecheck       time.Duration `yaml:"privilege_recheck_interval"`
 }
 
@@ -311,6 +323,8 @@ func applyDefaults(cfg *Config) {
 		if target.Port == 0 {
 			if target.Engine == EnginePostgreSQL {
 				target.Port = 5432
+			} else if target.Engine == EngineSQLServer {
+				target.Port = 1433
 			} else if target.Engine == EngineRedis {
 				if target.Redis.Mode != "sentinel" && target.Redis.Mode != "cluster" {
 					target.Port = 6379
@@ -355,6 +369,30 @@ func applyDefaults(cfg *Config) {
 			}
 			if target.PostgreSQL.PrivilegeRecheck == 0 {
 				target.PostgreSQL.PrivilegeRecheck = 5 * time.Minute
+			}
+		}
+		if target.Engine == EngineSQLServer {
+			if target.SQLServer.ApplicationName == "" {
+				target.SQLServer.ApplicationName = "readonly-db-mcp"
+			}
+			if target.SQLServer.ApplicationIntent == "" {
+				target.SQLServer.ApplicationIntent = "read-only"
+			}
+			if target.SQLServer.LockTimeout == 0 {
+				target.SQLServer.LockTimeout = 1500 * time.Millisecond
+			}
+			if target.SQLServer.BatchIsolation == "" {
+				target.SQLServer.BatchIsolation = "snapshot"
+			}
+			// SQL Server has no transaction-level read-only switch. Requiring
+			// snapshot isolation gives a multi-query MCP request one stable view
+			// without falling back to locks that can disrupt application traffic.
+			if target.SQLServer.RequireSnapshot == nil {
+				required := true
+				target.SQLServer.RequireSnapshot = &required
+			}
+			if target.SQLServer.PrivilegeRecheck == 0 {
+				target.SQLServer.PrivilegeRecheck = 5 * time.Minute
 			}
 		}
 		if target.Engine == EngineMySQL && target.MySQL.PrivilegeRecheck == 0 {
@@ -592,8 +630,8 @@ func validateTarget(name string, target *TargetConfig, limits Limits) []string {
 	if !safeName.MatchString(name) {
 		problems = append(problems, "name must match [a-zA-Z0-9][a-zA-Z0-9_.-]{0,63}")
 	}
-	if target.Engine != EngineMySQL && target.Engine != EnginePostgreSQL && target.Engine != EngineRedis {
-		problems = append(problems, "engine must be mysql, postgresql, or redis")
+	if target.Engine != EngineMySQL && target.Engine != EnginePostgreSQL && target.Engine != EngineSQLServer && target.Engine != EngineRedis {
+		problems = append(problems, "engine must be mysql, postgresql, sqlserver, or redis")
 	}
 	if !safeName.MatchString(target.Environment) {
 		problems = append(problems, "environment is required and must be a safe identifier")
@@ -713,6 +751,9 @@ func validateTarget(name string, target *TargetConfig, limits Limits) []string {
 		if target.PostgreSQL != (PostgreSQLConfig{}) {
 			problems = append(problems, "postgresql settings are valid only for postgresql targets")
 		}
+		if target.SQLServer != (SQLServerConfig{}) {
+			problems = append(problems, "sqlserver settings are valid only for sqlserver targets")
+		}
 		if !redisConfigEmpty(target.Redis) {
 			problems = append(problems, "redis settings are valid only for redis targets")
 		}
@@ -722,6 +763,9 @@ func validateTarget(name string, target *TargetConfig, limits Limits) []string {
 		}
 		if !redisConfigEmpty(target.Redis) {
 			problems = append(problems, "redis settings are valid only for redis targets")
+		}
+		if target.SQLServer != (SQLServerConfig{}) {
+			problems = append(problems, "sqlserver settings are valid only for sqlserver targets")
 		}
 		pg := target.PostgreSQL
 		if !safeName.MatchString(pg.ApplicationName) {
@@ -736,12 +780,50 @@ func validateTarget(name string, target *TargetConfig, limits Limits) []string {
 		if pg.PrivilegeRecheck < 10*time.Second || pg.PrivilegeRecheck > time.Hour {
 			problems = append(problems, "postgresql.privilege_recheck_interval must be between 10s and 1h")
 		}
+	} else if target.Engine == EngineSQLServer {
+		if target.MySQL != (MySQLConfig{}) {
+			problems = append(problems, "mysql settings are valid only for mysql targets")
+		}
+		if target.PostgreSQL != (PostgreSQLConfig{}) {
+			problems = append(problems, "postgresql settings are valid only for postgresql targets")
+		}
+		if !redisConfigEmpty(target.Redis) {
+			problems = append(problems, "redis settings are valid only for redis targets")
+		}
+		s := target.SQLServer
+		if !safeName.MatchString(s.ApplicationName) {
+			problems = append(problems, "sqlserver.application_name must be a safe identifier")
+		}
+		if s.ApplicationIntent != "read-only" && s.ApplicationIntent != "read-write" {
+			problems = append(problems, "sqlserver.application_intent must be read-only or read-write")
+		}
+		if s.RequireReadOnlyReplica && target.Consistency != ConsistencyEventual {
+			problems = append(problems, "a required SQL Server read-only replica requires eventual consistency")
+		}
+		if s.LockTimeout < time.Millisecond || s.LockTimeout > 30*time.Second || s.LockTimeout >= limits.MaxTimeout {
+			problems = append(problems, "sqlserver.lock_timeout must be between 1ms and 30s and below max_timeout")
+		}
+		if s.BatchIsolation != "snapshot" {
+			problems = append(problems, "sqlserver.batch_isolation must be snapshot")
+		}
+		if s.RequireSnapshot == nil || !*s.RequireSnapshot {
+			problems = append(problems, "sqlserver.require_snapshot_isolation must be true")
+		}
+		if s.RequireReadOnlyReplica && s.ApplicationIntent != "read-only" {
+			problems = append(problems, "a required SQL Server read-only replica requires application_intent read-only")
+		}
+		if s.PrivilegeRecheck < 10*time.Second || s.PrivilegeRecheck > time.Hour {
+			problems = append(problems, "sqlserver.privilege_recheck_interval must be between 10s and 1h")
+		}
 	} else if target.Engine == EngineRedis {
 		if target.MySQL != (MySQLConfig{}) {
 			problems = append(problems, "mysql settings are valid only for mysql targets")
 		}
 		if target.PostgreSQL != (PostgreSQLConfig{}) {
 			problems = append(problems, "postgresql settings are valid only for postgresql targets")
+		}
+		if target.SQLServer != (SQLServerConfig{}) {
+			problems = append(problems, "sqlserver settings are valid only for sqlserver targets")
 		}
 		r := target.Redis
 		if strings.EqualFold(target.Username, "default") {

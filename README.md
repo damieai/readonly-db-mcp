@@ -7,7 +7,8 @@ The project is designed to be copied into its own GitHub repository. It is a
 standalone Go module and does not import code or configuration from its parent
 repository.
 
-> Current status: MySQL 8 and PostgreSQL 15-17 are implemented. Redis 7.2/7.4
+> Current status: MySQL 8, PostgreSQL 15-17, and SQL Server 2019-2025 are
+> implemented. Redis 7.2/7.4
 > and Redis 8.x standalone, Sentinel and Cluster read-only command support is
 > implemented behind strict ACL, topology and live command-catalog attestation.
 > Third-party modules require exact, Ed25519-signed module profiles and a locally
@@ -18,17 +19,21 @@ repository.
 ## What it provides
 
 - Multiple named database targets, selected explicitly on every tool call.
-- Independent MySQL and PostgreSQL dialect policies and privilege attestation.
+- Independent MySQL, PostgreSQL, and SQL Server dialect policies and privilege
+  attestation.
 - Redis command-vector tools with live read-only command, key-scope, ACL,
   Sentinel quorum, Cluster slot-map and signed module attestation.
 - Full read-only analytical SQL: CTEs, joins, subqueries, unions, aggregates,
   window functions, JSON expressions and ordinary `USE INDEX`/`FORCE INDEX`
   clauses supported by MySQL/Vitess. Optimizer comment hints are rejected.
 - Database-account privilege attestation during startup and periodic fail-closed
-  rechecks for MySQL and PostgreSQL.
-- AST validation that rejects mutations, locks, file access, variables,
-  executable comments, optimizer hints and unknown extension functions.
-- A `READ ONLY` database transaction for every free-form query.
+  rechecks for MySQL, PostgreSQL, and SQL Server.
+- Dialect validation that rejects mutations and unsafe external capabilities.
+  SQL Server additionally requires a server-compiled `SHOWPLAN_XML` proof before
+  execution, while preserving advanced read-only T-SQL.
+- Database-native read-only transactions where available. SQL Server uses a
+  least-privilege account, mandatory compile-only preflight, and rollback-only
+  SELECT transactions because it has no transaction-level read-only mode.
 - Per-target and global concurrency limits, timeouts, row limits, SQL parameter
   byte limits, result-byte limits and cell-size limits.
 - Bounded fair scheduling across metadata, interactive, batch and maintenance
@@ -110,6 +115,28 @@ privileges. Grant only database `CONNECT`, allowed-schema `USAGE`, and relation
 this scope, including `CONNECT` on other databases and `EXECUTE` on
 non-system functions; startup attestation intentionally fails closed otherwise.
 
+For SQL Server, use a dedicated login and database user, grant `SELECT` only on
+curated schemas, and grant database `SHOWPLAN`. Snapshot isolation is required
+for consistent batches. A minimal shape is:
+
+```sql
+ALTER DATABASE [Finance] SET ALLOW_SNAPSHOT_ISOLATION ON;
+GO
+USE [Finance];
+GO
+CREATE USER [finance_mcp_ro] FOR LOGIN [finance_mcp_ro]
+  WITH DEFAULT_SCHEMA = [reporting];
+GRANT CONNECT TO [finance_mcp_ro];
+GRANT SHOWPLAN TO [finance_mcp_ro];
+GRANT SELECT ON SCHEMA::[reporting] TO [finance_mcp_ro];
+```
+
+Do not grant DML, DDL, ownership, impersonation, executable-module, bulk,
+external-access, or broad control permissions. Startup walks effective server,
+database, schema, and object permissions and fails closed on drift. SQL Server
+parameters use `@p1`, `@p2`, and so on. See
+[RFC-0005](docs/RFC-0005-sql-server-dialect-support.md) for the full model.
+
 For Redis, create a password-protected ACL user from `reset`, grant `%R~pattern`
 only for the configured key prefixes, start command permissions from `-@all`,
 and grant `+@read`. Startup also needs the internal-only introspection commands
@@ -180,7 +207,7 @@ Use target inventory-test. Inspect the schema and verify whether transaction
 | `schema_describe_table` | Shows columns and indexes. |
 | `query_select` | Runs one validated SELECT. |
 | `query_batch` | Runs several SELECTs in one read-only transaction snapshot. |
-| `query_explain` | Runs `EXPLAIN FORMAT=JSON` on a validated SELECT. |
+| `query_explain` | Returns an engine-native non-executing plan for a validated SELECT. |
 | `redis_command` | Runs one attested advanced read-only Redis command vector. |
 | `redis_batch` | Runs a bounded read-only Redis batch; non-atomic commands execute sequentially to bound retained reply memory. |
 
@@ -201,8 +228,8 @@ Example query input:
 ```
 
 Encode integers larger than JavaScript's safe integer range as strings.
-MySQL parameters use `?`; PostgreSQL parameters use `$1`, `$2`, and so on. The
-selected target reports its `parameter_style`.
+MySQL parameters use `?`; PostgreSQL uses `$1`, `$2`; SQL Server uses `@p1`,
+`@p2`, and so on. The selected target reports its `parameter_style`.
 
 ### Performance controls
 
@@ -314,8 +341,8 @@ make build
 Unit tests cover the SQL security policy, privilege validation, secret-file
 permissions, read-only transaction execution, batch output limits and result
 truncation. Real integration tests should use disposable MySQL 8, PostgreSQL,
-Redis standalone, Sentinel and Cluster deployments with separately provisioned
-read-only accounts. Multi-node failover and third-party module certification
+SQL Server 2019-2025, Redis standalone, Sentinel and Cluster deployments with
+separately provisioned read-only accounts. Multi-node failover and third-party module certification
 remain release-gate tests because a unit-test double cannot prove real routing,
 replication or server-module behavior.
 
@@ -324,6 +351,11 @@ The Redis integration suite accepts operator-owned configurations through
 `READONLY_DB_MCP_REDIS_CLUSTER_CONFIG`/`_TARGET`/`_KEY`. Tests are skipped when
 these variables are absent and should be run against disposable deployments
 during release qualification.
+
+The SQL Server integration test accepts `READONLY_DB_MCP_SQLSERVER_DSN` and an
+optional `READONLY_DB_MCP_SQLSERVER_SCHEMA` (default `reporting`). It performs
+live permission attestation, an advanced SELECT `SHOWPLAN_XML`, and a
+transactionally rolled-back DDL denial probe against a disposable database.
 
 ## License
 

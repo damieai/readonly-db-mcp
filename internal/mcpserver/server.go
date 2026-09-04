@@ -118,8 +118,8 @@ func (s *Server) registerTools() {
 	mcp.AddTool(s.mcp, tool("schema_list_tables", "List visible tables and views for one configured target."), s.listTables)
 	mcp.AddTool(s.mcp, tool("schema_describe_table", "Describe columns and indexes for one visible table or view."), s.describeTable)
 	mcp.AddTool(s.mcp, tool("query_select", "Execute one advanced read-only SELECT against an explicit target."), s.querySelect)
-	mcp.AddTool(s.mcp, tool("query_batch", "Execute multiple read-only SELECT queries in one read-only transaction snapshot."), s.queryBatch)
-	mcp.AddTool(s.mcp, tool("query_explain", "Return EXPLAIN FORMAT=JSON for a validated read-only SELECT."), s.queryExplain)
+	mcp.AddTool(s.mcp, tool("query_batch", "Execute multiple validated SELECT queries in one consistent transaction snapshot."), s.queryBatch)
+	mcp.AddTool(s.mcp, tool("query_explain", "Return an engine-native non-executing plan for a validated read-only SELECT."), s.queryExplain)
 	mcp.AddTool(s.mcp, tool("redis_command", "Execute one attested advanced read-only Redis command."), s.redisCommand)
 	mcp.AddTool(s.mcp, tool("redis_batch", "Execute a bounded batch of attested read-only Redis commands."), s.redisBatch)
 }

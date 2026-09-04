@@ -14,6 +14,7 @@ import (
 	mysqltarget "github.com/your-org/readonly-db-mcp/internal/dialects/mysql"
 	postgresqltarget "github.com/your-org/readonly-db-mcp/internal/dialects/postgresql"
 	redistarget "github.com/your-org/readonly-db-mcp/internal/dialects/redis"
+	sqlservertarget "github.com/your-org/readonly-db-mcp/internal/dialects/sqlserver"
 	"github.com/your-org/readonly-db-mcp/internal/metrics"
 )
 
@@ -46,6 +47,8 @@ func Open(ctx context.Context, cfg *config.Config, auditor audit.Auditor, record
 			target, err = mysqltarget.Open(ctx, targetCfg, cfg.Limits, controller, auditor, recorder)
 		case config.EnginePostgreSQL:
 			target, err = postgresqltarget.Open(ctx, targetCfg, cfg.Limits, controller, auditor, recorder)
+		case config.EngineSQLServer:
+			target, err = sqlservertarget.Open(ctx, targetCfg, cfg.Limits, controller, auditor, recorder)
 		case config.EngineRedis:
 			target, err = redistarget.Open(ctx, targetCfg, cfg.Limits, controller, auditor, recorder)
 		default:
