@@ -68,6 +68,21 @@ func TestTargetRejectsStaleAttestation(t *testing.T) {
 	}
 }
 
+func TestDataOptionsApplyConfiguredPoolCeilings(t *testing.T) {
+	cfg := &config.TargetConfig{
+		Connection: config.ConnectionConfig{
+			MaxOpen:     8,
+			MaxIdle:     4,
+			MaxLifetime: 30 * time.Minute,
+			MaxIdleTime: 10 * time.Minute,
+		},
+	}
+	options := dataOptions(cfg, "127.0.0.1:6379", "", nil)
+	if options.PoolSize != 8 || options.MaxActiveConns != 8 || options.MaxIdleConns != 4 || options.MinIdleConns != 0 {
+		t.Fatalf("unexpected Redis pool limits: %#v", options)
+	}
+}
+
 func TestSupportedRedisVersions(t *testing.T) {
 	for _, version := range []string{"7.2.0", "7.4.1", "8.0.0", "8.2.3"} {
 		if !supportedVersion(version) {

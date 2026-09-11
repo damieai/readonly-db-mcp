@@ -502,13 +502,13 @@ targets:
       max_reply_elements: 10000
       allowed_modules: []
     connection:
-      connect_timeout: 3s
-      read_timeout: 5s
-      write_timeout: 3s
-      max_open: 4
-      max_idle: 2
-      max_lifetime: 3m
-      max_idle_time: 1m
+      connect_timeout: 15s
+      read_timeout: 11m
+      write_timeout: 15s
+      max_open: 8
+      max_idle: 4
+      max_lifetime: 30m
+      max_idle_time: 10m
     tls:
       mode: verify-full
       ca_file: /etc/readonly-db-mcp/redis-ca.pem

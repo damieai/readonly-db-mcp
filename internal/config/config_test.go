@@ -59,8 +59,42 @@ func TestPasswordReadsProtectedFile(t *testing.T) {
 }
 
 func TestExampleConfigLoads(t *testing.T) {
-	if _, err := Load("../../configs/example.yaml"); err != nil {
+	cfg, err := Load("../../configs/example.yaml")
+	if err != nil {
 		t.Fatalf("example configuration is invalid: %v", err)
+	}
+	if cfg.Limits.DefaultTimeout != 5*time.Minute || cfg.Limits.MaxTimeout != 10*time.Minute || cfg.Limits.QueueTimeout != time.Minute {
+		t.Fatalf("unexpected agent-friendly timeout profile: %#v", cfg.Limits)
+	}
+	if cfg.Limits.PerTargetConcurrency != 8 || cfg.Limits.WorkloadClasses.BatchMaxConcurrency != 4 {
+		t.Fatalf("unexpected agent-friendly concurrency profile: %#v", cfg.Limits)
+	}
+	for name, target := range cfg.Targets {
+		if target.Connection.MaxOpen != 8 || target.Connection.ReadTimeout != 11*time.Minute {
+			t.Fatalf("target %q has unexpected connection profile: %#v", name, target.Connection)
+		}
+	}
+}
+
+func TestValidateAllowsTenMinuteQueriesAndOneMinuteQueue(t *testing.T) {
+	cfg := validConfig()
+	if err := cfg.Validate(); err != nil {
+		t.Fatalf("agent-friendly limits should validate: %v", err)
+	}
+}
+
+func TestValidateRetainsBoundedTimeoutCeilings(t *testing.T) {
+	cfg := validConfig()
+	cfg.Limits.MaxTimeout = 16 * time.Minute
+	cfg.Targets["test"].Connection.ReadTimeout = 17 * time.Minute
+	if err := cfg.Validate(); err == nil || !strings.Contains(err.Error(), "fifteen-minute") {
+		t.Fatalf("expected maximum timeout ceiling error, got %v", err)
+	}
+
+	cfg = validConfig()
+	cfg.Limits.QueueTimeout = 6 * time.Minute
+	if err := cfg.Validate(); err == nil || !strings.Contains(err.Error(), "between 1ms and 5m") {
+		t.Fatalf("expected queue timeout ceiling error, got %v", err)
 	}
 }
 
@@ -78,21 +112,21 @@ func validConfig() *Config {
 	return &Config{
 		Server: ServerConfig{Transport: TransportStdio, StrictStartup: true},
 		Limits: Limits{
-			GlobalConcurrency:      4,
-			PerTargetConcurrency:   2,
-			DefaultTimeout:         3 * time.Second,
-			MaxTimeout:             10 * time.Second,
-			MaxRows:                500,
-			MaxResultBytes:         1 << 20,
-			MaxCellBytes:           64 << 10,
-			MaxSQLBytes:            32 << 10,
-			MaxBatchQueries:        10,
-			MaxParameters:          100,
-			MaxParameterBytes:      1 << 20,
-			MaxParameterValueBytes: 256 << 10,
-			MaxQueuedRequests:      32,
-			QueueTimeout:           500 * time.Millisecond,
-			WorkloadClasses:        WorkloadClasses{MetadataReserved: 1, BatchMaxConcurrency: 1, MaintenanceMaxConcurrency: 1},
+			GlobalConcurrency:      16,
+			PerTargetConcurrency:   8,
+			DefaultTimeout:         5 * time.Minute,
+			MaxTimeout:             10 * time.Minute,
+			MaxRows:                5_000,
+			MaxResultBytes:         8 << 20,
+			MaxCellBytes:           1 << 20,
+			MaxSQLBytes:            256 << 10,
+			MaxBatchQueries:        50,
+			MaxParameters:          1_000,
+			MaxParameterBytes:      8 << 20,
+			MaxParameterValueBytes: 2 << 20,
+			MaxQueuedRequests:      256,
+			QueueTimeout:           time.Minute,
+			WorkloadClasses:        WorkloadClasses{MetadataReserved: 2, BatchMaxConcurrency: 4, MaintenanceMaxConcurrency: 2},
 		},
 		Targets: map[string]*TargetConfig{
 			"test": {
@@ -108,13 +142,13 @@ func validConfig() *Config {
 				AllowedSchemas: []string{"sample"},
 				MetadataCache:  MetadataCacheConfig{TableListTTL: 20 * time.Minute, TableDescriptionTTL: 20 * time.Minute, NegativeTTL: 5 * time.Second, FreshCooldown: time.Second, MaxEntries: 256, MaxBytes: 8 << 20},
 				Connection: ConnectionConfig{
-					ConnectTimeout: 3 * time.Second,
-					ReadTimeout:    12 * time.Second,
-					WriteTimeout:   3 * time.Second,
-					MaxOpen:        2,
-					MaxIdle:        1,
-					MaxLifetime:    3 * time.Minute,
-					MaxIdleTime:    time.Minute,
+					ConnectTimeout: 15 * time.Second,
+					ReadTimeout:    11 * time.Minute,
+					WriteTimeout:   15 * time.Second,
+					MaxOpen:        8,
+					MaxIdle:        4,
+					MaxLifetime:    30 * time.Minute,
+					MaxIdleTime:    10 * time.Minute,
 				},
 				TLS:   TLSConfig{Mode: TLSDisabled},
 				MySQL: MySQLConfig{PrivilegeRecheck: 5 * time.Minute},

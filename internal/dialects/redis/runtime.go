@@ -58,7 +58,7 @@ func buildRuntime(ctx context.Context, cfg *config.TargetConfig, salt []byte, pr
 func dataOptions(cfg *config.TargetConfig, address, password string, tlsConfig *tls.Config) *redisdriver.Options {
 	return &redisdriver.Options{Addr: address, Username: cfg.Username, Password: password, DB: cfg.Redis.Database, Protocol: cfg.Redis.Protocol,
 		DialTimeout: cfg.Connection.ConnectTimeout, ReadTimeout: cfg.Connection.ReadTimeout, WriteTimeout: cfg.Connection.WriteTimeout,
-		PoolSize: cfg.Connection.MaxOpen, MinIdleConns: cfg.Connection.MaxIdle, ConnMaxLifetime: cfg.Connection.MaxLifetime,
+		PoolSize: cfg.Connection.MaxOpen, MaxActiveConns: cfg.Connection.MaxOpen, MaxIdleConns: cfg.Connection.MaxIdle, ConnMaxLifetime: cfg.Connection.MaxLifetime,
 		ConnMaxIdleTime: cfg.Connection.MaxIdleTime, TLSConfig: tlsConfig, DisableIdentity: true}
 }
 
@@ -312,7 +312,7 @@ func buildClusterRuntime(ctx context.Context, cfg *config.TargetConfig, password
 	if err != nil {
 		return nil, nil, "", "", err
 	}
-	cluster := redisdriver.NewClusterClient(&redisdriver.ClusterOptions{Addrs: pinnedSeeds, Username: cfg.Username, Password: password, Protocol: cfg.Redis.Protocol, MaxRedirects: cfg.Redis.Cluster.RedirectLimit, ReadOnly: cfg.Redis.Cluster.ReadRole == "replica", DialTimeout: cfg.Connection.ConnectTimeout, ReadTimeout: cfg.Connection.ReadTimeout, WriteTimeout: cfg.Connection.WriteTimeout, PoolSize: cfg.Connection.MaxOpen, MinIdleConns: cfg.Connection.MaxIdle, ConnMaxLifetime: cfg.Connection.MaxLifetime, ConnMaxIdleTime: cfg.Connection.MaxIdleTime, TLSConfig: tlsConfig, ClusterSlots: func(context.Context) ([]redisdriver.ClusterSlot, error) { return slots, nil }, NewClient: func(options *redisdriver.Options) *redisdriver.Client {
+	cluster := redisdriver.NewClusterClient(&redisdriver.ClusterOptions{Addrs: pinnedSeeds, Username: cfg.Username, Password: password, Protocol: cfg.Redis.Protocol, MaxRedirects: cfg.Redis.Cluster.RedirectLimit, ReadOnly: cfg.Redis.Cluster.ReadRole == "replica", DialTimeout: cfg.Connection.ConnectTimeout, ReadTimeout: cfg.Connection.ReadTimeout, WriteTimeout: cfg.Connection.WriteTimeout, PoolSize: cfg.Connection.MaxOpen, MaxActiveConns: cfg.Connection.MaxOpen, MaxIdleConns: cfg.Connection.MaxIdle, ConnMaxLifetime: cfg.Connection.MaxLifetime, ConnMaxIdleTime: cfg.Connection.MaxIdleTime, TLSConfig: tlsConfig, ClusterSlots: func(context.Context) ([]redisdriver.ClusterSlot, error) { return slots, nil }, NewClient: func(options *redisdriver.Options) *redisdriver.Client {
 		if _, ok := eligible[options.Addr]; !ok {
 			if _, primary := knownPrimaries[options.Addr]; primary && cfg.Redis.Cluster.ReadRole == "replica" {
 				client := redisdriver.NewClient(options)

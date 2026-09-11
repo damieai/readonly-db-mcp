@@ -4,24 +4,24 @@ server:
   metrics_summary_interval: 30s
 
 limits:
-  global_concurrency: 4
-  per_target_concurrency: 2
-  default_timeout: 3s
-  max_timeout: 10s
-  max_rows: 500
-  max_result_bytes: 1048576
-  max_cell_bytes: 65536
-  max_sql_bytes: 32768
-  max_batch_queries: 10
-  max_parameters: 100
-  max_parameter_bytes: 1048576
-  max_parameter_value_bytes: 262144
-  max_queued_requests: 32
-  queue_timeout: 500ms
+  global_concurrency: 16
+  per_target_concurrency: 8
+  default_timeout: 5m
+  max_timeout: 10m
+  max_rows: 5000
+  max_result_bytes: 8388608
+  max_cell_bytes: 1048576
+  max_sql_bytes: 262144
+  max_batch_queries: 50
+  max_parameters: 1000
+  max_parameter_bytes: 8388608
+  max_parameter_value_bytes: 2097152
+  max_queued_requests: 256
+  queue_timeout: 1m
   workload_classes:
-    metadata_reserved: 1
-    batch_max_concurrency: 1
-    maintenance_max_concurrency: 1
+    metadata_reserved: 2
+    batch_max_concurrency: 4
+    maintenance_max_concurrency: 2
 
 targets:
   inventory-test:
@@ -40,13 +40,13 @@ targets:
     mysql:
       privilege_recheck_interval: 5m
     connection:
-      connect_timeout: 3s
-      read_timeout: 12s
-      write_timeout: 3s
-      max_open: 2
-      max_idle: 1
-      max_lifetime: 3m
-      max_idle_time: 1m
+      connect_timeout: 15s
+      read_timeout: 11m
+      write_timeout: 15s
+      max_open: 8
+      max_idle: 4
+      max_lifetime: 30m
+      max_idle_time: 10m
     tls:
       # Encrypted but certificate-unverified; use verify-full outside local tests.
       mode: required
@@ -78,13 +78,13 @@ targets:
     mysql:
       privilege_recheck_interval: 5m
     connection:
-      connect_timeout: 3s
-      read_timeout: 12s
-      write_timeout: 3s
-      max_open: 2
-      max_idle: 1
-      max_lifetime: 3m
-      max_idle_time: 1m
+      connect_timeout: 15s
+      read_timeout: 11m
+      write_timeout: 15s
+      max_open: 8
+      max_idle: 4
+      max_lifetime: 30m
+      max_idle_time: 10m
     tls:
       mode: verify-full
       ca_file: /etc/readonly-db-mcp/ca.pem
@@ -113,13 +113,13 @@ targets:
     allowed_schemas:
       - reporting
     connection:
-      connect_timeout: 3s
-      read_timeout: 12s
-      write_timeout: 3s
-      max_open: 2
-      max_idle: 1
-      max_lifetime: 3m
-      max_idle_time: 1m
+      connect_timeout: 15s
+      read_timeout: 11m
+      write_timeout: 15s
+      max_open: 8
+      max_idle: 4
+      max_lifetime: 30m
+      max_idle_time: 10m
     postgresql:
       application_name: readonly-db-mcp
       statement_timeout_margin: 250ms
@@ -152,20 +152,20 @@ targets:
     denied_tables:
       - reporting.raw_payroll
     connection:
-      connect_timeout: 3s
-      read_timeout: 12s
-      write_timeout: 3s
+      connect_timeout: 15s
+      read_timeout: 11m
+      write_timeout: 15s
       # SHOWPLAN preflight completes before execution, so no extra pool slot
       # is required beyond ordinary target concurrency.
-      max_open: 2
-      max_idle: 1
-      max_lifetime: 3m
-      max_idle_time: 1m
+      max_open: 8
+      max_idle: 4
+      max_lifetime: 30m
+      max_idle_time: 10m
     sqlserver:
       application_name: readonly-db-mcp
       application_intent: read-only
       require_read_only_replica: false
-      lock_timeout: 1500ms
+      lock_timeout: 15s
       batch_isolation: snapshot
       require_snapshot_isolation: true
       privilege_recheck_interval: 5m
@@ -236,12 +236,12 @@ targets:
       # module_object_patterns:
       #   FT.SEARCH: ["tenant-42:*"]
     connection:
-      connect_timeout: 3s
-      read_timeout: 12s
-      write_timeout: 3s
-      max_open: 2
-      max_idle: 1
-      max_lifetime: 3m
-      max_idle_time: 1m
+      connect_timeout: 15s
+      read_timeout: 11m
+      write_timeout: 15s
+      max_open: 8
+      max_idle: 4
+      max_lifetime: 30m
+      max_idle_time: 10m
     tls:
       mode: required

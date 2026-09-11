@@ -20,7 +20,7 @@ func TestSQLServerDefaults(t *testing.T) {
 	if target.SQLServer.ApplicationName != "readonly-db-mcp" || target.SQLServer.ApplicationIntent != "read-only" {
 		t.Fatalf("unexpected SQL Server defaults: %#v", target.SQLServer)
 	}
-	if target.SQLServer.LockTimeout != 1500*time.Millisecond || target.SQLServer.BatchIsolation != "snapshot" {
+	if target.SQLServer.LockTimeout != 15*time.Second || target.SQLServer.BatchIsolation != "snapshot" {
 		t.Fatalf("unexpected SQL Server execution defaults: %#v", target.SQLServer)
 	}
 	if target.SQLServer.RequireSnapshot == nil || !*target.SQLServer.RequireSnapshot {

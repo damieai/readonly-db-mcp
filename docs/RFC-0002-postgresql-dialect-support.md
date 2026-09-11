@@ -201,13 +201,13 @@ targets:
     denied_tables:
       - reporting.raw_customer_export
     connection:
-      connect_timeout: 3s
-      read_timeout: 12s
-      write_timeout: 3s
-      max_open: 2
-      max_idle: 1
-      max_lifetime: 3m
-      max_idle_time: 1m
+      connect_timeout: 15s
+      read_timeout: 11m
+      write_timeout: 15s
+      max_open: 8
+      max_idle: 4
+      max_lifetime: 30m
+      max_idle_time: 10m
     postgresql:
       application_name: readonly-db-mcp
       statement_timeout_margin: 250ms

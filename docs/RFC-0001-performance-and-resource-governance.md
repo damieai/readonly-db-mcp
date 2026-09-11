@@ -187,7 +187,8 @@ round-robin among non-empty queues.
 
 Default policy:
 
-- reserve one global slot for metadata when global concurrency is at least 3;
+- reserve roughly one eighth of global capacity for metadata when global
+  concurrency is at least 3;
 - batch may use at most 25% of global capacity, rounded up;
 - interactive work may borrow unused metadata capacity;
 - metadata may borrow unused interactive capacity;
@@ -199,21 +200,21 @@ Default policy:
 
 Per-target capacity remains a hard ceiling. `connection.max_open` must be at
 least the target admission ceiling; configuration validation rejects impossible
-combinations. The default remains conservative and never raises existing pool
-sizes automatically.
+combinations. The agent-friendly default pool has eight connections per target;
+operators can still choose a smaller explicit pool for constrained databases.
 
 New configuration shape:
 
 ```yaml
 limits:
-  global_concurrency: 4
-  per_target_concurrency: 2
-  max_queued_requests: 32
-  queue_timeout: 500ms
+  global_concurrency: 16
+  per_target_concurrency: 8
+  max_queued_requests: 256
+  queue_timeout: 1m
   workload_classes:
-    metadata_reserved: 1
-    batch_max_concurrency: 1
-    maintenance_max_concurrency: 1
+    metadata_reserved: 2
+    batch_max_concurrency: 4
+    maintenance_max_concurrency: 2
 ```
 
 Existing configurations receive safe defaults. Unknown fields remain rejected.
@@ -461,7 +462,8 @@ but never cache key material.
 New settings remain subject to compiled hard ceilings:
 
 - queued requests: 1 to 1024;
-- queue timeout: 1 ms to 30 seconds and no more than maximum query timeout;
+- query timeout: at most 15 minutes;
+- queue timeout: 1 ms to 5 minutes and no more than maximum query timeout;
 - metadata cache: at most 10,000 entries and 256 MiB per target;
 - result cache: at most 10,000 entries and 512 MiB per target;
 - aggregate configured cache budget: at most a process-level ceiling;

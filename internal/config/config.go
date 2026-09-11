@@ -259,55 +259,55 @@ func applyDefaults(cfg *Config) {
 		cfg.Server.Transport = TransportStdio
 	}
 	if cfg.Limits.GlobalConcurrency == 0 {
-		cfg.Limits.GlobalConcurrency = 4
+		cfg.Limits.GlobalConcurrency = 16
 	}
 	if cfg.Limits.PerTargetConcurrency == 0 {
-		cfg.Limits.PerTargetConcurrency = 2
+		cfg.Limits.PerTargetConcurrency = 8
 	}
 	if cfg.Limits.DefaultTimeout == 0 {
-		cfg.Limits.DefaultTimeout = 3 * time.Second
+		cfg.Limits.DefaultTimeout = 5 * time.Minute
 	}
 	if cfg.Limits.MaxTimeout == 0 {
-		cfg.Limits.MaxTimeout = 10 * time.Second
+		cfg.Limits.MaxTimeout = 10 * time.Minute
 	}
 	if cfg.Limits.MaxRows == 0 {
-		cfg.Limits.MaxRows = 500
+		cfg.Limits.MaxRows = 5_000
 	}
 	if cfg.Limits.MaxResultBytes == 0 {
-		cfg.Limits.MaxResultBytes = 1 << 20
+		cfg.Limits.MaxResultBytes = 8 << 20
 	}
 	if cfg.Limits.MaxCellBytes == 0 {
-		cfg.Limits.MaxCellBytes = 64 << 10
+		cfg.Limits.MaxCellBytes = 1 << 20
 	}
 	if cfg.Limits.MaxSQLBytes == 0 {
-		cfg.Limits.MaxSQLBytes = 32 << 10
+		cfg.Limits.MaxSQLBytes = 256 << 10
 	}
 	if cfg.Limits.MaxBatchQueries == 0 {
-		cfg.Limits.MaxBatchQueries = 10
+		cfg.Limits.MaxBatchQueries = 50
 	}
 	if cfg.Limits.MaxParameters == 0 {
-		cfg.Limits.MaxParameters = 100
+		cfg.Limits.MaxParameters = 1_000
 	}
 	if cfg.Limits.MaxParameterBytes == 0 {
-		cfg.Limits.MaxParameterBytes = 1 << 20
+		cfg.Limits.MaxParameterBytes = 8 << 20
 	}
 	if cfg.Limits.MaxParameterValueBytes == 0 {
-		cfg.Limits.MaxParameterValueBytes = 256 << 10
+		cfg.Limits.MaxParameterValueBytes = 2 << 20
 	}
 	if cfg.Limits.MaxQueuedRequests == 0 {
-		cfg.Limits.MaxQueuedRequests = 32
+		cfg.Limits.MaxQueuedRequests = 256
 	}
 	if cfg.Limits.QueueTimeout == 0 {
-		cfg.Limits.QueueTimeout = 500 * time.Millisecond
+		cfg.Limits.QueueTimeout = time.Minute
 	}
 	if cfg.Limits.WorkloadClasses.MetadataReserved == 0 && cfg.Limits.GlobalConcurrency >= 3 {
-		cfg.Limits.WorkloadClasses.MetadataReserved = 1
+		cfg.Limits.WorkloadClasses.MetadataReserved = (cfg.Limits.GlobalConcurrency + 7) / 8
 	}
 	if cfg.Limits.WorkloadClasses.BatchMaxConcurrency == 0 {
 		cfg.Limits.WorkloadClasses.BatchMaxConcurrency = (cfg.Limits.GlobalConcurrency + 3) / 4
 	}
 	if cfg.Limits.WorkloadClasses.MaintenanceMaxConcurrency == 0 {
-		cfg.Limits.WorkloadClasses.MaintenanceMaxConcurrency = 1
+		cfg.Limits.WorkloadClasses.MaintenanceMaxConcurrency = (cfg.Limits.GlobalConcurrency + 7) / 8
 	}
 
 	for _, target := range cfg.Targets {
@@ -334,25 +334,25 @@ func applyDefaults(cfg *Config) {
 			}
 		}
 		if target.Connection.ConnectTimeout == 0 {
-			target.Connection.ConnectTimeout = 3 * time.Second
+			target.Connection.ConnectTimeout = 15 * time.Second
 		}
 		if target.Connection.ReadTimeout == 0 {
-			target.Connection.ReadTimeout = cfg.Limits.MaxTimeout + 2*time.Second
+			target.Connection.ReadTimeout = cfg.Limits.MaxTimeout + time.Minute
 		}
 		if target.Connection.WriteTimeout == 0 {
-			target.Connection.WriteTimeout = 3 * time.Second
+			target.Connection.WriteTimeout = 15 * time.Second
 		}
 		if target.Connection.MaxOpen == 0 {
-			target.Connection.MaxOpen = 2
+			target.Connection.MaxOpen = 8
 		}
 		if target.Connection.MaxIdle == 0 {
-			target.Connection.MaxIdle = 1
+			target.Connection.MaxIdle = 4
 		}
 		if target.Connection.MaxLifetime == 0 {
-			target.Connection.MaxLifetime = 3 * time.Minute
+			target.Connection.MaxLifetime = 30 * time.Minute
 		}
 		if target.Connection.MaxIdleTime == 0 {
-			target.Connection.MaxIdleTime = time.Minute
+			target.Connection.MaxIdleTime = 10 * time.Minute
 		}
 		if target.TLS.Mode == "" {
 			target.TLS.Mode = TLSVerifyFull
@@ -379,7 +379,7 @@ func applyDefaults(cfg *Config) {
 				target.SQLServer.ApplicationIntent = "read-only"
 			}
 			if target.SQLServer.LockTimeout == 0 {
-				target.SQLServer.LockTimeout = 1500 * time.Millisecond
+				target.SQLServer.LockTimeout = 15 * time.Second
 			}
 			if target.SQLServer.BatchIsolation == "" {
 				target.SQLServer.BatchIsolation = "snapshot"
@@ -535,8 +535,8 @@ func (cfg *Config) Validate() error {
 	if cfg.Limits.PerTargetConcurrency < 1 || cfg.Limits.PerTargetConcurrency > cfg.Limits.GlobalConcurrency {
 		problems = append(problems, "limits.per_target_concurrency must be positive and no greater than global_concurrency")
 	}
-	if cfg.Limits.DefaultTimeout <= 0 || cfg.Limits.MaxTimeout <= 0 || cfg.Limits.DefaultTimeout > cfg.Limits.MaxTimeout || cfg.Limits.MaxTimeout > time.Minute {
-		problems = append(problems, "query timeouts are invalid or exceed the one-minute hard ceiling")
+	if cfg.Limits.DefaultTimeout <= 0 || cfg.Limits.MaxTimeout <= 0 || cfg.Limits.DefaultTimeout > cfg.Limits.MaxTimeout || cfg.Limits.MaxTimeout > 15*time.Minute {
+		problems = append(problems, "query timeouts are invalid or exceed the fifteen-minute hard ceiling")
 	}
 	if cfg.Limits.MaxRows < 1 || cfg.Limits.MaxRows > 10_000 {
 		problems = append(problems, "limits.max_rows must be between 1 and 10000")
@@ -562,8 +562,8 @@ func (cfg *Config) Validate() error {
 	if cfg.Limits.MaxQueuedRequests < 1 || cfg.Limits.MaxQueuedRequests > 1024 {
 		problems = append(problems, "limits.max_queued_requests must be between 1 and 1024")
 	}
-	if cfg.Limits.QueueTimeout < time.Millisecond || cfg.Limits.QueueTimeout > 30*time.Second || cfg.Limits.QueueTimeout > cfg.Limits.MaxTimeout {
-		problems = append(problems, "limits.queue_timeout must be between 1ms and 30s and no greater than max_timeout")
+	if cfg.Limits.QueueTimeout < time.Millisecond || cfg.Limits.QueueTimeout > 5*time.Minute || cfg.Limits.QueueTimeout > cfg.Limits.MaxTimeout {
+		problems = append(problems, "limits.queue_timeout must be between 1ms and 5m and no greater than max_timeout")
 	}
 	wc := cfg.Limits.WorkloadClasses
 	if wc.MetadataReserved < 0 || wc.MetadataReserved > cfg.Limits.GlobalConcurrency {

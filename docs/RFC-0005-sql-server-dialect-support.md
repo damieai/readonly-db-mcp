@@ -431,18 +431,18 @@ targets:
     denied_tables:
       - reporting.raw_payroll
     connection:
-      connect_timeout: 3s
-      read_timeout: 12s
-      write_timeout: 3s
-      max_open: 2
-      max_idle: 1
-      max_lifetime: 3m
-      max_idle_time: 1m
+      connect_timeout: 15s
+      read_timeout: 11m
+      write_timeout: 15s
+      max_open: 8
+      max_idle: 4
+      max_lifetime: 30m
+      max_idle_time: 10m
     sqlserver:
       application_name: readonly-db-mcp
       application_intent: read-only
       require_read_only_replica: true
-      lock_timeout: 1500ms
+      lock_timeout: 15s
       batch_isolation: snapshot
       require_snapshot_isolation: true
       privilege_recheck_interval: 5m
@@ -705,7 +705,7 @@ On checkout, the executor applies fixed session settings such as:
 ```sql
 SET NOCOUNT ON;
 SET XACT_ABORT ON;
-SET LOCK_TIMEOUT 1500;
+SET LOCK_TIMEOUT 15000;
 SET DEADLOCK_PRIORITY LOW;
 ```
 
