@@ -113,13 +113,21 @@ type PostgreSQLConfig struct {
 }
 
 type SQLServerConfig struct {
-	ApplicationName        string        `yaml:"application_name"`
-	ApplicationIntent      string        `yaml:"application_intent"`
-	RequireReadOnlyReplica bool          `yaml:"require_read_only_replica"`
-	LockTimeout            time.Duration `yaml:"lock_timeout"`
-	BatchIsolation         string        `yaml:"batch_isolation"`
-	RequireSnapshot        *bool         `yaml:"require_snapshot_isolation"`
-	PrivilegeRecheck       time.Duration `yaml:"privilege_recheck_interval"`
+	ParserPath             string                   `yaml:"parser_path"`
+	Attestor               *SQLServerAttestorConfig `yaml:"attestor"`
+	ApplicationName        string                   `yaml:"application_name"`
+	ApplicationIntent      string                   `yaml:"application_intent"`
+	RequireReadOnlyReplica bool                     `yaml:"require_read_only_replica"`
+	LockTimeout            time.Duration            `yaml:"lock_timeout"`
+	BatchIsolation         string                   `yaml:"batch_isolation"`
+	RequireSnapshot        *bool                    `yaml:"require_snapshot_isolation"`
+	PrivilegeRecheck       time.Duration            `yaml:"privilege_recheck_interval"`
+}
+
+type SQLServerAttestorConfig struct {
+	Username     string `yaml:"username"`
+	PasswordFile string `yaml:"password_file"`
+	PasswordEnv  string `yaml:"password_env"`
 }
 
 type RedisConfig struct {
@@ -501,7 +509,11 @@ func applyDefaults(cfg *Config) {
 }
 
 func resolveRelativePaths(target *TargetConfig, configDir string) {
-	for _, path := range []*string{&target.PasswordFile, &target.TLS.CAFile, &target.TLS.CertFile, &target.TLS.KeyFile, &target.Redis.Sentinel.PasswordFile} {
+	paths := []*string{&target.PasswordFile, &target.TLS.CAFile, &target.TLS.CertFile, &target.TLS.KeyFile, &target.Redis.Sentinel.PasswordFile, &target.SQLServer.ParserPath}
+	if target.SQLServer.Attestor != nil {
+		paths = append(paths, &target.SQLServer.Attestor.PasswordFile)
+	}
+	for _, path := range paths {
 		if *path != "" && !filepath.IsAbs(*path) {
 			*path = filepath.Join(configDir, *path)
 		}
@@ -795,6 +807,23 @@ func validateTarget(name string, target *TargetConfig, limits Limits) []string {
 			problems = append(problems, "redis settings are valid only for redis targets")
 		}
 		s := target.SQLServer
+		if s.ParserPath != "" && !filepath.IsAbs(s.ParserPath) {
+			problems = append(problems, "sqlserver.parser_path must resolve to an absolute path")
+		}
+		if a := s.Attestor; a != nil {
+			if target.Connection.MaxOpen < 2 {
+				problems = append(problems, "SQL Server attestor requires max_open >= 2; one slot is reserved for fixed catalog queries")
+			}
+			if a.Username == "" || strings.ContainsAny(a.Username, "\x00\r\n") {
+				problems = append(problems, "sqlserver.attestor.username is required")
+			}
+			if (a.PasswordFile == "") == (a.PasswordEnv == "") {
+				problems = append(problems, "sqlserver.attestor requires exactly one password source")
+			}
+			if a.PasswordEnv != "" && !regexp.MustCompile(`^[A-Z][A-Z0-9_]{2,127}$`).MatchString(a.PasswordEnv) {
+				problems = append(problems, "sqlserver.attestor.password_env is invalid")
+			}
+		}
 		if !safeName.MatchString(s.ApplicationName) {
 			problems = append(problems, "sqlserver.application_name must be a safe identifier")
 		}

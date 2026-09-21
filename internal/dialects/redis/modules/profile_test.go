@@ -62,10 +62,19 @@ func TestLoadSignedProfile(t *testing.T) {
 	}
 }
 
-func TestValidateRejectsUnimplementedIndexPrefixAttestation(t *testing.T) {
+func TestValidateIndexPrefixAttestationRequiresKnownModuleAndCommand(t *testing.T) {
 	now := time.Now()
 	profile := Profile{ProfileVersion: 1, Module: ModuleIdentity{Name: "search", Version: 1, RedisCompatibility: []string{"8.0"}, ArtifactSHA256: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", ArtifactPath: "/opt/search.so", VendorBuildID: "build"}, Commands: map[string]CommandRule{"FT.SEARCH": {ReadOnly: true, KeyModel: "index-prefix-attested"}}, IssuedAt: now.Add(-time.Minute), ExpiresAt: now.Add(time.Minute)}
+	if err := validate(profile, now); err != nil {
+		t.Fatal(err)
+	}
+	profile.Module.Name = "unknown"
 	if err := validate(profile, now); err == nil {
-		t.Fatal("expected unsupported index-prefix attestation rejection")
+		t.Fatal("expected unknown module rejection")
+	}
+	profile.Module.Name = "search"
+	profile.Commands["FT.UNKNOWN"] = CommandRule{ReadOnly: true, KeyModel: "index-prefix-attested"}
+	if err := validate(profile, now); err == nil {
+		t.Fatal("expected unknown index command rejection")
 	}
 }

@@ -108,7 +108,7 @@ func attest(ctx context.Context, client redisdriver.UniversalClient, cfg *config
 	if err != nil {
 		return nil, "", "", errors.New("inspect Redis command catalog")
 	}
-	trustedModules, moduleCommands, err := attestModules(ctx, client, profiles, commands, version)
+	trustedModules, moduleCommands, err := attestModules(ctx, client, profiles, commands, version, infoField(info, "redis_build_id"))
 	if err != nil {
 		return nil, "", "", err
 	}
@@ -116,11 +116,15 @@ func attest(ctx context.Context, client redisdriver.UniversalClient, cfg *config
 	if err != nil {
 		return nil, "", "", errors.New("inspect effective Redis ACL")
 	}
-	if err := attestACL(acl, cfg.Redis, commands); err != nil {
+	if err := attestACL(acl, cfg.Redis, commands, trustedModules); err != nil {
 		return nil, "", "", err
 	}
 	revision := catalogRevision(version, commands) + ":" + profiles.Digest()
-	return newPolicy(cfg.Redis, commands, salt, trustedModules, moduleCommands), version, revision, nil
+	policy := newPolicy(cfg.Redis, commands, salt, trustedModules, moduleCommands)
+	if err := policy.attestSearchIndexes(ctx, client); err != nil {
+		return nil, "", "", err
+	}
+	return policy, version, revision, nil
 }
 
 func loadCommandCatalog(ctx context.Context, client redisdriver.UniversalClient) (map[string]*redisdriver.CommandInfo, error) {
@@ -128,6 +132,15 @@ func loadCommandCatalog(ctx context.Context, client redisdriver.UniversalClient)
 	if err != nil {
 		return nil, err
 	}
+	normalized := make(map[string]*redisdriver.CommandInfo, len(commands))
+	for name, info := range commands {
+		key := strings.ToLower(name)
+		if _, duplicate := normalized[key]; duplicate || info == nil {
+			return nil, errors.New("ambiguous Redis command catalog")
+		}
+		normalized[key] = info
+	}
+	commands = normalized
 	names, err := client.CommandList(ctx, nil).Result()
 	if err != nil {
 		return nil, err

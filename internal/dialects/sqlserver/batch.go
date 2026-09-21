@@ -30,12 +30,10 @@ func (t *Target) BatchQuery(ctx context.Context, request core.BatchRequest) (*co
 	if timeout > t.limits.MaxTimeout {
 		return nil, errors.New("requested timeout exceeds configured maximum")
 	}
+	qctx, cancel := context.WithTimeout(ctx, timeout)
+	defer cancel()
 	batchParameterBytes := 0
 	for i, query := range request.Queries {
-		_, err := t.policy.Load().Validate(query.SQL, len(query.Parameters))
-		if err != nil {
-			return nil, fmt.Errorf("batch query %d: %w", i+1, err)
-		}
 		if query.MaxRows < 0 || query.MaxRows > t.limits.MaxRows {
 			return nil, fmt.Errorf("batch query %d row limit exceeds configured maximum", i+1)
 		}
@@ -51,8 +49,6 @@ func (t *Target) BatchQuery(ctx context.Context, request core.BatchRequest) (*co
 		}
 	}
 
-	qctx, cancel := context.WithTimeout(ctx, timeout)
-	defer cancel()
 	permit, err := t.admission.Acquire(qctx, t.cfg.Name, admission.Batch)
 	if err != nil {
 		return nil, fmt.Errorf("query concurrency limit: %w", err)
@@ -64,6 +60,9 @@ func (t *Target) BatchQuery(ctx context.Context, request core.BatchRequest) (*co
 		return nil, err
 	}
 	for i, query := range request.Queries {
+		if _, err := t.parseQuery(qctx, query.SQL, len(query.Parameters)); err != nil {
+			return nil, fmt.Errorf("batch query %d: %w", i+1, err)
+		}
 		if _, err := t.showPlan(qctx, query.SQL, namedParameters(query.Parameters)); err != nil {
 			return nil, fmt.Errorf("batch query %d SHOWPLAN: %w", i+1, err)
 		}

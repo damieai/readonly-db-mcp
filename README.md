@@ -12,9 +12,12 @@ repository.
 > and Redis 8.x standalone, Sentinel and Cluster read-only command support is
 > implemented behind strict ACL, topology and live command-catalog attestation.
 > Third-party modules require exact, Ed25519-signed module profiles and a locally
-> verifiable module artifact. Module index-prefix introspection fails closed
-> until a dedicated verifier is available. Production rollout still
+> verifiable module artifact. Search index prefixes are checked at startup and
+> before each query. Production rollout still
 > requires validation against your provisioned accounts and server builds.
+> Elasticsearch is not implemented. Its native read-only query design is in
+> [RFC-0006](docs/RFC-0006-elasticsearch-readonly-support.md), including advanced
+> DSL, scripts, aggregations, vector search, pagination and query languages.
 
 ## What it provides
 
@@ -118,7 +121,8 @@ this scope, including `CONNECT` on other databases and `EXECUTE` on
 non-system functions; startup attestation intentionally fails closed otherwise.
 
 For SQL Server, use a dedicated login and database user, grant `SELECT` only on
-curated schemas, and grant database `SHOWPLAN`. Snapshot isolation is required
+curated schemas, and grant database `SHOWPLAN`, and make `VIEW DEFINITION` available through the
+runtime identity or the separate read-only catalog attestor below. Snapshot isolation is required
 for consistent batches. A minimal shape is:
 
 ```sql
@@ -130,14 +134,28 @@ CREATE USER [finance_mcp_ro] FOR LOGIN [finance_mcp_ro]
   WITH DEFAULT_SCHEMA = [reporting];
 GRANT CONNECT TO [finance_mcp_ro];
 GRANT SHOWPLAN TO [finance_mcp_ro];
+GRANT VIEW DEFINITION TO [finance_mcp_ro];
+GRANT SELECT ON OBJECT::sys.sql_expression_dependencies TO [finance_mcp_ro];
 GRANT SELECT ON SCHEMA::[reporting] TO [finance_mcp_ro];
 ```
 
-Do not grant DML, DDL, ownership, impersonation, executable-module, bulk,
+Do not grant DML, DDL, ownership, impersonation, arbitrary procedure execution, bulk,
 external-access, or broad control permissions. Startup walks effective server,
 database, schema, and object permissions and fails closed on drift. SQL Server
 parameters use `@p1`, `@p2`, and so on. See
 [RFC-0005](docs/RFC-0005-sql-server-dialect-support.md) for the full model.
+
+SQL Server now requires the pinned ScriptDom helper. Build it with
+`make build-sqlserver-parser` using a .NET 8 SDK, then ship the complete
+`bin/sqlserver-parser` directory beside the MCP binary. Its self-contained
+release needs no installed .NET runtime. See the [helper build instructions](tools/sqlserver-parser/README.md).
+Startup and each query verify reachable view/UDF definitions, dependency chains,
+computed-column functions and RLS predicates. An optional `sqlserver.attestor`
+uses a separate read-only identity for fixed catalog reads (including an exact
+`SELECT` grant on `sys.sql_expression_dependencies`); one connection is
+reserved from the configured target pool. Missing parser or catalog proof fails
+closed. See the [qualification record](docs/qualification/2026-09-13-redis-sqlserver.md)
+for the distinction between implemented checks and live-server qualification.
 
 For Redis, create a password-protected ACL user from `reset`, grant `%R~pattern`
 only for the configured key prefixes, start command permissions from `-@all`,
@@ -358,6 +376,20 @@ The SQL Server integration test accepts `READONLY_DB_MCP_SQLSERVER_DSN` and an
 optional `READONLY_DB_MCP_SQLSERVER_SCHEMA` (default `reporting`). It performs
 live permission attestation, an advanced SELECT `SHOWPLAN_XML`, and a
 transactionally rolled-back DDL denial probe against a disposable database.
+For the full production path, provision the disposable
+[SQL fixture](tools/sqlserver-parser/acceptance-fixture.sql), then set
+`READONLY_DB_MCP_SQLSERVER_CONFIG` and `READONLY_DB_MCP_SQLSERVER_TARGET` and run
+`go test ./internal/dialects/sqlserver -run TestSQLServerConfiguredTargetIntegration -count=1 -v`.
+This gate opens the real target, verifies curated views and functions, executes
+advanced reads and snapshot batches, checks native UPDATE/DELETE denial, and
+checks recovery after an already-cancelled request. Mid-execution cancellation
+and the full engine/version matrix remain separate acceptance requirements.
+
+Local disposable Redis tests use `READONLY_DB_MCP_REDIS_SERVER` and optionally
+`READONLY_DB_MCP_REDIS_SEARCH_MODULE`. Run `make test-redis-local` to exercise
+standalone, Sentinel failover, all-slot Cluster routing, and a signed Search
+profile with index-prefix drift. These tests create and clean up their own
+processes and fixture credentials; missing binaries cause explicit skips.
 
 ## License
 

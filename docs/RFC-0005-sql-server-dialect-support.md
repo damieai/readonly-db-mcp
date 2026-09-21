@@ -6,16 +6,22 @@
 - Target release: staged
 - Scope: Microsoft SQL Server targets over TDS and the existing stdio MCP transport
 
-Implementation note (2026-09-04): the first runnable slice now includes
-`go-mssqldb`, strict configuration, effective permission attestation, native
-`@pN` binding, catalog metadata, snapshot batches, a T-SQL safety scanner, and
-mandatory server-compiled `SHOWPLAN_XML` validation before execution. The
-planned ScriptDom helper remains a release-hardening phase: the build
-environment has no managed runtime, so the current boundary deliberately pairs
-the Go scanner with SQL Server's own non-executing compiler proof instead of
-shipping an unverified grammar substitute. Exact-version integration matrices,
-transitive module-definition attestation, and the optional separate attestor
-identity remain open release gates.
+Implementation update (2026-09-13): the adapter now requires a pinned ScriptDom
+helper, traverses entry and transitive view/UDF definitions plus computed-column
+and RLS dependencies, and supports a separate read-only catalog attestor. Missing
+parser or metadata proof fails startup. The helper's self-contained Linux x64
+artifact has passed the 150/160/170 parser corpus; this does not certify those SQL
+Server engine releases. Exact server/permission/cancellation matrices and broader
+release hardening remain explicit gates in the
+[qualification record](qualification/2026-09-13-redis-sqlserver.md).
+
+The initial helper uses one bounded process per active parse rather than a
+persistent pool. It runs inside admission and the original request deadline,
+with 1 MiB framing, 100,000 AST nodes, depth 256 and a 256 MiB CLR heap ceiling.
+SQL module proofs cap the catalog at 10,000 objects, 100,000 edges and 16 MiB of
+definition text. A separate attestor reserves one connection from `max_open`;
+minimum total is two. Deployment must include helper process memory in addition
+to the existing Go response/cache forecast.
 
 ## Summary
 

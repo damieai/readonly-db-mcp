@@ -35,10 +35,15 @@ dedicated SELECT-only SQL identity / read-key-only Redis ACL
 - `internal/dialects/postgresql`: PostgreSQL connection, role/object privilege
   attestation, native AST policy and metadata reads.
 - `internal/dialects/sqlserver`: SQL Server connection, effective-permission
-  attestation, T-SQL safety scan, mandatory `SHOWPLAN_XML` proof, snapshot
-  batches, and catalog metadata reads.
+  attestation, pinned ScriptDom process, transitive module/catalog proof, mandatory
+  `SHOWPLAN_XML` proof, snapshot batches, and catalog metadata reads. An optional
+  read-only attestor uses one connection reserved from the target capacity.
+- `tools/sqlserver-parser`: self-contained ScriptDom helper and hostile/advanced
+  grammar corpus integration. Parsing runs under admission and the request deadline;
+  its separate process memory must be included in deployment capacity.
 - `internal/dialects/redis`: Redis ACL and live command-catalog attestation,
-  key-scope policy, RESP normalization and bounded command execution.
+  signed module profiles, canonical Search index/prefix verification, Sentinel and
+  Cluster route attestation, RESP normalization and bounded command execution.
 - `internal/config`: strict YAML decoding, hard ceilings and secret resolution.
 - `internal/audit`: structured, non-content audit events.
 - `internal/admission`: global/per-target bounded queues, workload fairness and

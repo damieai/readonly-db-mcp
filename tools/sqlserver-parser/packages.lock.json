@@ -1,0 +1,14 @@
+{
+  "version": 1,
+  "dependencies": {
+    "net8.0": {
+      "Microsoft.SqlServer.TransactSql.ScriptDom": {
+        "type": "Direct",
+        "requested": "[170.191.0, 170.191.0]",
+        "resolved": "170.191.0",
+        "contentHash": "Rd0xOrMhZV3bE7LwkiOv9zJsZ/OUNUS7xvEPvbSVK04vDotPk1lxRTPXxul/E6TSfdmT8E+RoeVDgtIaFMUshQ=="
+      }
+    },
+    "net8.0/linux-x64": {}
+  }
+}

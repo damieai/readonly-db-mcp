@@ -30,32 +30,50 @@ import (
 )
 
 type Target struct {
-	cfg             *config.TargetConfig
-	limits          config.Limits
-	db              *sql.DB
-	policy          atomic.Pointer[Policy]
-	admission       *admission.Controller
-	auditor         audit.Auditor
-	metrics         metrics.Recorder
-	info            core.TargetInfo
-	allowed         map[string]struct{}
-	denied          map[string]struct{}
-	cache           *metadataCache
-	policyRevision  string
-	defaultSchema   string
-	healthy         atomic.Bool
-	lastAttested    atomic.Int64
-	gate            sync.RWMutex
-	maintenanceStop context.CancelFunc
-	maintenanceWG   sync.WaitGroup
+	cfg              *config.TargetConfig
+	limits           config.Limits
+	db               *sql.DB
+	parser           tsqlParser
+	compatibility    int
+	catalogDB        *sql.DB
+	verifyReferences func(context.Context, []parserReference) error
+	policy           atomic.Pointer[Policy]
+	admission        *admission.Controller
+	auditor          audit.Auditor
+	metrics          metrics.Recorder
+	info             core.TargetInfo
+	allowed          map[string]struct{}
+	denied           map[string]struct{}
+	cache            *metadataCache
+	policyRevision   string
+	defaultSchema    string
+	healthy          atomic.Bool
+	lastAttested     atomic.Int64
+	gate             sync.RWMutex
+	maintenanceStop  context.CancelFunc
+	maintenanceWG    sync.WaitGroup
 }
 
 func Open(ctx context.Context, cfg *config.TargetConfig, limits config.Limits, controller *admission.Controller, auditor audit.Auditor, recorder metrics.Recorder) (*Target, error) {
+	helper, err := parserPath(cfg.SQLServer.ParserPath)
+	if err != nil {
+		return nil, err
+	}
 	password, err := cfg.Password()
 	if err != nil {
 		return nil, fmt.Errorf("target %q credentials: %w", cfg.Name, err)
 	}
-	db, err := openDB(cfg, password)
+	runtimeCfg := *cfg
+	if cfg.SQLServer.Attestor != nil {
+		if cfg.Connection.MaxOpen < 2 {
+			return nil, errors.New("SQL Server attestor requires at least two configured connection slots")
+		}
+		runtimeCfg.Connection.MaxOpen--
+		if runtimeCfg.Connection.MaxIdle > 0 {
+			runtimeCfg.Connection.MaxIdle--
+		}
+	}
+	db, err := openDB(&runtimeCfg, password)
 	password = ""
 	if err != nil {
 		return nil, fmt.Errorf("target %q connection setup: %w", cfg.Name, err)
@@ -84,6 +102,8 @@ func Open(ctx context.Context, cfg *config.TargetConfig, limits config.Limits, c
 		cfg:            cfg,
 		limits:         limits,
 		db:             db,
+		parser:         scriptDOM{path: helper},
+		compatibility:  identity.compatibility,
 		admission:      controller,
 		auditor:        auditor,
 		metrics:        recorder,
@@ -108,6 +128,19 @@ func Open(ctx context.Context, cfg *config.TargetConfig, limits config.Limits, c
 		},
 	}
 	t.policy.Store(NewPolicy(cfg.Database, identity.defaultSchema, cfg.AllowedSchemas, cfg.DeniedTables, limits.MaxSQLBytes))
+	if _, err := t.parser.Parse(attestationCtx, "SELECT 1", identity.compatibility, false); err != nil {
+		return nil, err
+	}
+	if err := t.openCatalog(attestationCtx); err != nil {
+		return nil, err
+	}
+	t.verifyReferences = t.verifyModuleReferences
+	if err := t.attestAccessibleModules(attestationCtx); err != nil {
+		if t.catalogDB != t.db {
+			_ = t.catalogDB.Close()
+		}
+		return nil, err
+	}
 	t.healthy.Store(true)
 	t.lastAttested.Store(time.Now().UnixNano())
 	t.startPrivilegeRecheck()
@@ -189,23 +222,21 @@ func (t *Target) Info() core.TargetInfo {
 }
 
 func (t *Target) ValidateQuery(query string) (*core.Validation, error) {
-	return t.policy.Load().Validate(query, -1)
+	ctx, cancel := context.WithTimeout(context.Background(), t.limits.DefaultTimeout)
+	defer cancel()
+	permit, err := t.admission.Acquire(ctx, t.cfg.Name, admission.Interactive)
+	if err != nil {
+		return nil, err
+	}
+	defer permit.Release()
+	return t.parseQuery(ctx, query, -1)
 }
 
 func (t *Target) Query(ctx context.Context, request core.QueryRequest) (*core.QueryResult, error) {
-	validation, err := t.policy.Load().Validate(request.SQL, len(request.Parameters))
-	if err != nil {
-		t.audit(ctx, audit.Event{Target: t.cfg.Name, Operation: "query_select", Decision: "rejected", Reason: err.Error()})
-		return nil, err
-	}
-	return t.execute(ctx, request, validation)
+	return t.execute(ctx, request, nil)
 }
 
 func (t *Target) Explain(ctx context.Context, request core.QueryRequest) (*core.QueryResult, error) {
-	validation, err := t.policy.Load().Validate(request.SQL, len(request.Parameters))
-	if err != nil {
-		return nil, err
-	}
 	timeout, _, err := t.requestLimits(request)
 	if err != nil {
 		return nil, err
@@ -221,6 +252,10 @@ func (t *Target) Explain(ctx context.Context, request core.QueryRequest) (*core.
 	t.gate.RLock()
 	defer t.gate.RUnlock()
 	if err := t.requireHealthy(); err != nil {
+		return nil, err
+	}
+	validation, err := t.parseQuery(qctx, request.SQL, len(request.Parameters))
+	if err != nil {
 		return nil, err
 	}
 	plan, err := t.showPlan(qctx, request.SQL, namedParameters(request.Parameters))
@@ -274,6 +309,11 @@ func (t *Target) execute(ctx context.Context, request core.QueryRequest, validat
 		return nil, err
 	}
 	args := namedParameters(request.Parameters)
+	validation, err = t.parseQuery(qctx, request.SQL, len(request.Parameters))
+	if err != nil {
+		t.audit(qctx, audit.Event{Target: t.cfg.Name, Operation: "query_select", Decision: "rejected", Reason: err.Error()})
+		return nil, err
+	}
 	if _, err := t.showPlan(qctx, request.SQL, args); err != nil {
 		t.audit(qctx, audit.Event{Target: t.cfg.Name, Operation: "query_select", Fingerprint: validation.Fingerprint, Tables: validation.Tables, Decision: "rejected", Reason: err.Error()})
 		return nil, err
@@ -567,7 +607,15 @@ func (t *Target) startPrivilegeRecheck() {
 				if err == nil {
 					t.gate.Lock()
 					identity, verifyErr := verifyIdentityAndPrivileges(checkCtx, t.db, t.cfg)
-					if verifyErr == nil && strings.EqualFold(identity.defaultSchema, t.defaultSchema) {
+					if verifyErr == nil && t.cfg.SQLServer.Attestor != nil {
+						cfg := *t.cfg
+						cfg.Username = cfg.SQLServer.Attestor.Username
+						_, verifyErr = verifyIdentityAndPrivileges(checkCtx, t.catalogDB, &cfg)
+					}
+					if verifyErr == nil {
+						verifyErr = t.attestAccessibleModules(checkCtx)
+					}
+					if verifyErr == nil && identity.compatibility == t.compatibility && strings.EqualFold(identity.defaultSchema, t.defaultSchema) {
 						t.lastAttested.Store(time.Now().UnixNano())
 						t.healthy.Store(true)
 					} else {
@@ -588,6 +636,9 @@ func (t *Target) Close() error {
 	if t.maintenanceStop != nil {
 		t.maintenanceStop()
 		t.maintenanceWG.Wait()
+	}
+	if t.catalogDB != nil && t.catalogDB != t.db {
+		_ = t.catalogDB.Close()
 	}
 	t.cache.clear()
 	return t.db.Close()

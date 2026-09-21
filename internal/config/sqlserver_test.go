@@ -31,6 +31,33 @@ func TestSQLServerDefaults(t *testing.T) {
 	}
 }
 
+func TestSQLServerAttestorConfigAndRelativePaths(t *testing.T) {
+	cfg := validConfig()
+	target := cfg.Targets["test"]
+	target.Engine = EngineSQLServer
+	target.MySQL = MySQLConfig{}
+	applyDefaults(cfg)
+	target.SQLServer.ParserPath = "../bin/sqlserver-parser/readonly-sqlserver-parser"
+	target.SQLServer.Attestor = &SQLServerAttestorConfig{Username: "catalog_reader", PasswordFile: "../secrets/catalog.password"}
+	resolveRelativePaths(target, "/srv/mcp/configs")
+	if target.SQLServer.ParserPath != "/srv/mcp/bin/sqlserver-parser/readonly-sqlserver-parser" || target.SQLServer.Attestor.PasswordFile != "/srv/mcp/secrets/catalog.password" {
+		t.Fatal("SQL Server paths did not resolve")
+	}
+	if err := cfg.Validate(); err != nil {
+		t.Fatal(err)
+	}
+	target.SQLServer.Attestor.PasswordEnv = "ALSO_A_PASSWORD"
+	if err := cfg.Validate(); err == nil {
+		t.Fatal("ambiguous attestor secrets accepted")
+	}
+	target.SQLServer.Attestor.PasswordEnv = ""
+	target.Connection.MaxOpen = 1
+	target.Connection.MaxIdle = 0
+	if err := cfg.Validate(); err == nil {
+		t.Fatal("unbudgeted attestor connection accepted")
+	}
+}
+
 func TestSQLServerRequiresEventualConsistencyForReplica(t *testing.T) {
 	cfg := validConfig()
 	target := cfg.Targets["test"]

@@ -15,7 +15,7 @@ type installedModule struct {
 	Path    string
 }
 
-func attestModules(ctx context.Context, client redisdriver.UniversalClient, profiles *modulepolicy.Set, catalog map[string]*redisdriver.CommandInfo, redisVersion string) (map[string]modulepolicy.CommandRule, map[string]struct{}, error) {
+func attestModules(ctx context.Context, client redisdriver.UniversalClient, profiles *modulepolicy.Set, catalog map[string]*redisdriver.CommandInfo, redisVersion, redisBuildID string) (map[string]modulepolicy.CommandRule, map[string]struct{}, error) {
 	raw, err := client.Do(ctx, "MODULE", "LIST").Result()
 	if err != nil {
 		return nil, nil, fmt.Errorf("inspect installed Redis modules")
@@ -40,7 +40,7 @@ func attestModules(ctx context.Context, client redisdriver.UniversalClient, prof
 	}
 	for name, identity := range installed {
 		profile, ok := profiles.Profile(name)
-		if !ok || profile.Module.Version != identity.Version || profile.Module.ArtifactPath != identity.Path {
+		if !ok || profile.Module.Version != identity.Version || !moduleArtifactMatches(profile.Module, identity, redisBuildID) {
 			return nil, nil, fmt.Errorf("Redis module %q identity does not match its signed profile", name)
 		}
 		if !compatibleRedisVersion(profile.Module.RedisCompatibility, redisVersion) {
@@ -112,12 +112,19 @@ func parseModuleInventory(raw any) (map[string]installedModule, error) {
 			return nil, fmt.Errorf("duplicate Redis module inventory entry")
 		}
 		path := fields["path"]
-		if path == "" {
-			return nil, fmt.Errorf("Redis module inventory path is missing")
-		}
 		result[name] = installedModule{Version: version, Path: path}
 	}
 	return result, nil
+}
+
+func moduleArtifactMatches(profile modulepolicy.ModuleIdentity, live installedModule, buildID string) bool {
+	if profile.Builtin {
+		// Redis 8 compiles some modules into the server executable. The signed
+		// local artifact is that executable, not a fictitious module .so. Remote
+		// artifact identity retains the documented operator-deployment trust.
+		return live.Path == "" && buildID != "" && strings.EqualFold(profile.VendorBuildID, buildID)
+	}
+	return live.Path != "" && profile.ArtifactPath == live.Path
 }
 
 func compatibleRedisVersion(allowed []string, live string) bool {

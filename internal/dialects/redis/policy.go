@@ -127,7 +127,25 @@ func (p *Policy) validate(ctx context.Context, client keyResolver, req core.Redi
 		}
 	}
 	var keyFlags []redisdriver.KeyFlags
-	if needsKeyPreflight(command, entry) {
+	prefixAttested := false
+	if rule, ok := p.trustedModuleCommands[command]; ok && rule.KeyModel == "index-prefix-attested" {
+		inspector, ok := client.(moduleInspector)
+		if !ok || len(args) < 2 {
+			return nil, nil, errors.New("Redis Search requires live index-prefix inspection")
+		}
+		canonical, err := p.searchIndex(ctx, inspector, command, string(args[1].([]byte)))
+		if err != nil {
+			return nil, nil, err
+		}
+		if command == "ft.spellcheck" && !p.spellcheckDictionariesAllowed(req.Arguments) {
+			return nil, nil, errors.New("Redis Search spellcheck dictionary is outside the configured logical scope")
+		}
+		// Freeze alias resolution for this dispatch. The server ACL remains the
+		// boundary against concurrent administrator changes to index definitions.
+		args[1] = []byte(canonical)
+		prefixAttested = true
+	}
+	if !prefixAttested && needsKeyPreflight(command, entry) {
 		var err error
 		keyFlags, err = client.CommandGetKeysAndFlags(ctx, args...).Result()
 		if err != nil {

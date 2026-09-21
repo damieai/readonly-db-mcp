@@ -7,9 +7,10 @@ import (
 
 	redisdriver "github.com/redis/go-redis/v9"
 	"github.com/your-org/readonly-db-mcp/internal/config"
+	modulepolicy "github.com/your-org/readonly-db-mcp/internal/dialects/redis/modules"
 )
 
-func attestACL(value any, cfg config.RedisConfig, catalog map[string]*redisdriver.CommandInfo) error {
+func attestACL(value any, cfg config.RedisConfig, catalog map[string]*redisdriver.CommandInfo, moduleRules ...map[string]modulepolicy.CommandRule) error {
 	m, ok := stringMap(value)
 	if !ok {
 		return errors.New("Redis ACL response has an unsupported shape")
@@ -35,6 +36,13 @@ func attestACL(value any, cfg config.RedisConfig, catalog map[string]*redisdrive
 	}
 	for _, rule := range keys {
 		if _, ok := want[rule]; !ok {
+			// Legacy module APIs mark logical index arguments as RW even for a
+			// readonly command. An index-only key grant is safe only in conjunction
+			// with a signed prefix verifier and a write-free command ACL. It never
+			// substitutes for the required %R~ grants on document keys.
+			if len(moduleRules) == 1 && moduleIndexACLRule(rule, cfg, moduleRules[0]) {
+				continue
+			}
 			return fmt.Errorf("Redis ACL key rule exceeds configured read scope")
 		}
 		delete(want, rule)
@@ -51,6 +59,32 @@ func attestACL(value any, cfg config.RedisConfig, catalog map[string]*redisdrive
 		return err
 	}
 	return nil
+}
+
+func moduleIndexACLRule(rule string, cfg config.RedisConfig, rules map[string]modulepolicy.CommandRule) bool {
+	if !strings.HasPrefix(rule, "~") {
+		return false
+	}
+	pattern := strings.TrimPrefix(rule, "~")
+	// Logical index grants must be disjoint from document key prefixes, so they
+	// cannot accidentally promote a configured document prefix to RW.
+	for _, keyPattern := range cfg.KeyPatterns {
+		a, b := strings.TrimSuffix(pattern, "*"), strings.TrimSuffix(keyPattern, "*")
+		if strings.HasPrefix(a, b) || strings.HasPrefix(b, a) {
+			return false
+		}
+	}
+	for command, capability := range rules {
+		if capability.KeyModel != "index-prefix-attested" {
+			continue
+		}
+		for _, allowed := range cfg.ModuleObjectPatterns[strings.ToUpper(command)] {
+			if pattern == allowed {
+				return true
+			}
+		}
+	}
+	return false
 }
 
 func attestCommandRules(rules string, catalog map[string]*redisdriver.CommandInfo) error {

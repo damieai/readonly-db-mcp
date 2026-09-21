@@ -11,6 +11,7 @@ import (
 )
 
 type identity struct {
+	compatibility  int
 	version        string
 	defaultSchema  string
 	deploymentMode string
@@ -85,7 +86,10 @@ WHERE d.name=DB_NAME()`).Scan(
 	if err := verifyPermissionSets(ctx, db, cfg); err != nil {
 		return identity{}, err
 	}
-	return identity{version: version, defaultSchema: defaultSchema, deploymentMode: deploymentMode, readOnly: readOnly == 1}, nil
+	if compatibility != 150 && compatibility != 160 && compatibility != 170 {
+		return identity{}, errors.New("SQL Server compatibility must be 150, 160 or 170")
+	}
+	return identity{version: version, defaultSchema: defaultSchema, deploymentMode: deploymentMode, readOnly: readOnly == 1, compatibility: compatibility}, nil
 }
 
 func verifyPermissionSets(ctx context.Context, db *sql.DB, cfg *config.TargetConfig) error {
@@ -204,11 +208,12 @@ WHERE object_value.is_ms_shipped=0`)
 		_, allowed := allowedSchemas[strings.ToLower(schema)]
 		_, deniedByName := deniedTables[strings.ToLower(name)]
 		_, deniedQualified := deniedTables[qualified]
-		if insertPermission == 1 || updatePermission == 1 || deletePermission == 1 || executePermission == 1 || alterPermission == 1 || controlPermission == 1 || ownershipPermission == 1 || referencesPermission == 1 {
+		tsqlFunction := objectType == "FN" || objectType == "IF" || objectType == "TF"
+		if insertPermission == 1 || updatePermission == 1 || deletePermission == 1 || (executePermission == 1 && !tsqlFunction) || alterPermission == 1 || controlPermission == 1 || ownershipPermission == 1 || referencesPermission == 1 {
 			rows.Close()
 			return fmt.Errorf("SQL Server object %q has a data-changing or executable permission", schema+"."+name)
 		}
-		if selectPermission == 1 && (!allowed || deniedByName || deniedQualified) {
+		if (selectPermission == 1 || executePermission == 1) && (!allowed || deniedByName || deniedQualified) {
 			rows.Close()
 			return fmt.Errorf("SQL Server object %q is selectable outside the configured scope", schema+"."+name)
 		}

@@ -313,6 +313,7 @@ func buildClusterRuntime(ctx context.Context, cfg *config.TargetConfig, password
 		return nil, nil, "", "", err
 	}
 	cluster := redisdriver.NewClusterClient(&redisdriver.ClusterOptions{Addrs: pinnedSeeds, Username: cfg.Username, Password: password, Protocol: cfg.Redis.Protocol, MaxRedirects: cfg.Redis.Cluster.RedirectLimit, ReadOnly: cfg.Redis.Cluster.ReadRole == "replica", DialTimeout: cfg.Connection.ConnectTimeout, ReadTimeout: cfg.Connection.ReadTimeout, WriteTimeout: cfg.Connection.WriteTimeout, PoolSize: cfg.Connection.MaxOpen, MaxActiveConns: cfg.Connection.MaxOpen, MaxIdleConns: cfg.Connection.MaxIdle, ConnMaxLifetime: cfg.Connection.MaxLifetime, ConnMaxIdleTime: cfg.Connection.MaxIdleTime, TLSConfig: tlsConfig, ClusterSlots: func(context.Context) ([]redisdriver.ClusterSlot, error) { return slots, nil }, NewClient: func(options *redisdriver.Options) *redisdriver.Client {
+		restorePinnedLoopback(options, pinnedEndpoints)
 		if _, ok := eligible[options.Addr]; !ok {
 			if _, primary := knownPrimaries[options.Addr]; primary && cfg.Redis.Cluster.ReadRole == "replica" {
 				client := redisdriver.NewClient(options)
@@ -332,6 +333,25 @@ func buildClusterRuntime(ctx context.Context, cfg *config.TargetConfig, password
 		}
 	}
 	return cluster, policy, version, revision, nil
+}
+
+// go-redis's custom ClusterSlots path has an empty origin and may rewrite a
+// loopback node into ":port". Recover only the exact previously attested node;
+// never resolve a new hostname or widen redirect admission.
+func restorePinnedLoopback(options *redisdriver.Options, pinned map[string]string) {
+	host, port, err := net.SplitHostPort(options.Addr)
+	if err != nil || host != "" {
+		return
+	}
+	canonical, ok := pinned[options.NodeAddress]
+	if !ok {
+		return
+	}
+	nodeHost, nodePort, err := net.SplitHostPort(canonical)
+	ip := net.ParseIP(nodeHost)
+	if err == nil && ip != nil && ip.IsLoopback() && port == nodePort {
+		options.Addr = canonical
+	}
 }
 
 func clusterReplicaAssignments(slots []redisdriver.ClusterSlot, readRole string) (map[string]string, error) {

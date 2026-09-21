@@ -31,6 +31,7 @@ type Profile struct {
 }
 
 type ModuleIdentity struct {
+	Builtin            bool     `json:"builtin,omitempty"`
 	Name               string   `json:"name"`
 	Version            int      `json:"version"`
 	RedisCompatibility []string `json:"redis_compatibility"`
@@ -189,6 +190,9 @@ func validate(profile Profile, now time.Time) error {
 	if profile.Module.Name == "" || profile.Module.Version < 1 || !regexp.MustCompile(`^[a-fA-F0-9]{64}$`).MatchString(profile.Module.ArtifactSHA256) || !filepath.IsAbs(profile.Module.ArtifactPath) || profile.Module.VendorBuildID == "" || len(profile.Module.RedisCompatibility) == 0 {
 		return errors.New("Redis module profile identity is incomplete")
 	}
+	if profile.Module.Builtin && !regexp.MustCompile(`^[a-fA-F0-9]{16}$`).MatchString(profile.Module.VendorBuildID) {
+		return errors.New("builtin Redis module profiles must pin the INFO server redis_build_id")
+	}
 	if profile.IssuedAt.IsZero() || profile.ExpiresAt.IsZero() || now.Before(profile.IssuedAt) || !now.Before(profile.ExpiresAt) {
 		return errors.New("Redis module profile is not currently valid")
 	}
@@ -202,7 +206,9 @@ func validate(profile Profile, now time.Time) error {
 		switch rule.KeyModel {
 		case "ordinary-keys", "index-name", "keyless-safe":
 		case "index-prefix-attested":
-			return fmt.Errorf("Redis module command %q requires a module-specific index-prefix verifier that is not implemented", name)
+			if !strings.EqualFold(profile.Module.Name, "search") || !SearchIndexCommand(name) {
+				return fmt.Errorf("Redis module command %q has no certified index-prefix verifier", name)
+			}
 		default:
 			return fmt.Errorf("Redis module command %q has unknown key model", name)
 		}
@@ -211,6 +217,17 @@ func validate(profile Profile, now time.Time) error {
 		}
 	}
 	return nil
+}
+
+// SearchIndexCommand identifies commands whose first argument is the index and
+// whose remaining arguments cannot select another index. Query expressions and
+// options are deliberately left to the signed module's native grammar.
+func SearchIndexCommand(name string) bool {
+	switch strings.ToUpper(name) {
+	case "FT.SEARCH", "FT.AGGREGATE", "FT.INFO", "FT.EXPLAIN", "FT.EXPLAINCLI", "FT.PROFILE", "FT.SPELLCHECK", "FT.TAGVALS":
+		return true
+	}
+	return false
 }
 
 func (s *Set) Empty() bool { return s == nil || len(s.profiles) == 0 }

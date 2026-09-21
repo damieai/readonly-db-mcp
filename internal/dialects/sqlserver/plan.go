@@ -2,6 +2,7 @@ package sqlserver
 
 import (
 	"context"
+	"database/sql/driver"
 	"encoding/xml"
 	"errors"
 	"fmt"
@@ -38,8 +39,11 @@ func (t *Target) showPlan(ctx context.Context, query string, args []any) (plan s
 		}
 		offCtx, cancel := context.WithTimeout(context.Background(), restoreTimeout)
 		defer cancel()
-		if _, offErr := conn.ExecContext(offCtx, "SET SHOWPLAN_XML OFF"); offErr != nil && err == nil {
-			err = errors.New("failed to restore SQL Server SHOWPLAN session state")
+		if _, offErr := conn.ExecContext(offCtx, "SET SHOWPLAN_XML OFF"); offErr != nil {
+			_ = conn.Raw(func(any) error { return driver.ErrBadConn })
+			if err == nil {
+				err = errors.New("failed to restore SQL Server SHOWPLAN session state")
+			}
 		}
 	}()
 
@@ -71,10 +75,18 @@ func (t *Target) showPlan(ctx context.Context, query string, args []any) (plan s
 	if rowsErr := rows.Err(); rowsErr != nil {
 		return "", sanitize(rowsErr)
 	}
+	if rows.NextResultSet() {
+		return "", errors.New("SQL Server compiled multiple statement result sets")
+	}
+	if rowsErr := rows.Err(); rowsErr != nil {
+		return "", sanitize(rowsErr)
+	}
 	if len(plans) != 1 {
 		return "", errors.New("SQL Server must compile exactly one statement")
 	}
-	if err = validateShowPlan(plans[0], t.cfg.Database, t.denied); err != nil {
+	// Entry-object denies are checked by ScriptDom. Expanded same-database base
+	// objects are checked by the module closure and may belong to a curated view.
+	if err = validateShowPlan(plans[0], t.cfg.Database, nil); err != nil {
 		return "", err
 	}
 	rows.Close()

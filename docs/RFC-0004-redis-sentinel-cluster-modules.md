@@ -1,12 +1,32 @@
 # RFC-0004: Redis Sentinel, Cluster, and Attested Module Support
 
-- Status: Core implemented; module-specific index-prefix introspection remains
-  fail-closed
+- Status: Core and Redis Search index-prefix verifier implemented; deployment
+  certification remains profile-specific
 - Authors: readonly-db-mcp maintainers
 - Created: 2026-09-02
 - Depends on: RFC-0003
 - Scope: Redis Sentinel discovery, Redis Cluster routing, replica reads, and
   explicitly attested third-party module commands
+
+
+Implementation update (2026-09-13): Redis Search now validates canonical index
+names, HASH/JSON key type and every index prefix at startup and before dispatch.
+Aliases are resolved once and the validated canonical index is sent to Redis.
+The native query/aggregation body is preserved. `FT.INFO` and `FT._LIST` need
+internal read grants. Legacy Search builds can require a `~search-index:*`
+logical-index ACL rule even for read-only commands. The verifier admits it only
+for signed prefix-attested commands, exact configured logical patterns disjoint
+from document key prefixes, and an otherwise write-free command ACL. Document
+keys retain `%R~` grants. Spellcheck dictionary sources additionally require
+`module_object_patterns.FT.DICTDUMP` scope.
+
+Redis 8 built-in modules can use signed `module.builtin: true` profiles. Their
+artifact is the server executable; `vendor_build_id` must equal INFO server's
+`redis_build_id`, and an empty MODULE LIST path is accepted only for that explicit
+binding. This retains the documented operator trust for remote deployment and
+does not claim that the server build ID is a cryptographic remote hash.
+
+See [qualification evidence](qualification/2026-09-13-redis-sqlserver.md).
 
 ## Summary
 
@@ -41,8 +61,8 @@ flags. Unknown, changed, unsigned, or incompletely described modules remain
 rejected.
 
 The generic implementation accepts `ordinary-keys`, `index-name`, and
-`keyless-safe`. `index-prefix-attested` is rejected until a module-specific
-introspection verifier exists. Exact artifact profiles also include the absolute
+`keyless-safe`. `index-prefix-attested` now uses a Redis Search-specific
+introspection verifier. Exact artifact profiles also include the absolute
 module path reported by `MODULE LIST`; the same regular file must be visible to
 this process and its SHA-256 must match. This deliberately makes remote modules
 without mounted artifact evidence unavailable instead of pretending that a
@@ -611,8 +631,9 @@ Profiles must declare one of:
 
 - `ordinary-keys`: live key extraction and `%R~` checks are sufficient;
 - `index-name`: the logical object name has an explicit configured allowlist;
-- `index-prefix-attested`: reserved for a future module-specific startup
-  introspector; the generic implementation rejects it;
+- `index-prefix-attested`: Redis Search startup and per-request `FT.INFO`
+  inspection proves every document prefix is inside configured key scope;
+  unknown modules/command shapes still require their own verifier;
 - `keyless-safe`: reviewed command reads no user data outside its reply metadata.
 
 Unknown key models fail closed. A module command is never admitted merely because

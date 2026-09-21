@@ -162,6 +162,13 @@ targets:
       max_lifetime: 30m
       max_idle_time: 10m
     sqlserver:
+      # Required helper; defaults to sqlserver-parser beside the MCP binary.
+      parser_path: ../bin/sqlserver-parser/readonly-sqlserver-parser
+      # Optional read-only catalog identity, using the same endpoint/database.
+      # Reserves one slot from connection.max_open, not an additional pool budget.
+      # attestor:
+      #   username: catalog_reader
+      #   password_file: ../secrets/sqlserver-catalog.password
       application_name: readonly-db-mcp
       application_intent: read-only
       require_read_only_replica: false
@@ -234,7 +241,11 @@ targets:
       # with module_profiles and trusted_profile_keys. Logical module object
       # scopes use uppercase command names, for example:
       # module_object_patterns:
-      #   FT.SEARCH: ["tenant-42:*"]
+      #   FT.SEARCH: ["search-tenant-42:*"]
+      # Search uses signed index-prefix-attested profiles and live FT.INFO.
+      # Grant +ft.info and +ft._list for internal inspection. Legacy Search may
+      # also need ~search-tenant-42:* for the logical index argument; it must be
+      # disjoint from document %R~ prefixes and no write command may be granted.
     connection:
       connect_timeout: 15s
       read_timeout: 11m

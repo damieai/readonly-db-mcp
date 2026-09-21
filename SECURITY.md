@@ -6,8 +6,9 @@ The server must be unable to persistently modify a configured database through
 any public MCP tool, even when a caller supplies hostile SQL or Redis commands.
 
 This objective depends on a dedicated database identity whose effective grants
-are limited to `USAGE` and `SELECT`, or on a Redis ACL limited to attested read
-commands and `%R~` key patterns. Parsing, command classification, tool
+are limited to engine-specific read permissions (including attested T-SQL
+functions for SQL Server), or on a Redis ACL limited to attested read commands
+and `%R~` document-key patterns. Parsing, command classification, tool
 annotations and read-only execution modes are additional controls, not
 substitutes for database permissions.
 
@@ -18,7 +19,11 @@ Trusted:
 - The operator-owned YAML configuration.
 - Secret files or environment variables provided to the local process.
 - The database administrator who provisions accounts and safe views.
-- The compiled server binary and pinned dependencies.
+- The compiled server binary, SQL Server parser helper and pinned dependencies.
+- Operator-approved signing keys and exact native Redis module artifacts. A
+  signed profile asserts reviewed behavior; it cannot sandbox native module code.
+  Redis built-in profiles bind the server executable hash and declared build ID;
+  the latter is not cryptographic remote artifact attestation.
 
 Untrusted:
 
@@ -46,10 +51,17 @@ Untrusted:
 7. Audit logs contain a one-way query fingerprint and table names but never raw
    SQL, parameters, returned values, passwords or DSNs.
 8. Redis startup expands the live command/subcommand catalog, verifies the
-   effective ACL and read-key patterns, rejects modules, and resolves effective
-   key access before execution.
+   effective ACL and read-key patterns, requires signed exact-artifact module
+   profiles, and resolves effective key access before execution. Redis Search
+   additionally verifies canonical indexes and every indexed key prefix. A legacy
+   logical-index ACL rule is admitted only for signed read commands and a namespace
+   disjoint from document keys; it does not admit data-changing commands.
 9. Redis ACL and command capabilities are periodically re-attested; drift marks
    the target unhealthy and new requests fail closed.
+10. SQL Server requires the pinned ScriptDom helper, complete catalog visibility,
+    transitive module checks and native SHOWPLAN before query execution. Missing
+    proof fails closed; there is no lexical-parser fallback. Native transactions
+    always roll back, and a connection whose SHOWPLAN cleanup fails is discarded.
 
 ## Known limitations
 
