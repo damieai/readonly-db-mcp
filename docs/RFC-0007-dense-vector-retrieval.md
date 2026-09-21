@@ -1,6 +1,6 @@
 # RFC-0007: Dense vector retrieval for Redis and PostgreSQL
 
-- Status: Draft implementation plan; not a support declaration
+- Status: P0 Redis implemented with local native evidence; P1–P3 pending
 - Created: 2026-09-21
 - Depends on: RFC-0001, RFC-0002, RFC-0003, RFC-0004
 - Scope: Redis Search vector indexes and PostgreSQL pgvector
@@ -15,6 +15,10 @@ Keep advanced read-only queries, filters, joins, aggregations and tuning options
 enforce persistent-effect, object-scope and resource boundaries.
 
 ## Context and current evidence
+
+Update: P0 now has a [native qualification record](qualification/2026-09-21-redis-dense-vectors.md)
+and [usage guide](REDIS-VECTOR-RETRIEVAL.md). The following table records the
+pre-implementation assessment that motivated the plan.
 
 | Engine | Current implementation | Missing evidence or behavior |
 | --- | --- | --- |
@@ -265,5 +269,5 @@ running and backend memory growth; disable the profile if proof or recovery fail
 All P0–P3 gates pass for each advertised profile. Examples work through the real
 MCP server with a dedicated reader, advanced reads remain usable, persistent
 writes fail at both layers, request resources recover, and the qualification
-record lists actual evidence. Until then Redis is an implemented Search transport
-with pending dense qualification, and pgvector support is planned.
+record lists actual evidence. Redis P0 now has local standalone dense evidence;
+broader release qualification and pgvector support remain pending.

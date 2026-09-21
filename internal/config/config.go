@@ -899,8 +899,8 @@ func validateTarget(name string, target *TargetConfig, limits Limits) []string {
 		if r.Database < 0 || r.Database > 15 {
 			problems = append(problems, "redis.database must be between 0 and 15")
 		}
-		if r.Protocol != 3 {
-			problems = append(problems, "redis.protocol must be 3")
+		if r.Protocol != 2 && r.Protocol != 3 {
+			problems = append(problems, "redis.protocol must be 2 or 3")
 		}
 		if len(r.KeyPatterns) == 0 {
 			problems = append(problems, "redis.key_patterns must not be empty")

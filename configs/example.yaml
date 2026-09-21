@@ -203,7 +203,7 @@ targets:
       database: 0
       key_patterns:
         - "analytics:*"
-      protocol: 3
+      protocol: 3 # RESP2 is also supported; default remains RESP3.
       acl_recheck_interval: 5m
       command_catalog_max_age: 10m
       # Prefix-scoped targets keep this disabled because scripts can issue

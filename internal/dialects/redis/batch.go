@@ -88,6 +88,10 @@ func (t *Target) RedisBatch(ctx context.Context, request core.RedisBatchRequest)
 			return err
 		}
 		item := &core.RedisResult{RequestID: fmt.Sprintf("%s/%d", result.BatchID, i+1), Target: t.cfg.Name, Engine: t.cfg.Engine, Environment: t.cfg.Environment, Command: commands[i].validation.Command, Value: normalized, ElementCount: count, Truncated: truncated}
+		item.SearchIndex, err = t.policy.Load().searchSummary(commands[i].validation.Command, value, t.limits.MaxCellBytes)
+		if err != nil {
+			return err
+		}
 		encodedItem, err := json.Marshal(item)
 		if err != nil {
 			return errors.New("encode Redis batch item")

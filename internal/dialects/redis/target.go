@@ -11,6 +11,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"math"
 	"os"
 	"sort"
 	"strconv"
@@ -244,6 +245,10 @@ func (t *Target) RedisCommand(ctx context.Context, req core.RedisRequest) (*core
 		return nil, err
 	}
 	result := &core.RedisResult{RequestID: uuid.NewString(), Target: t.cfg.Name, Engine: t.cfg.Engine, Environment: t.cfg.Environment, Command: validation.Command, Value: normalized, ElementCount: count, Truncated: truncated, DurationMS: time.Since(started).Milliseconds()}
+	result.SearchIndex, err = t.policy.Load().searchSummary(validation.Command, value, t.limits.MaxCellBytes)
+	if err != nil {
+		return nil, err
+	}
 	if err := enforceRedisBudget(result, t.limits.MaxResultBytes); err != nil {
 		return nil, err
 	}
@@ -502,6 +507,17 @@ func normalizeRedis(value any, depth int, n *normalizer) (any, int, bool, error)
 	case int:
 		return x, 1, false, nil
 	case float64:
+		// RESP3 permits non-finite doubles (FT.INFO can return them for ratios).
+		// JSON has no such number; retain the value in an explicit tagged form.
+		if math.IsNaN(x) {
+			return map[string]string{"float": "nan"}, 1, false, nil
+		}
+		if math.IsInf(x, 1) {
+			return map[string]string{"float": "+inf"}, 1, false, nil
+		}
+		if math.IsInf(x, -1) {
+			return map[string]string{"float": "-inf"}, 1, false, nil
+		}
 		return x, 1, false, nil
 	case bool:
 		return x, 1, false, nil
@@ -593,6 +609,7 @@ func enforceRedisBudget(result *core.RedisResult, max int) error {
 		return nil
 	}
 	result.Value = nil
+	result.SearchIndex = nil
 	result.Truncated = true
 	encoded, _ = json.Marshal(result)
 	if len(encoded) > max {

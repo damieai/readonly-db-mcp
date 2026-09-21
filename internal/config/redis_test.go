@@ -20,6 +20,13 @@ func TestRedisDefaultsAndValidation(t *testing.T) {
 	if err := cfg.Validate(); err != nil {
 		t.Fatal(err)
 	}
+	for _, protocol := range []int{1, 2, 3, 4} {
+		target.Redis.Protocol = protocol
+		err := cfg.Validate()
+		if (err == nil) != (protocol == 2 || protocol == 3) {
+			t.Fatalf("protocol %d: %v", protocol, err)
+		}
+	}
 }
 
 func TestRedisRejectsComplexOrMissingKeyScope(t *testing.T) {

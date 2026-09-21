@@ -59,6 +59,10 @@ func (p *Policy) searchIndex(ctx context.Context, client moduleInspector, comman
 	if err != nil {
 		return "", errors.New("inspect Redis Search index prefixes")
 	}
+	return p.checkSearchIndex(raw, command)
+}
+
+func (p *Policy) checkSearchIndex(raw any, command string) (string, error) {
 	info, err := strictModuleMap(raw)
 	if err != nil {
 		return "", err

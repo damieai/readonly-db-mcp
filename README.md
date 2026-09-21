@@ -122,11 +122,12 @@ privileges. Grant only database `CONNECT`, allowed-schema `USAGE`, and relation
 this scope, including `CONNECT` on other databases and `EXECUTE` on
 non-system functions; startup attestation intentionally fails closed otherwise.
 
-Dense vector retrieval is not yet fully qualified. Redis Search has a binary-safe
-command path and preserves KNN expressions under signed module profiles, but its
-real vector acceptance suite is pending. PostgreSQL pgvector needs extension-aware
-permission and expression validation before use. See the staged implementation
-plan in [RFC-0007](docs/RFC-0007-dense-vector-retrieval.md).
+Redis Search dense retrieval has local native/MCP acceptance for HASH/JSON,
+FLAT/HNSW, FLOAT32/FLOAT64 and L2/IP/COSINE over RESP2/RESP3. See
+[vector setup and queries](docs/REDIS-VECTOR-RETRIEVAL.md) for signed-profile
+requirements and the exact qualification boundary. PostgreSQL pgvector still
+needs extension-aware permission and expression validation under
+[RFC-0007](docs/RFC-0007-dense-vector-retrieval.md).
 
 For SQL Server, use a dedicated login and database user, grant `SELECT` only on
 curated schemas, and grant database `SHOWPLAN`, and make `VIEW DEFINITION` available through the
@@ -417,6 +418,10 @@ Local disposable Redis tests use `READONLY_DB_MCP_REDIS_SERVER` and optionally
 standalone, Sentinel failover, all-slot Cluster routing, and a signed Search
 profile with index-prefix drift. These tests create and clean up their own
 processes and fixture credentials; missing binaries cause explicit skips.
+
+`make test-redis-vectors` additionally requires
+`READONLY_DB_MCP_REDIS_JSON_MODULE` and runs the complete native dense-retrieval
+matrix through MCP, including score comparison and native write denial.
 
 ## License
 

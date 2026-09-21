@@ -32,3 +32,10 @@ test-sqlserver-parser: build-sqlserver-parser
 test-redis-local:
 	test -n "$(READONLY_DB_MCP_REDIS_SERVER)"
 	go test ./internal/dialects/redis -run TestLocalRedis -count=1 -v
+
+.PHONY: test-redis-vectors
+test-redis-vectors:
+	test -n "$(READONLY_DB_MCP_REDIS_SERVER)"
+	test -n "$(READONLY_DB_MCP_REDIS_SEARCH_MODULE)"
+	test -n "$(READONLY_DB_MCP_REDIS_JSON_MODULE)"
+	go test -race ./internal/mcpserver -run TestLocalRedisDenseVectorsThroughMCP -count=1 -v
