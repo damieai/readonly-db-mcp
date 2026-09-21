@@ -51,8 +51,6 @@ func (t *Target) ListTables(ctx context.Context, pattern string, fresh bool) ([]
 		return nil, fmt.Errorf("metadata concurrency limit: %w", err)
 	}
 	defer permit.Release()
-	t.gate.RLock()
-	defer t.gate.RUnlock()
 	if err := t.requireHealthy(); err != nil {
 		return nil, err
 	}
@@ -146,8 +144,6 @@ func (t *Target) DescribeTable(ctx context.Context, schema, table string, fresh 
 		return nil, fmt.Errorf("metadata concurrency limit: %w", err)
 	}
 	defer permit.Release()
-	t.gate.RLock()
-	defer t.gate.RUnlock()
 	if err := t.requireHealthy(); err != nil {
 		return nil, err
 	}

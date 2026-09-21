@@ -11,6 +11,15 @@ state the exact tested builds and limits. Installing pgvector alone does not
 enable this path. Database operators provision the extension, indexes and native
 analysis helper; MCP does not install them or load embeddings.
 
+[TLS and long-read acceptance](qualification/2026-09-22-postgresql-vector-transport.md)
+adds PostgreSQL 16.15 evidence for verified TLS, interrupted connections and a
+two-minute vector read alongside short queries, fresh metadata and privilege
+rechecks. Rechecks share the normal admission/pool budgets and publish atomic
+policy/health updates; they do not hold an exclusive lock across active reads.
+Failed or expired checks still block new requests, and vector execution retains
+its per-transaction proof. An unreachable backend may retain an aborted
+transaction until connectivity is restored even after server-side work stops.
+
 ## Provision the deployment
 
 Use a trusted deployment owner, different from the runtime reader, to install

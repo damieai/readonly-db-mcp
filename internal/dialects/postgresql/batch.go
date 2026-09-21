@@ -65,8 +65,6 @@ func (t *Target) BatchQuery(ctx context.Context, r core.BatchRequest) (*core.Bat
 		return nil, fmt.Errorf("query concurrency limit: %w", err)
 	}
 	defer permit.Release()
-	t.gate.RLock()
-	defer t.gate.RUnlock()
 	if err := t.requireHealthy(); err != nil {
 		return nil, err
 	}

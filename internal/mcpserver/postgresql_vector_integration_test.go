@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"io"
 	"math"
+	"net"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -23,6 +24,11 @@ import (
 
 func vectorPostgresFixture(t *testing.T) (*sql.DB, *sql.DB, *config.Config) {
 	t.Helper()
+	return vectorPostgresTransportFixture(t, false)
+}
+
+func vectorPostgresTransportFixture(t *testing.T, useTLS bool) (*sql.DB, *sql.DB, *config.Config) {
+	t.Helper()
 	bin, helper := os.Getenv("READONLY_DB_MCP_PG_BIN"), os.Getenv("READONLY_DB_MCP_PGVECTOR_PROOF")
 	if bin == "" || helper == "" {
 		t.Skip("local PostgreSQL/pgvector helper artifacts are not configured")
@@ -35,7 +41,26 @@ func vectorPostgresFixture(t *testing.T) (*sql.DB, *sql.DB, *config.Config) {
 	if out, err := exec.Command(filepath.Join(bin, "initdb"), "-D", data, "-U", "fixture_owner", "--auth=trust", "--no-sync", "--encoding=UTF8", "--locale=C").CombinedOutput(); err != nil {
 		t.Fatalf("initdb: %v %s", err, out)
 	}
-	cmd := exec.Command(filepath.Join(bin, "postgres"), "-D", data, "-k", dir, "-h", "", "-c", "fsync=off", "-c", "max_connections=12")
+	port, host, tlsYAML := 5432, dir, "mode: disabled\n      allow_insecure_remote: true"
+	args := []string{"-D", data, "-k", dir, "-h", "", "-c", "fsync=off", "-c", "max_connections=12"}
+	if useTLS {
+		ca, cert, key := vectorTLSCertificates(t, dir)
+		listener, err := net.Listen("tcp", "127.0.0.1:0")
+		if err != nil {
+			t.Fatal(err)
+		}
+		port = listener.Addr().(*net.TCPAddr).Port
+		listener.Close()
+		host = "127.0.0.1"
+		args = append(args, "-h", host, "-p", fmt.Sprint(port), "-c", "ssl=on", "-c", "ssl_cert_file="+cert, "-c", "ssl_key_file="+key)
+		// Only the reader may authenticate over loopback TCP, with TLS and
+		// SCRAM. Provisioning still uses the private local owner socket.
+		if err := os.WriteFile(filepath.Join(data, "pg_hba.conf"), []byte("local all all trust\nhostssl postgres vector_reader 127.0.0.1/32 scram-sha-256\nhost all all 127.0.0.1/32 reject\n"), 0600); err != nil {
+			t.Fatal(err)
+		}
+		tlsYAML = fmt.Sprintf("mode: verify-full\n      ca_file: %q\n      server_name: vector.fixture.test", ca)
+	}
+	cmd := exec.Command(filepath.Join(bin, "postgres"), args...)
 	cmd.Stdout, cmd.Stderr = io.Discard, io.Discard
 	if err := cmd.Start(); err != nil {
 		t.Fatal(err)
@@ -56,6 +81,7 @@ func vectorPostgresFixture(t *testing.T) (*sql.DB, *sql.DB, *config.Config) {
 		t.Fatal(err)
 	}
 	pc.Host = dir
+	pc.Port = uint16(port)
 	admin := stdlib.OpenDB(*pc)
 	t.Cleanup(func() { admin.Close() })
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
@@ -68,7 +94,7 @@ func vectorPostgresFixture(t *testing.T) (*sql.DB, *sql.DB, *config.Config) {
 	}
 	for _, q := range []string{
 		`CREATE SCHEMA vectors; CREATE EXTENSION vector WITH SCHEMA vectors VERSION '0.8.2'; CREATE SCHEMA reporting; CREATE SCHEMA mcp_proof`,
-		`CREATE ROLE vector_reader LOGIN; REVOKE ALL ON DATABASE postgres FROM PUBLIC; REVOKE CONNECT ON DATABASE template1 FROM PUBLIC; REVOKE ALL ON SCHEMA public FROM PUBLIC; GRANT CONNECT ON DATABASE postgres TO vector_reader; GRANT USAGE ON SCHEMA reporting,vectors,mcp_proof TO vector_reader`,
+		`CREATE ROLE vector_reader LOGIN PASSWORD 'private-unix-fixture'; REVOKE ALL ON DATABASE postgres FROM PUBLIC; REVOKE CONNECT ON DATABASE template1 FROM PUBLIC; REVOKE ALL ON SCHEMA public FROM PUBLIC; GRANT CONNECT ON DATABASE postgres TO vector_reader; GRANT USAGE ON SCHEMA reporting,vectors,mcp_proof TO vector_reader`,
 		`CREATE TABLE reporting.items(id integer PRIMARY KEY, embedding vectors.vector(3), halfembedding vectors.halfvec(3), category text); INSERT INTO reporting.items VALUES(1,'[1,0,0]','[1,0,0]','a'),(2,'[0.8,0.6,0]','[0.8,0.6,0]','a'),(3,'[0,1,0]','[0,1,0]','b'),(4,'[-1,0,0]','[-1,0,0]','b'); GRANT SELECT ON reporting.items TO vector_reader`,
 		// Force index preference only in this functional test deployment. This is
 		// not a client query option or a realistic ANN cost/recall qualification.
@@ -91,6 +117,10 @@ func vectorPostgresFixture(t *testing.T) (*sql.DB, *sql.DB, *config.Config) {
 		}
 		return fmt.Sprintf("%x", sha256.Sum256(b))
 	}
+	libraryDir, err := exec.Command(filepath.Join(bin, "pg_config"), "--pkglibdir").Output()
+	if err != nil {
+		t.Fatal(err)
+	}
 	t.Setenv("MCP_PG_VECTOR_PASSWORD", "private-unix-fixture")
 	contents := fmt.Sprintf(`server:
   strict_startup: true
@@ -102,13 +132,12 @@ targets:
     environment: test
     database: postgres
     host: %q
-    port: 5432
+    port: %d
     username: vector_reader
     password_env: MCP_PG_VECTOR_PASSWORD
     allowed_schemas: [reporting]
     tls:
-      mode: disabled
-      allow_insecure_remote: true
+      %s
     connection:
       max_open: 1
       max_idle: 1
@@ -122,7 +151,7 @@ targets:
         deployment_id: native-test
         vector_library_sha256: %s
         helper_library_sha256: %s
-`, dir, helper, hash(filepath.Join(filepath.Dir(bin), "lib/postgresql/vector.so")), hash(helper))
+`, host, port, tlsYAML, helper, hash(filepath.Join(strings.TrimSpace(string(libraryDir)), "vector.so")), hash(helper))
 	path := filepath.Join(dir, "config.yaml")
 	if err := os.WriteFile(path, []byte(contents), 0600); err != nil {
 		t.Fatal(err)

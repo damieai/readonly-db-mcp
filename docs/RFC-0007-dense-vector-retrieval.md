@@ -1,6 +1,6 @@
 # RFC-0007: Dense vector retrieval for Redis and PostgreSQL
 
-- Status: P0–P2 implemented; P3 local recall/recovery acceptance added, production release qualification pending
+- Status: P0–P2 implemented; P3 local recall/recovery, TLS and multi-minute mixed-load acceptance added, production qualification pending
 - Created: 2026-09-21
 - Depends on: RFC-0001, RFC-0002, RFC-0003, RFC-0004
 - Scope: Redis Search vector indexes and PostgreSQL pgvector
@@ -29,6 +29,9 @@ P3 adds [local recall and recovery acceptance](qualification/2026-09-21-postgres
 for larger dense fixtures, filtered scans/reranking, native cancellation, backend
 loss and sampled connection ceilings. Production build/topology and sustained
 resource qualification remain open.
+The [TLS/long-read record](qualification/2026-09-22-postgresql-vector-transport.md)
+adds PostgreSQL 16.15 transport evidence and fixes background privilege rechecks
+blocking concurrent reads behind an existing long query.
 The following table records the pre-implementation assessment that motivated
 the plan.
 
@@ -283,6 +286,6 @@ MCP server with a dedicated reader, advanced reads remain usable, persistent
 writes fail at both layers, request resources recover, and the qualification
 record lists actual evidence. Redis and PostgreSQL now have local standalone
 dense retrieval evidence. PostgreSQL additionally has local synthetic recall,
-native interruption and connection recovery tests. Production build/topology,
-representative scale, multi-minute reads and sustained resource qualification
-remain pending under P3.
+native interruption, verified TLS, connection recovery and a multi-minute mixed
+workload test. Production build/topology, representative scale and sustained
+resource qualification remain pending under P3.

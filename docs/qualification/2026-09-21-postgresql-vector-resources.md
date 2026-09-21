@@ -118,6 +118,12 @@ not production latency or memory guarantees.
 
 ## Remaining P3 gates
 
+The subsequent [TLS/long-read record](2026-09-22-postgresql-vector-transport.md)
+adds a PostgreSQL 16.15 OpenSSL build, verified TCP/TLS reconnects, bidirectional
+transport drops and a two-minute read with concurrent metadata and maintenance.
+The list below records the limits of this original run; consult that record for
+the remaining production gates.
+
 Current production builds, TCP/TLS and deployment topology; representative
 high-dimensional datasets and additional metric recall; successful multi-minute
 reads; sustained mixed metadata/maintenance/interactive fairness; larger pool

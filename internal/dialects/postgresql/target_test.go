@@ -3,7 +3,9 @@ package postgresql
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"regexp"
+	"sync"
 	"testing"
 	"time"
 
@@ -12,6 +14,69 @@ import (
 	"github.com/your-org/readonly-db-mcp/internal/config"
 	"github.com/your-org/readonly-db-mcp/internal/core"
 )
+
+func TestPrivilegeRecheckFailsClosedWhileReadIsRunning(t *testing.T) {
+	started := make(chan struct{})
+	var once sync.Once
+	const query = `SELECT id FROM reporting.items`
+	db, mock, err := sqlmock.New(sqlmock.QueryMatcherOption(sqlmock.QueryMatcherFunc(func(expected, actual string) error {
+		err := sqlmock.QueryMatcherRegexp.Match(expected, actual)
+		if err == nil && actual == query {
+			once.Do(func() { close(started) })
+		}
+		return err
+	})))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.Close()
+	mock.MatchExpectationsInOrder(false)
+	target := postgresTestTarget(db)
+	target.admission = admission.New(admission.Config{Global: 2, PerTarget: 2, MaxQueued: 10, QueueTimeout: time.Second, BatchMax: 1, MaintenanceMax: 1})
+	target.cfg.Connection.ConnectTimeout = 500 * time.Millisecond
+	target.cfg.PostgreSQL.PrivilegeRecheck = 50 * time.Millisecond
+	target.lastAttested.Store(time.Now().UnixNano())
+	mock.ExpectBegin()
+	mock.ExpectExec(regexp.QuoteMeta(`SELECT pg_catalog.set_config('statement_timeout',$1,true)`)).WithArgs("900").WillReturnResult(sqlmock.NewResult(0, 1))
+	mock.ExpectQuery(regexp.QuoteMeta(query)).WillDelayFor(750 * time.Millisecond).WillReturnRows(sqlmock.NewRows([]string{"id"}).AddRow(1))
+	mock.ExpectRollback()
+	mock.ExpectQuery(`SELECT current_user, session_user`).WillReturnError(errors.New("identity check failed"))
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+	defer cancel()
+	done := make(chan error, 1)
+	go func() { _, err := target.Query(ctx, core.QueryRequest{SQL: query}); done <- err }()
+	select {
+	case <-started:
+	case <-ctx.Done():
+		t.Fatal("read did not start")
+	}
+	target.startPrivilegeRecheck()
+	defer func() { target.maintenanceStop(); target.maintenanceWG.Wait() }()
+	deadline := time.After(500 * time.Millisecond)
+	for target.healthy.Load() {
+		select {
+		case <-deadline:
+			t.Fatal("recheck waited for running read")
+		case <-time.After(time.Millisecond):
+		}
+	}
+	target.maintenanceStop()
+	target.maintenanceWG.Wait()
+	select {
+	case <-done:
+		t.Fatal("read completed before failed recheck was published")
+	default:
+	}
+	if _, err := target.Query(ctx, core.QueryRequest{SQL: query}); err == nil {
+		t.Fatal("new query admitted after failed recheck")
+	}
+	if err := <-done; err != nil {
+		t.Fatal("existing read interrupted by recheck", err)
+	}
+	if err := mock.ExpectationsWereMet(); err != nil {
+		t.Fatal(err)
+	}
+}
 
 func postgresTestTarget(db *sql.DB) *Target {
 	limits := config.Limits{GlobalConcurrency: 2, PerTargetConcurrency: 1, DefaultTimeout: time.Second, MaxTimeout: 2 * time.Second, MaxRows: 10, MaxResultBytes: 1 << 20, MaxCellBytes: 64 << 10, MaxSQLBytes: 32 << 10, MaxParameters: 10, MaxBatchQueries: 4}

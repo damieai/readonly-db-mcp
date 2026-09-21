@@ -131,6 +131,9 @@ existing SQL tools, including vector/halfvec results and transaction-local
 HNSW/IVFFlat tuning. See the [setup and query guide](docs/POSTGRESQL-VECTOR-RETRIEVAL.md)
 and [local MCP evidence](docs/qualification/2026-09-21-postgresql-vector-retrieval.md),
 including [synthetic recall and recovery acceptance](docs/qualification/2026-09-21-postgresql-vector-resources.md).
+The [TLS and long-read record](docs/qualification/2026-09-22-postgresql-vector-transport.md)
+adds verified reconnects and concurrent query/metadata/privilege-recheck evidence
+on PostgreSQL 16.15.
 Installing the extension alone does not enable its permission exceptions.
 
 For SQL Server, use a dedicated login and database user, grant `SELECT` only on

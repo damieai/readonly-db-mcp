@@ -47,7 +47,6 @@ type Target struct {
 	policyRevision  string
 	healthy         atomic.Bool
 	lastAttested    atomic.Int64
-	gate            sync.RWMutex
 	maintenanceStop context.CancelFunc
 	maintenanceWG   sync.WaitGroup
 }
@@ -412,8 +411,6 @@ func (t *Target) execute(ctx context.Context, op, q string, r core.QueryRequest,
 		return nil, fmt.Errorf("query concurrency limit: %w", err)
 	}
 	defer permit.Release()
-	t.gate.RLock()
-	defer t.gate.RUnlock()
 	if err := t.requireHealthy(); err != nil {
 		return nil, err
 	}
@@ -629,6 +626,11 @@ func (t *Target) requireHealthy() error {
 	return nil
 }
 
+// Rechecks share admission and pool budgets with requests, but never wait for
+// running queries to release a target-wide lock. Policies are immutable snapshots
+// published atomically; health and freshness are atomic as well. New requests
+// fail closed after a failed/expired check. Vector requests additionally attest
+// their own read-only transaction immediately before binding and execution.
 func (t *Target) startPrivilegeRecheck() {
 	ctx, cancel := context.WithCancel(context.Background())
 	t.maintenanceStop = cancel
@@ -645,7 +647,6 @@ func (t *Target) startPrivilegeRecheck() {
 				checkCtx, checkCancel := context.WithTimeout(ctx, t.cfg.Connection.ConnectTimeout)
 				permit, err := t.admission.Acquire(checkCtx, t.cfg.Name, admission.Maintenance)
 				if err == nil {
-					t.gate.Lock()
 					identity, verifyErr := verifyIdentityAndPrivileges(checkCtx, t.db, t.cfg)
 					if verifyErr == nil && identity.vector != nil && identity.vector.DenseTypeOIDs() != t.vectorTypes {
 						verifyErr = errors.New("vector type identities changed; reopen the target")
@@ -658,7 +659,6 @@ func (t *Target) startPrivilegeRecheck() {
 					} else {
 						t.healthy.Store(false)
 					}
-					t.gate.Unlock()
 					permit.Release()
 				} else {
 					t.healthy.Store(false)

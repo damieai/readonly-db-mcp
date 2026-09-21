@@ -62,3 +62,14 @@ test-postgresql-vector-qualification:
 	test -n "$(READONLY_DB_MCP_PG_BIN)"
 	test -n "$(READONLY_DB_MCP_PGVECTOR_PROOF)"
 	go test -race ./internal/mcpserver -run 'TestLocalPostgreSQLVector(Recall|Recovery)' -count=1 -v
+
+.PHONY: test-postgresql-vector-transport test-postgresql-vector-long-read
+test-postgresql-vector-transport:
+	test -n "$(READONLY_DB_MCP_PG_BIN)"
+	test -n "$(READONLY_DB_MCP_PGVECTOR_PROOF)"
+	READONLY_DB_MCP_PG_TLS=1 go test -race ./internal/mcpserver -run TestLocalPostgreSQLVectorTLS -count=1 -v
+
+test-postgresql-vector-long-read:
+	test -n "$(READONLY_DB_MCP_PG_BIN)"
+	test -n "$(READONLY_DB_MCP_PGVECTOR_PROOF)"
+	READONLY_DB_MCP_PG_LONG_READ=1 go test -race ./internal/mcpserver -run TestLocalPostgreSQLVectorLongRead -count=1 -v -timeout=5m
