@@ -41,7 +41,7 @@ func DecodeBinding(raw []byte) (*Binding, error) {
 			return nil, errors.New("duplicate or invalid binding reference")
 		}
 		switch ref.Class {
-		case "pg_proc", "pg_type", "pg_operator", "pg_class":
+		case "pg_proc", "pg_type", "pg_operator", "pg_class", "pg_collation", "pg_opfamily":
 		default:
 			return nil, errors.New("unknown binding object class")
 		}
@@ -59,6 +59,29 @@ func DecodeBinding(raw []byte) (*Binding, error) {
 // component of the proof, not a complete admission decision: full relation,
 // index and type dependencies and analysis-time callbacks need closure first.
 func (s *Snapshot) CheckBinding(ctx context.Context, tx *sql.Tx, query string, b *Binding, allowedSchemas, deniedTables []string) error {
+	if err := s.checkBindingIdentity(ctx, tx, query, b); err != nil {
+		return err
+	}
+	d := &dependencyCheck{ctx: ctx, tx: tx, snapshot: s, seen: map[Reference]bool{}, allowed: map[string]bool{}, denied: map[string]bool{}}
+	for _, schema := range allowedSchemas {
+		d.allowed[schema] = true
+	}
+	for _, name := range deniedTables {
+		d.denied[name] = true
+	}
+	for _, ref := range b.Objects {
+		// This legacy expression-only API has no stored-tree helper. Analyze
+		// is the entry point for preflight and recursive dependency closure.
+		if ref.Class == "pg_collation" || ref.Class == "pg_opfamily" {
+			if err := d.inspect(ref); err != nil {
+				return err
+			}
+		}
+	}
+	return s.checkExpressionObjects(ctx, tx, b, allowedSchemas, deniedTables)
+}
+
+func (s *Snapshot) checkBindingIdentity(ctx context.Context, tx *sql.Tx, query string, b *Binding) error {
 	if s.digest == "" || tx == nil || s.tx != tx || b == nil || b.Format != 1 || b.PostgreSQLMajor != 16 {
 		return errors.New("binding requires a verified extension snapshot")
 	}
@@ -67,6 +90,10 @@ func (s *Snapshot) CheckBinding(ctx context.Context, tx *sql.Tx, query string, b
 	if b.DatabaseOID != s.databaseOID || b.SQLSHA256 != hex.EncodeToString(sum[:]) || tx.QueryRowContext(ctx, `SELECT oid FROM pg_catalog.pg_roles WHERE rolname=current_user`).Scan(&roleOID) != nil || roleOID != b.RoleOID {
 		return errors.New("binding does not match the query and execution identity")
 	}
+	return nil
+}
+
+func (s *Snapshot) checkExpressionObjects(ctx context.Context, tx *sql.Tx, b *Binding, allowedSchemas, deniedTables []string) error {
 	allowed, denied := map[string]bool{}, map[string]bool{}
 	for _, schema := range allowedSchemas {
 		allowed[schema] = true
@@ -82,6 +109,8 @@ func (s *Snapshot) CheckBinding(ctx context.Context, tx *sql.Tx, query string, b
 			continue
 		}
 		switch ref.Class {
+		case "pg_collation", "pg_opfamily":
+			// Checked by the dependency inspector above.
 		case "pg_class":
 			var schema, name, kind string
 			if tx.QueryRowContext(ctx, `SELECT n.nspname,c.relname,c.relkind FROM pg_catalog.pg_class c JOIN pg_catalog.pg_namespace n ON n.oid=c.relnamespace WHERE c.oid=$1`, ref.OID).Scan(&schema, &name, &kind) != nil || !allowed[schema] || denied[name] || denied[schema+"."+name] || len(kind) != 1 || !strings.Contains("rpvm", kind) {

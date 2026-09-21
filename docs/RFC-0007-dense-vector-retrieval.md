@@ -1,6 +1,6 @@
 # RFC-0007: Dense vector retrieval for Redis and PostgreSQL
 
-- Status: P0 Redis implemented; P1 catalog/binding foundation implemented, admission gates open; P2–P3 pending
+- Status: P0 Redis implemented; P1 catalog, pre-analysis dependencies and native binding implemented; runtime admission and P2–P3 pending
 - Created: 2026-09-21
 - Depends on: RFC-0001, RFC-0002, RFC-0003, RFC-0004
 - Scope: Redis Search vector indexes and PostgreSQL pgvector
@@ -19,8 +19,10 @@ enforce persistent-effect, object-scope and resource boundaries.
 Update: P0 now has a [native qualification record](qualification/2026-09-21-redis-dense-vectors.md)
 and [usage guide](REDIS-VECTOR-RETRIEVAL.md). P1 has an internal
 [catalog/native binding foundation](qualification/2026-09-21-postgresql-vector-proof.md)
-with PostgreSQL fixture evidence. Pre-analysis callback admission and complete
-dependency closure remain open; no production pgvector exception is enabled.
+with PostgreSQL fixture evidence. Pre-analysis callback checks and catalog
+dependency traversal now have native tests, including non-execution tripwires.
+Runtime helper/deployment attestation and execution integration remain open;
+no production pgvector exception is enabled.
 The following table records the pre-implementation assessment that motivated
 the plan.
 

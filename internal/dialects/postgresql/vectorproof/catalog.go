@@ -1,5 +1,5 @@
 // Package vectorproof implements RFC-0007 P1 catalog and native binding proof.
-// Public query admission awaits the remaining P1 dependency checks and P2
+// Public query admission awaits runtime helper/deployment attestation and P2
 // integration of execution and proof freshness on one lease.
 package vectorproof
 

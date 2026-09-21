@@ -82,6 +82,10 @@ func localPostgres(t *testing.T) (*sql.DB, string) {
 	if _, err := db.ExecContext(ctx, q); err != nil {
 		t.Fatal(err)
 	}
+	q = fmt.Sprintf(`CREATE FUNCTION mcp_proof.expression(text) RETURNS text AS '%s','mcp_vector_expression' LANGUAGE C STRICT VOLATILE PARALLEL UNSAFE; REVOKE ALL ON FUNCTION mcp_proof.expression(text) FROM PUBLIC`, strings.ReplaceAll(helper, "'", "''"))
+	if _, err := db.ExecContext(ctx, q); err != nil {
+		t.Fatal(err)
+	}
 	return db, dir
 }
 
