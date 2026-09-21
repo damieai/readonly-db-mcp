@@ -206,12 +206,13 @@ type ConnectionConfig struct {
 }
 
 type TLSConfig struct {
-	Mode                string `yaml:"mode"`
-	AllowInsecureRemote bool   `yaml:"allow_insecure_remote"`
-	CAFile              string `yaml:"ca_file"`
-	CertFile            string `yaml:"cert_file"`
-	KeyFile             string `yaml:"key_file"`
-	ServerName          string `yaml:"server_name"`
+	Mode                    string `yaml:"mode"`
+	AllowInsecureRemote     bool   `yaml:"allow_insecure_remote"`
+	AllowInsecureProduction bool   `yaml:"allow_insecure_production"`
+	CAFile                  string `yaml:"ca_file"`
+	CertFile                string `yaml:"cert_file"`
+	KeyFile                 string `yaml:"key_file"`
+	ServerName              string `yaml:"server_name"`
 }
 
 func Load(path string) (*Config, error) {
@@ -718,7 +719,7 @@ func validateTarget(name string, target *TargetConfig, limits Limits) []string {
 		if !redisTargetIsLoopback(target) && !target.TLS.AllowInsecureRemote {
 			problems = append(problems, "TLS may be disabled for a remote database only when tls.allow_insecure_remote is true")
 		}
-		if isProductionEnvironment(target.Environment) {
+		if isProductionEnvironment(target.Environment) && !target.TLS.AllowInsecureProduction {
 			problems = append(problems, "TLS cannot be disabled for production")
 		}
 	case TLSRequired:
@@ -740,6 +741,9 @@ func validateTarget(name string, target *TargetConfig, limits Limits) []string {
 		}
 	default:
 		problems = append(problems, "tls.mode must be disabled, required, or verify-full")
+	}
+	if target.TLS.AllowInsecureProduction && (target.TLS.Mode != TLSDisabled || !target.TLS.AllowInsecureRemote) {
+		problems = append(problems, "tls.allow_insecure_production requires tls.mode disabled and tls.allow_insecure_remote true")
 	}
 	if (target.TLS.CertFile == "") != (target.TLS.KeyFile == "") {
 		problems = append(problems, "tls.cert_file and tls.key_file must be configured together")

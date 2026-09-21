@@ -91,3 +91,28 @@ func TestValidateRequiresStrictStartup(t *testing.T) {
 		t.Fatalf("expected strict-startup rejection, got %v", err)
 	}
 }
+
+func TestValidateExplicitProductionCleartextException(t *testing.T) {
+	for _, environment := range []string{"production", "prod-eu", "jurnal-scm-production"} {
+		t.Run(environment, func(t *testing.T) {
+			cfg := validConfig()
+			target := cfg.Targets["test"]
+			target.Host = "database.internal.example"
+			target.Environment = environment
+			target.TLS.AllowInsecureRemote = true
+			target.TLS.AllowInsecureProduction = true
+			if err := cfg.Validate(); err != nil {
+				t.Fatalf("expected explicit production exception to pass: %v", err)
+			}
+			target.TLS.AllowInsecureRemote = false
+			if err := cfg.Validate(); err == nil {
+				t.Fatal("production exception must also require remote cleartext opt-in")
+			}
+			target.TLS.AllowInsecureRemote = true
+			target.TLS.Mode = TLSRequired
+			if err := cfg.Validate(); err == nil {
+				t.Fatal("cleartext exception must not bypass production certificate verification")
+			}
+		})
+	}
+}

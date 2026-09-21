@@ -102,9 +102,11 @@ are not available in the same form.
 Remote databases are expected to use TLS. A non-production target whose server
 cannot provide TLS can opt in to cleartext transport with both
 `tls.mode: disabled` and `tls.allow_insecure_remote: true`. This explicit escape
-hatch logs a startup warning and is still refused for production environments;
-credentials, SQL and results are unencrypted, so use it only on a trusted private
-network or VPN.
+hatch logs a startup warning. Production targets additionally require
+`tls.allow_insecure_production: true` to explicitly authorize a temporary
+cleartext exception while retaining their production environment label.
+Credentials, SQL and results are unencrypted, so use it only on a trusted private
+network or VPN. Remove both exception flags when restoring `verify-full`.
 
 For PostgreSQL, use a dedicated non-owning `LOGIN` role with no memberships,
 `SUPERUSER`, `CREATEDB`, `CREATEROLE`, `REPLICATION`, `BYPASSRLS`, database
