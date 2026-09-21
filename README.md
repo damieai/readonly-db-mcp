@@ -122,6 +122,12 @@ privileges. Grant only database `CONNECT`, allowed-schema `USAGE`, and relation
 this scope, including `CONNECT` on other databases and `EXECUTE` on
 non-system functions; startup attestation intentionally fails closed otherwise.
 
+Dense vector retrieval is not yet fully qualified. Redis Search has a binary-safe
+command path and preserves KNN expressions under signed module profiles, but its
+real vector acceptance suite is pending. PostgreSQL pgvector needs extension-aware
+permission and expression validation before use. See the staged implementation
+plan in [RFC-0007](docs/RFC-0007-dense-vector-retrieval.md).
+
 For SQL Server, use a dedicated login and database user, grant `SELECT` only on
 curated schemas, and grant database `SHOWPLAN`, and make `VIEW DEFINITION` available through the
 runtime identity or the separate read-only catalog attestor below. Snapshot isolation is required
