@@ -129,7 +129,8 @@ requirements and the exact qualification boundary. PostgreSQL now supports an
 opt-in PostgreSQL 16 / pgvector 0.8.2 profile for dense retrieval through the
 existing SQL tools, including vector/halfvec results and transaction-local
 HNSW/IVFFlat tuning. See the [setup and query guide](docs/POSTGRESQL-VECTOR-RETRIEVAL.md)
-and [local MCP evidence](docs/qualification/2026-09-21-postgresql-vector-retrieval.md).
+and [local MCP evidence](docs/qualification/2026-09-21-postgresql-vector-retrieval.md),
+including [synthetic recall and recovery acceptance](docs/qualification/2026-09-21-postgresql-vector-resources.md).
 Installing the extension alone does not enable its permission exceptions.
 
 For SQL Server, use a dedicated login and database user, grant `SELECT` only on

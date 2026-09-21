@@ -7,7 +7,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"log/slog"
 	"math"
 	"os"
 	"os/exec"
@@ -18,10 +17,8 @@ import (
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/stdlib"
-	"github.com/modelcontextprotocol/go-sdk/mcp"
 	"github.com/your-org/readonly-db-mcp/internal/config"
 	"github.com/your-org/readonly-db-mcp/internal/core"
-	"github.com/your-org/readonly-db-mcp/internal/registry"
 )
 
 func vectorPostgresFixture(t *testing.T) (*sql.DB, *sql.DB, *config.Config) {
@@ -145,37 +142,10 @@ targets:
 func TestLocalPostgreSQLDenseVectorsThroughMCP(t *testing.T) {
 	admin, reader, cfg := vectorPostgresFixture(t)
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Minute)
-	defer cancel()
-	targets, err := registry.Open(ctx, cfg, nil, nil)
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer targets.Close()
-	server := New(targets, slog.Default(), "pgvector-test")
-	a, b := mcp.NewInMemoryTransports()
-	ss, err := server.mcp.Connect(ctx, a, nil)
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer ss.Close()
-	client := mcp.NewClient(&mcp.Implementation{Name: "vector-test", Version: "1"}, nil)
-	cs, err := client.Connect(ctx, b, nil)
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer cs.Close()
-	call := func(tool string, input any, out any) error {
-		r, err := cs.CallTool(ctx, &mcp.CallToolParams{Name: tool, Arguments: input})
-		if err != nil {
-			return err
-		}
-		if r.IsError {
-			return fmt.Errorf("MCP failure: %v", r.Content)
-		}
-		if len(r.Content) != 1 {
-			return fmt.Errorf("missing MCP result")
-		}
-		return json.Unmarshal([]byte(r.Content[0].(*mcp.TextContent).Text), out)
+	t.Cleanup(cancel)
+	request := vectorMCPClient(t, ctx, cfg)
+	call := func(tool string, input, out any) error {
+		return request(ctx, tool, input, out)
 	}
 	query := func(q string, params []any, options *core.PostgreSQLQueryOptions) (core.QueryResult, error) {
 		var result core.QueryResult

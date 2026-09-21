@@ -1,6 +1,6 @@
 # RFC-0007: Dense vector retrieval for Redis and PostgreSQL
 
-- Status: P0 and P1 implemented; P2 runtime retrieval/tuning implemented with local MCP evidence; P3 release qualification pending
+- Status: P0–P2 implemented; P3 local recall/recovery acceptance added, production release qualification pending
 - Created: 2026-09-21
 - Depends on: RFC-0001, RFC-0002, RFC-0003, RFC-0004
 - Scope: Redis Search vector indexes and PostgreSQL pgvector
@@ -25,6 +25,10 @@ P2 now has opt-in runtime helper/role attestation, retrieval, codecs and local
 tuning, with a [22-combination MCP record](qualification/2026-09-21-postgresql-vector-retrieval.md)
 and [operator guide](POSTGRESQL-VECTOR-RETRIEVAL.md). Library identity is an explicit
 operator assertion; catalog inspection cannot authenticate remote library bytes.
+P3 adds [local recall and recovery acceptance](qualification/2026-09-21-postgresql-vector-resources.md)
+for larger dense fixtures, filtered scans/reranking, native cancellation, backend
+loss and sampled connection ceilings. Production build/topology and sustained
+resource qualification remain open.
 The following table records the pre-implementation assessment that motivated
 the plan.
 
@@ -278,5 +282,7 @@ All P0–P3 gates pass for each advertised profile. Examples work through the re
 MCP server with a dedicated reader, advanced reads remain usable, persistent
 writes fail at both layers, request resources recover, and the qualification
 record lists actual evidence. Redis and PostgreSQL now have local standalone
-dense retrieval evidence. Production build/topology, scale, cancellation and
-resource qualification remain pending under P3.
+dense retrieval evidence. PostgreSQL additionally has local synthetic recall,
+native interruption and connection recovery tests. Production build/topology,
+representative scale, multi-minute reads and sustained resource qualification
+remain pending under P3.

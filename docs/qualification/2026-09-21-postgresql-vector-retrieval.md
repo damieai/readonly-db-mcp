@@ -79,6 +79,11 @@ in this run; their skips are not new qualification evidence.
 
 ## Remaining release gates
 
+The subsequent [P3 local record](2026-09-21-postgresql-vector-resources.md) adds
+synthetic recall, filtered/reranked ANN, observed native interruption, backend
+loss and sampled pool-ceiling acceptance. The limitations below describe the
+original P2 run; production release gates remain open as detailed in P3.
+
 Qualify current production server/library builds, TLS and deployment topology;
 larger ANN corpora and recall criteria; iterative scan/reranking combinations at
 scale; native mid-execution cancellation and cleanup timing; long-running reads,

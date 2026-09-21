@@ -6,7 +6,8 @@ parameters with explicit casts, decoded `vector`/`halfvec` results, and optional
 transaction-local search controls. The profile is default-off.
 
 The [local qualification record](qualification/2026-09-21-postgresql-vector-retrieval.md)
-states the exact tested builds and limits. Installing pgvector alone does not
+and [recall/recovery acceptance](qualification/2026-09-21-postgresql-vector-resources.md)
+state the exact tested builds and limits. Installing pgvector alone does not
 enable this path. Database operators provision the extension, indexes and native
 analysis helper; MCP does not install them or load embeddings.
 

@@ -52,8 +52,13 @@ test-pgvector-proof: build-pgvector-test-fixture
 	test -n "$(READONLY_DB_MCP_PGVECTOR_PROOF)"
 	go test -race ./internal/dialects/postgresql/vectorproof -count=1 -v
 
-.PHONY: test-postgresql-vectors
+.PHONY: test-postgresql-vectors test-postgresql-vector-qualification
 test-postgresql-vectors:
 	test -n "$(READONLY_DB_MCP_PG_BIN)"
 	test -n "$(READONLY_DB_MCP_PGVECTOR_PROOF)"
-	go test -race ./internal/mcpserver -run TestLocalPostgreSQLDenseVectorsThroughMCP -count=1 -v
+	go test -race ./internal/mcpserver -run 'TestLocalPostgreSQL(DenseVectorsThroughMCP|Vector)' -count=1 -v
+
+test-postgresql-vector-qualification:
+	test -n "$(READONLY_DB_MCP_PG_BIN)"
+	test -n "$(READONLY_DB_MCP_PGVECTOR_PROOF)"
+	go test -race ./internal/mcpserver -run 'TestLocalPostgreSQLVector(Recall|Recovery)' -count=1 -v
