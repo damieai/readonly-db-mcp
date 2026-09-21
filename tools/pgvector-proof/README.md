@@ -1,12 +1,12 @@
-# PostgreSQL native binding prototype
+# PostgreSQL native binding helper
 
 RFC-0007 P1 uses the PostgreSQL 16 analyzer and rewrite engine to resolve actual
 function, operator, type and relation OIDs. This helper produces binding data;
 it does not execute or plan the supplied query. The Go `vectorproof` package
 compares the extension catalog against the source-pinned profile, checks the
 analysis surface before invoking the analyzer, and follows bound dependencies.
-Neither component is connected to public MCP query
-admission yet.
+The opt-in runtime path uses these components before planning and execution;
+see the [operator guide](../../docs/POSTGRESQL-VECTOR-RETRIEVAL.md).
 
 ## Build and run the isolated fixture
 
@@ -43,8 +43,8 @@ The embedded profile contains 327 descriptors for PostgreSQL 16 / pgvector
 0.8.2, including extension membership, function bodies/attributes, aggregate
 support, type I/O, operators, casts, access methods and index operator families.
 Local OIDs are discovered each time. Namespace relocation is normalized and
-tested; the prototype currently accepts simple lower-case installation names.
-This prototype restriction is not a proposed limit on native query syntax.
+tested; this profile currently accepts dedicated lower-case installation names.
+Native query expressions retain PostgreSQL's syntax.
 
 Bindings carry the original SQL digest, database and effective role OIDs,
 resolved parameter types and class-qualified object references. Snapshot checks
@@ -69,7 +69,7 @@ their dependencies before native analysis. It includes types even when USAGE or
 function EXECUTE was revoked: those privileges alone do not block every coercion
 callback. The check follows type I/O, typmod/subscript handlers, arrays,
 composites, domain constraints, range callbacks, TABLESAMPLE handlers, view/RLS
-expressions, indexes and operator families, partition children/keys and
+expressions, extended statistics, indexes and operator families, partition children/keys and
 collations. After binding, it checks the actual expression references too.
 
 The `expression(text)` helper inspects serialized `pg_node_tree` values obtained
@@ -89,23 +89,24 @@ The inspector and binder share the caller's transaction and request context;
 successful analysis restores `search_path=pg_catalog`. Roll back after a database
 error or cancellation. These checks do not cache proof across requests.
 
-## Admission gates still open
+## Runtime trust and remaining qualification
 
 Native analysis can call type input and typmod routines before it returns a
-tree. Do not grant this prototype to an untrusted query caller or use its output
+tree. Do not grant this helper to an untrusted query caller or use its output
 as the sole safety decision. The Go preflight now checks those callbacks and
 has native evidence of rejection before callback entry. Runtime integration
-still needs helper/deployment identity, effective role and schema attestation,
-and freshness through planning and execution. Foreign/native extensions and
+checks helper definitions, effective role/schema authority and dependencies on
+the execution transaction; it requires operator-asserted deployment identity.
+Foreign/native extensions and
 unreviewed routines need their own capabilities; a volatility label is not one.
 The dependency corpus is not a claim of complete execution-path qualification.
 
 Catalog metadata does not prove which shared-library bytes a remote server
-loaded. A reviewed deployment/library identity assertion, helper identity,
-role/schema ownership checks and concurrency boundaries are required before
-P2 enables extension EXECUTE exceptions. The current production startup and
-query policies retain their existing behavior. P2 codecs, retrieval execution
-and transaction-local tuning, and P3 release qualification remain pending.
+loaded. Deployment identity and concurrent administrative DDL remain trusted
+operator boundaries. The default-off P2 profile now enables exact extension and
+helper EXECUTE exceptions, codecs, retrieval and transaction-local tuning.
+[Local MCP qualification](../../docs/qualification/2026-09-21-postgresql-vector-retrieval.md)
+covers the initial dense matrix; P3 release/scale/resource gates remain open.
 
 See the [native evidence record](../../docs/qualification/2026-09-21-postgresql-vector-proof.md).
 The pgvector license accompanying the source-derived catalog descriptors is

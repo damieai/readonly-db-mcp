@@ -75,18 +75,20 @@ type DescribeTableInput struct {
 }
 
 type QueryInput struct {
-	Target     string `json:"target" jsonschema:"Exact target alias returned by list_targets"`
-	SQL        string `json:"sql" jsonschema:"One read-only SELECT in the target dialect; MySQL uses question marks and PostgreSQL uses $1, $2 placeholders"`
-	Parameters []any  `json:"parameters,omitempty" jsonschema:"Positional JSON scalar values matching the selected target's placeholder style"`
-	TimeoutMS  int    `json:"timeout_ms,omitempty" jsonschema:"Optional query timeout in milliseconds, capped by server configuration"`
-	MaxRows    int    `json:"max_rows,omitempty" jsonschema:"Optional result row cap, capped by server configuration"`
-	Purpose    string `json:"purpose,omitempty" jsonschema:"Short human-readable reason for the query; never include secrets"`
+	PostgreSQLOptions *core.PostgreSQLQueryOptions `json:"postgresql_options,omitempty" jsonschema:"Transaction-local pgvector retrieval controls for an enabled PostgreSQL target"`
+	Target            string                       `json:"target" jsonschema:"Exact target alias returned by list_targets"`
+	SQL               string                       `json:"sql" jsonschema:"One read-only SELECT in the target dialect; MySQL uses question marks and PostgreSQL uses $1, $2 placeholders"`
+	Parameters        []any                        `json:"parameters,omitempty" jsonschema:"Positional JSON scalar values matching the selected target's placeholder style"`
+	TimeoutMS         int                          `json:"timeout_ms,omitempty" jsonschema:"Optional query timeout in milliseconds, capped by server configuration"`
+	MaxRows           int                          `json:"max_rows,omitempty" jsonschema:"Optional result row cap, capped by server configuration"`
+	Purpose           string                       `json:"purpose,omitempty" jsonschema:"Short human-readable reason for the query; never include secrets"`
 }
 
 type BatchInput struct {
-	Target    string            `json:"target" jsonschema:"Exact target alias returned by list_targets"`
-	Queries   []BatchQueryInput `json:"queries" jsonschema:"Read-only queries executed sequentially in one database snapshot"`
-	TimeoutMS int               `json:"timeout_ms,omitempty" jsonschema:"Timeout for the entire batch in milliseconds"`
+	PostgreSQLOptions *core.PostgreSQLQueryOptions `json:"postgresql_options,omitempty" jsonschema:"One transaction-local pgvector options scope for the entire batch"`
+	Target            string                       `json:"target" jsonschema:"Exact target alias returned by list_targets"`
+	Queries           []BatchQueryInput            `json:"queries" jsonschema:"Read-only queries executed sequentially in one database snapshot"`
+	TimeoutMS         int                          `json:"timeout_ms,omitempty" jsonschema:"Timeout for the entire batch in milliseconds"`
 }
 
 type BatchQueryInput struct {
@@ -185,6 +187,10 @@ func (s *Server) querySelect(ctx context.Context, _ *mcp.CallToolRequest, input 
 	if err != nil {
 		return nil, core.QueryResult{}, err
 	}
+	if input.PostgreSQLOptions != nil && target.Info().Engine != "postgresql" {
+		return nil, core.QueryResult{}, fmt.Errorf("postgresql_options are valid only for PostgreSQL targets")
+	}
+	request.PostgreSQLOptions = input.PostgreSQLOptions
 	result, err := target.Query(ctx, request)
 	if err != nil {
 		return nil, core.QueryResult{}, err
@@ -201,6 +207,10 @@ func (s *Server) queryExplain(ctx context.Context, _ *mcp.CallToolRequest, input
 	if err != nil {
 		return nil, core.QueryResult{}, err
 	}
+	if input.PostgreSQLOptions != nil && target.Info().Engine != "postgresql" {
+		return nil, core.QueryResult{}, fmt.Errorf("postgresql_options are valid only for PostgreSQL targets")
+	}
+	request.PostgreSQLOptions = input.PostgreSQLOptions
 	result, err := target.Explain(ctx, request)
 	if err != nil {
 		return nil, core.QueryResult{}, err
@@ -224,7 +234,10 @@ func (s *Server) queryBatch(ctx context.Context, _ *mcp.CallToolRequest, input B
 	if err != nil {
 		return nil, core.BatchResult{}, err
 	}
-	request := core.BatchRequest{Timeout: timeout}
+	if input.PostgreSQLOptions != nil && target.Info().Engine != "postgresql" {
+		return nil, core.BatchResult{}, fmt.Errorf("postgresql_options are valid only for PostgreSQL targets")
+	}
+	request := core.BatchRequest{Timeout: timeout, PostgreSQLOptions: input.PostgreSQLOptions}
 	request.Queries = make([]core.QueryRequest, 0, len(input.Queries))
 	for i, query := range input.Queries {
 		converted, err := queryRequest(query.SQL, query.Parameters, 0, query.MaxRows, query.Purpose)

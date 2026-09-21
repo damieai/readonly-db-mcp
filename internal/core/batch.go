@@ -6,8 +6,9 @@ import (
 )
 
 type BatchRequest struct {
-	Queries []QueryRequest
-	Timeout time.Duration
+	PostgreSQLOptions *PostgreSQLQueryOptions
+	Queries           []QueryRequest
+	Timeout           time.Duration
 }
 
 type BatchResult struct {

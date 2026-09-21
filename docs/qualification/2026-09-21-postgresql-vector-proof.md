@@ -1,7 +1,8 @@
 # PostgreSQL vector proof foundation — RFC-0007 P1
 
-This is native evidence for an internal catalog/binding prototype. P1 is still
-in progress; PostgreSQL vector retrieval through MCP is not enabled or qualified.
+This records the initial internal catalog/binding proof evidence. The subsequent
+[P2 runtime/MCP record](2026-09-21-postgresql-vector-retrieval.md) covers opt-in
+query execution; this earlier corpus alone is not retrieval qualification.
 
 ## Fixture identity
 
@@ -89,8 +90,8 @@ collations. It inventories the role's accessible analysis surface and readable
 target relations, which may reject an unreviewed dependency even when one query
 does not name it. Scope provisioning must account for this target-wide check.
 It does not follow a materialized view's defining query as an execution path.
-Other planner/executor mechanisms still need runtime admission and qualification;
-these tests do not certify a complete production execution boundary.
+These tests alone do not certify a complete production execution boundary;
+runtime admission and retrieval evidence are recorded separately in P2.
 
 ## Reproduction and checks
 
@@ -110,10 +111,8 @@ enabled in this run.
 
 ## Remaining gates
 
-Before any runtime exception permits pgvector functions, integrate helper and
-deployment identity, effective role/scope checks, and freshness through planning
-and execution on the same lease. The new preflight is internal; public query
-admission still has no pgvector exception. Then integrate the opt-in profile, native vector parameters and
-results, request-local tuning and common query/batch/explain behavior. Full
-exact/HNSW/IVFFlat retrieval, persistent-write denial, cancellation, pool reset,
-load and memory qualification remain in RFC-0007 P2/P3.
+P2 now integrates helper metadata/ownership, operator deployment assertions,
+effective role/scope checks, preflight and execution on the same lease, codecs
+and request-local tuning. See its linked evidence for exact/HNSW/IVFFlat, native
+write denial and recovery. P3 still requires production build/topology, scale,
+native cancellation timing, load and memory qualification.

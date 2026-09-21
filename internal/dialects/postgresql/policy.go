@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	pgquery "github.com/pganalyze/pg_query_go/v6"
+	"github.com/your-org/readonly-db-mcp/internal/config"
 	"github.com/your-org/readonly-db-mcp/internal/core"
 )
 
@@ -28,9 +29,16 @@ var dangerousFunctions = map[string]struct{}{
 var systemSchemas = map[string]struct{}{"pg_catalog": {}, "information_schema": {}}
 
 type Policy struct {
+	nativeBinding   bool
 	allowed, denied map[string]struct{}
 	safeFunctions   map[string]struct{}
 	maxSQL          int
+}
+
+func targetPolicy(c *config.TargetConfig, maxSQL int, safe map[string]struct{}) *Policy {
+	p := NewPolicy(c.AllowedSchemas, c.DeniedTables, maxSQL, safe)
+	p.nativeBinding = c.PostgreSQL.PGVector != nil
+	return p
 }
 
 func NewPolicy(allowed, denied []string, maxSQL int, safeFunctions ...map[string]struct{}) *Policy {
@@ -130,12 +138,12 @@ func (p *Policy) Validate(query string, paramCount int) (*core.Validation, error
 					return fmt.Errorf("function is not read-only")
 				}
 			}
-			if p.safeFunctions != nil {
+			if p.safeFunctions != nil && !p.nativeBinding {
 				if _, ok := p.safeFunctions[name]; !ok {
 					return fmt.Errorf("function capability has not been proven read-only")
 				}
 			}
-			if len(names) > 1 && strings.ToLower(names[len(names)-2]) != "pg_catalog" {
+			if !p.nativeBinding && len(names) > 1 && strings.ToLower(names[len(names)-2]) != "pg_catalog" {
 				return fmt.Errorf("user-defined functions require explicit attestation")
 			}
 		case "ParamRef":

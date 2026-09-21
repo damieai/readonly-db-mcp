@@ -364,6 +364,7 @@ const relationEdges = `SELECT 'pg_type',atttypid::bigint FROM pg_catalog.pg_attr
  UNION ALL SELECT 'pg_collation',f::bigint FROM pg_catalog.pg_partitioned_table p CROSS JOIN LATERAL unnest(p.partcollation) f WHERE p.partrelid=$1`
 
 const relationExpressions = `SELECT r.ev_action::text FROM pg_catalog.pg_rewrite r JOIN pg_catalog.pg_class c ON c.oid=r.ev_class WHERE c.oid=$1 AND c.relkind='v' AND r.ev_type='1'
+ UNION ALL SELECT stxexprs::text FROM pg_catalog.pg_statistic_ext WHERE stxrelid=$1
  UNION ALL SELECT conbin::text FROM pg_catalog.pg_constraint WHERE conrelid=$1 AND contype='c'
  UNION ALL SELECT p.polqual::text FROM pg_catalog.pg_policy p JOIN pg_catalog.pg_class c ON c.oid=p.polrelid WHERE c.oid=$1 AND c.relrowsecurity AND p.polcmd IN ('r','*') AND (0=ANY(p.polroles) OR current_user::regrole::oid=ANY(p.polroles))
  UNION ALL SELECT partexprs::text FROM pg_catalog.pg_partitioned_table WHERE partrelid=$1`

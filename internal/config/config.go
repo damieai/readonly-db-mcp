@@ -107,11 +107,12 @@ type MySQLConfig struct {
 }
 
 type PostgreSQLConfig struct {
-	ApplicationName        string        `yaml:"application_name"`
-	StatementTimeoutMargin time.Duration `yaml:"statement_timeout_margin"`
-	BatchIsolation         string        `yaml:"batch_isolation"`
-	RequireHotStandby      bool          `yaml:"require_hot_standby"`
-	PrivilegeRecheck       time.Duration `yaml:"privilege_recheck_interval"`
+	PGVector               *PGVectorConfig `yaml:"pgvector"`
+	ApplicationName        string          `yaml:"application_name"`
+	StatementTimeoutMargin time.Duration   `yaml:"statement_timeout_margin"`
+	BatchIsolation         string          `yaml:"batch_isolation"`
+	RequireHotStandby      bool            `yaml:"require_hot_standby"`
+	PrivilegeRecheck       time.Duration   `yaml:"privilege_recheck_interval"`
 }
 
 type SQLServerConfig struct {
@@ -812,6 +813,7 @@ func validateTarget(name string, target *TargetConfig, limits Limits) []string {
 			problems = append(problems, "sqlserver settings are valid only for sqlserver targets")
 		}
 		pg := target.PostgreSQL
+		problems = append(problems, validatePGVector(pg.PGVector, target.Username)...)
 		if !safeName.MatchString(pg.ApplicationName) {
 			problems = append(problems, "postgresql.application_name must be a safe identifier")
 		}

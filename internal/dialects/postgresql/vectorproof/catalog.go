@@ -59,6 +59,25 @@ type Snapshot struct {
 
 func (s *Snapshot) Digest() string { return s.digest }
 
+// DenseTypeOIDs ties text codecs to the verified database-local type identities.
+func (s *Snapshot) DenseTypeOIDs() [2]uint32 {
+	var ids [2]uint32
+	if s.digest == "" {
+		return ids
+	}
+	for ref, obj := range s.objects {
+		if ref.Class == "pg_type" {
+			switch obj.Identity {
+			case "@.vector":
+				ids[0] = ref.OID
+			case "@.halfvec":
+				ids[1] = ref.OID
+			}
+		}
+	}
+	return ids
+}
+
 var schemaPattern = regexp.MustCompile(`^[a-z_][a-z0-9_]{0,62}$`)
 
 func ReviewedProfile() (Profile, error) {
@@ -201,9 +220,10 @@ func (s *Snapshot) Verify(p Profile) error {
 	return nil
 }
 
-// CheckExecuteGrants permits only exact verified pgvector routine OIDs. It does
-// not grant them, trust a schema, or accept functions merely marked IMMUTABLE.
-func (s *Snapshot) CheckExecuteGrants(ctx context.Context, tx *sql.Tx) error {
+// CheckExecuteGrants permits exact verified pgvector routine OIDs and any
+// caller-attested helpers. It does not grant them, trust a schema, or accept
+// functions merely marked IMMUTABLE.
+func (s *Snapshot) CheckExecuteGrants(ctx context.Context, tx *sql.Tx, verifiedHelpers ...uint32) error {
 	if s.digest == "" || tx == nil || s.tx != tx {
 		return errors.New("pgvector snapshot has not been verified")
 	}
@@ -213,13 +233,18 @@ func (s *Snapshot) CheckExecuteGrants(ctx context.Context, tx *sql.Tx) error {
 	}
 	defer rows.Close()
 	count := 0
+	helpers := map[uint32]bool{}
+	// Only caller-attested helper OIDs may be supplied here, never client input.
+	for _, oid := range verifiedHelpers {
+		helpers[oid] = true
+	}
 	for rows.Next() {
 		var oid uint32
 		count++
 		if rows.Scan(&oid) != nil || count > MaxObjects {
 			return errors.New("function privilege inventory limit")
 		}
-		if _, ok := s.objects[Reference{"pg_proc", oid}]; !ok {
+		if _, ok := s.objects[Reference{"pg_proc", oid}]; !ok && !helpers[oid] {
 			return errors.New("role can execute an unreviewed non-system routine")
 		}
 	}

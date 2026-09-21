@@ -125,11 +125,12 @@ non-system functions; startup attestation intentionally fails closed otherwise.
 Redis Search dense retrieval has local native/MCP acceptance for HASH/JSON,
 FLAT/HNSW, FLOAT32/FLOAT64 and L2/IP/COSINE over RESP2/RESP3. See
 [vector setup and queries](docs/REDIS-VECTOR-RETRIEVAL.md) for signed-profile
-requirements and the exact qualification boundary. PostgreSQL pgvector still
-needs complete extension-aware admission under
-[RFC-0007](docs/RFC-0007-dense-vector-retrieval.md). Its internal
-[catalog and native binding prototype](docs/qualification/2026-09-21-postgresql-vector-proof.md)
-has fixture evidence; PostgreSQL vector queries through MCP are not yet enabled.
+requirements and the exact qualification boundary. PostgreSQL now supports an
+opt-in PostgreSQL 16 / pgvector 0.8.2 profile for dense retrieval through the
+existing SQL tools, including vector/halfvec results and transaction-local
+HNSW/IVFFlat tuning. See the [setup and query guide](docs/POSTGRESQL-VECTOR-RETRIEVAL.md)
+and [local MCP evidence](docs/qualification/2026-09-21-postgresql-vector-retrieval.md).
+Installing the extension alone does not enable its permission exceptions.
 
 For SQL Server, use a dedicated login and database user, grant `SELECT` only on
 curated schemas, and grant database `SHOWPLAN`, and make `VIEW DEFINITION` available through the

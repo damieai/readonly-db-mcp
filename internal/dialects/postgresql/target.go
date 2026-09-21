@@ -11,6 +11,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"math"
 	"os"
 	"strconv"
 	"strings"
@@ -27,10 +28,12 @@ import (
 	"github.com/your-org/readonly-db-mcp/internal/audit"
 	"github.com/your-org/readonly-db-mcp/internal/config"
 	"github.com/your-org/readonly-db-mcp/internal/core"
+	"github.com/your-org/readonly-db-mcp/internal/dialects/postgresql/vectorproof"
 	"github.com/your-org/readonly-db-mcp/internal/metrics"
 )
 
 type Target struct {
+	vectorTypes     [2]uint32
 	cfg             *config.TargetConfig
 	limits          config.Limits
 	db              *sql.DB
@@ -75,7 +78,12 @@ func Open(ctx context.Context, cfg *config.TargetConfig, limits config.Limits, c
 		return nil, fmt.Errorf("target %q startup verification failed: %w", cfg.Name, err)
 	}
 	t := &Target{cfg: cfg, limits: limits, db: db, admission: controller, auditor: auditor, metrics: recorder, allowed: lowerSet(cfg.AllowedSchemas), denied: lowerSet(cfg.DeniedTables), cache: newMetadataCache(cfg.MetadataCache.IsEnabled(), cfg.MetadataCache.MaxEntries, cfg.MetadataCache.MaxBytes), policyRevision: postgresPolicyRevision(cfg), info: core.TargetInfo{Name: cfg.Name, Engine: cfg.Engine, Environment: cfg.Environment, Consistency: cfg.Consistency, Database: cfg.Database, Schemas: append([]string(nil), cfg.AllowedSchemas...), Healthy: true, ReadOnlyUser: true, ServerReadOnly: identity.readOnly, ParameterStyle: "$1", ServerVersion: identity.version}}
-	t.policy.Store(NewPolicy(cfg.AllowedSchemas, cfg.DeniedTables, limits.MaxSQLBytes, identity.safeFunctions))
+	t.policy.Store(targetPolicy(cfg, limits.MaxSQLBytes, identity.safeFunctions))
+	if v := cfg.PostgreSQL.PGVector; v != nil {
+		t.vectorTypes = identity.vector.DenseTypeOIDs()
+		t.info.Capabilities = map[string]string{"dense_vectors": "pg16-vector0.8.2", "library_identity": "operator_asserted", "deployment_id": v.DeploymentID}
+		t.info.PolicyRevision = t.policyRevision
+	}
 	t.healthy.Store(true)
 	t.lastAttested.Store(time.Now().UnixNano())
 	t.startPrivilegeRecheck()
@@ -101,7 +109,12 @@ func openDB(c *config.TargetConfig, password string) (*sql.DB, error) {
 		return nil, err
 	}
 	pc.TLSConfig = tlsCfg
-	db := stdlib.OpenDB(*pc)
+	var options []stdlib.OptionOpenDB
+	if v := c.PostgreSQL.PGVector; v != nil {
+		pc.DefaultQueryExecMode = pgx.QueryExecModeDescribeExec
+		options = append(options, stdlib.OptionAfterConnect(func(ctx context.Context, conn *pgx.Conn) error { return registerVectorText(ctx, conn, v.Schema) }))
+	}
+	db := stdlib.OpenDB(*pc, options...)
 	db.SetMaxOpenConns(c.Connection.MaxOpen)
 	db.SetMaxIdleConns(c.Connection.MaxIdle)
 	db.SetConnMaxLifetime(c.Connection.MaxLifetime)
@@ -137,12 +150,30 @@ func postgresTLS(c *config.TargetConfig) (*tls.Config, error) {
 }
 
 type identity struct {
+	vector        *vectorproof.Snapshot
 	version       string
 	readOnly      bool
 	safeFunctions map[string]struct{}
 }
 
 func verifyIdentityAndPrivileges(ctx context.Context, db *sql.DB, c *config.TargetConfig) (identity, error) {
+	if c.PostgreSQL.PGVector != nil {
+		tx, err := db.BeginTx(ctx, &sql.TxOptions{ReadOnly: true, Isolation: sql.LevelRepeatableRead})
+		if err != nil {
+			return identity{}, err
+		}
+		defer tx.Rollback()
+		return verifyIdentityOn(ctx, tx, c)
+	}
+	return verifyIdentityOn(ctx, db, c)
+}
+
+type postgresInspector interface {
+	QueryContext(context.Context, string, ...any) (*sql.Rows, error)
+	QueryRowContext(context.Context, string, ...any) *sql.Row
+}
+
+func verifyIdentityOn(ctx context.Context, db postgresInspector, c *config.TargetConfig) (identity, error) {
 	var current, session, database, version string
 	var versionNum int
 	var recovery, readOnly bool
@@ -199,6 +230,11 @@ func verifyIdentityAndPrivileges(ctx context.Context, db *sql.DB, c *config.Targ
 		return identity{}, errors.New("PostgreSQL role can connect outside the configured database")
 	}
 	allowed := lowerSet(c.AllowedSchemas)
+	schemaUsage := lowerSet(c.AllowedSchemas)
+	if v := c.PostgreSQL.PGVector; v != nil {
+		schemaUsage[v.Schema] = struct{}{}
+		schemaUsage[v.HelperSchema] = struct{}{}
+	}
 	rows, err := db.QueryContext(ctx, `SELECT nspname,has_schema_privilege(current_user,oid,'USAGE'),has_schema_privilege(current_user,oid,'CREATE') FROM pg_catalog.pg_namespace WHERE nspname NOT LIKE 'pg_%' AND nspname<>'information_schema'`)
 	if err != nil {
 		return identity{}, errors.New("inspect PostgreSQL schema privileges")
@@ -210,10 +246,13 @@ func verifyIdentityAndPrivileges(ctx context.Context, db *sql.DB, c *config.Targ
 		if rows.Scan(&n, &usage, &create) != nil {
 			return identity{}, errors.New("read PostgreSQL schema privileges")
 		}
-		_, ok := allowed[strings.ToLower(n)]
+		_, ok := schemaUsage[strings.ToLower(n)]
 		if create || (!ok && usage) || (ok && !usage) {
 			return identity{}, errors.New("PostgreSQL schema privileges exceed configured scope")
 		}
+	}
+	if rows.Err() != nil {
+		return identity{}, errors.New("incomplete PostgreSQL schema privileges")
 	}
 	rows.Close()
 	rows, err = db.QueryContext(ctx, `
@@ -263,12 +302,27 @@ func verifyIdentityAndPrivileges(ctx context.Context, db *sql.DB, c *config.Targ
 			return identity{}, errors.New("PostgreSQL relation privileges are not strictly SELECT-only")
 		}
 	}
-	rows.Close()
-	if db.QueryRowContext(ctx, `SELECT count(*) FROM pg_catalog.pg_proc p JOIN pg_catalog.pg_namespace n ON n.oid=p.pronamespace WHERE n.nspname NOT IN ('pg_catalog','information_schema') AND has_function_privilege(current_user,p.oid,'EXECUTE')`).Scan(&count) != nil {
-		return identity{}, errors.New("inspect PostgreSQL function privileges")
+	if rows.Err() != nil {
+		return identity{}, errors.New("incomplete PostgreSQL relation privileges")
 	}
-	if count > 0 {
-		return identity{}, errors.New("PostgreSQL role can execute untrusted functions")
+	rows.Close()
+	var vector *vectorproof.Snapshot
+	if c.PostgreSQL.PGVector != nil {
+		tx, ok := db.(*sql.Tx)
+		if !ok {
+			return identity{}, errors.New("vector attestation requires one transaction")
+		}
+		vector, err = attestVector(ctx, tx, c)
+		if err != nil {
+			return identity{}, err
+		}
+	} else {
+		if db.QueryRowContext(ctx, `SELECT count(*) FROM pg_catalog.pg_proc p JOIN pg_catalog.pg_namespace n ON n.oid=p.pronamespace WHERE n.nspname NOT IN ('pg_catalog','information_schema') AND has_function_privilege(current_user,p.oid,'EXECUTE')`).Scan(&count) != nil {
+			return identity{}, errors.New("inspect PostgreSQL function privileges")
+		}
+		if count > 0 {
+			return identity{}, errors.New("PostgreSQL role can execute untrusted functions")
+		}
 	}
 	safeFunctions := map[string]struct{}{}
 	rows, err = db.QueryContext(ctx, `SELECT p.proname,bool_and(NOT p.prosecdef AND (p.provolatile<>'v' OR p.proname=ANY($1::text[]))) FROM pg_catalog.pg_proc p JOIN pg_catalog.pg_namespace n ON n.oid=p.pronamespace WHERE n.nspname='pg_catalog' AND p.prokind IN ('f','a','w') GROUP BY p.proname`, []string{"random", "setseed", "clock_timestamp", "timeofday", "gen_random_uuid"})
@@ -291,12 +345,18 @@ func verifyIdentityAndPrivileges(ctx context.Context, db *sql.DB, c *config.Targ
 	if rows.Err() != nil {
 		return identity{}, errors.New("read PostgreSQL function capability catalog")
 	}
-	return identity{version: version, readOnly: readOnly, safeFunctions: safeFunctions}, nil
+	return identity{version: version, readOnly: readOnly, safeFunctions: safeFunctions, vector: vector}, nil
 }
 func (t *Target) Info() core.TargetInfo {
 	x := t.info
 	x.Healthy = t.requireHealthy() == nil
 	x.Schemas = append([]string(nil), x.Schemas...)
+	if t.info.Capabilities != nil {
+		x.Capabilities = map[string]string{}
+		for k, v := range t.info.Capabilities {
+			x.Capabilities[k] = v
+		}
+	}
 	return x
 }
 func (t *Target) ValidateQuery(q string) (*core.Validation, error) {
@@ -318,6 +378,9 @@ func (t *Target) Explain(ctx context.Context, r core.QueryRequest) (*core.QueryR
 	return t.execute(ctx, "query_explain", "EXPLAIN (FORMAT JSON, ANALYZE FALSE, VERBOSE FALSE, COSTS TRUE) "+r.SQL, r, v)
 }
 func (t *Target) execute(ctx context.Context, op, q string, r core.QueryRequest, v *core.Validation) (*core.QueryResult, error) {
+	if err := validateVectorOptions(r.PostgreSQLOptions, t.cfg.PostgreSQL.PGVector != nil); err != nil {
+		return nil, err
+	}
 	if err := t.requireHealthy(); err != nil {
 		return nil, err
 	}
@@ -354,7 +417,11 @@ func (t *Target) execute(ctx context.Context, op, q string, r core.QueryRequest,
 	if err := t.requireHealthy(); err != nil {
 		return nil, err
 	}
-	tx, err := t.db.BeginTx(qctx, &sql.TxOptions{ReadOnly: true})
+	opts := &sql.TxOptions{ReadOnly: true}
+	if t.cfg.PostgreSQL.PGVector != nil {
+		opts.Isolation = sql.LevelRepeatableRead
+	}
+	tx, err := t.db.BeginTx(qctx, opts)
 	if err != nil {
 		return nil, sanitize(err)
 	}
@@ -365,6 +432,9 @@ func (t *Target) execute(ctx context.Context, op, q string, r core.QueryRequest,
 	}
 	if _, err = tx.ExecContext(qctx, `SELECT pg_catalog.set_config('statement_timeout',$1,true)`, strconv.FormatInt(serverTimeout.Milliseconds(), 10)); err != nil {
 		return nil, sanitize(err)
+	}
+	if err = t.prepareVector(qctx, tx, r); err != nil {
+		return nil, err
 	}
 	rows, err := tx.QueryContext(qctx, q, r.Parameters...)
 	if err != nil {
@@ -422,6 +492,13 @@ func (t *Target) collect(rows *sql.Rows, maxRows, byteBudget int) (*core.QueryRe
 		row := map[string]any{}
 		for i, v := range vals {
 			n, tr := normalize(v, t.limits.MaxCellBytes)
+			if t.cfg.PostgreSQL.PGVector != nil && (cols[i].DatabaseType == "VECTOR" || cols[i].DatabaseType == "HALFVEC") {
+				var err error
+				n, tr, err = normalizeVector(v, strings.ToLower(cols[i].DatabaseType), t.limits.MaxCellBytes)
+				if err != nil {
+					return nil, err
+				}
+			}
 			if tr {
 				out.TruncatedCells++
 			}
@@ -471,6 +548,9 @@ func normalize(v any, max int) (any, bool) {
 		}
 		return x, false
 	case float64:
+		if math.IsNaN(x) || math.IsInf(x, 0) {
+			return map[string]string{"type": "float64", "value": strconv.FormatFloat(x, 'g', -1, 64)}, false
+		}
 		return x, false
 	default:
 		return fmt.Sprint(x), false
@@ -567,9 +647,12 @@ func (t *Target) startPrivilegeRecheck() {
 				if err == nil {
 					t.gate.Lock()
 					identity, verifyErr := verifyIdentityAndPrivileges(checkCtx, t.db, t.cfg)
+					if verifyErr == nil && identity.vector != nil && identity.vector.DenseTypeOIDs() != t.vectorTypes {
+						verifyErr = errors.New("vector type identities changed; reopen the target")
+					}
 					err = verifyErr
 					if err == nil {
-						t.policy.Store(NewPolicy(t.cfg.AllowedSchemas, t.cfg.DeniedTables, t.limits.MaxSQLBytes, identity.safeFunctions))
+						t.policy.Store(targetPolicy(t.cfg, t.limits.MaxSQLBytes, identity.safeFunctions))
 						t.lastAttested.Store(time.Now().UnixNano())
 						t.healthy.Store(true)
 					} else {
@@ -630,6 +713,7 @@ func (t *Target) Close() error {
 	return t.db.Close()
 }
 func postgresPolicyRevision(c *config.TargetConfig) string {
-	sum := sha256.Sum256([]byte(strings.ToLower(c.Engine + "\x00" + c.Database + "\x00" + strings.Join(c.AllowedSchemas, "\x00") + "\x00" + strings.Join(c.DeniedTables, "\x00"))))
+	vector, _ := json.Marshal(c.PostgreSQL.PGVector)
+	sum := sha256.Sum256([]byte(strings.ToLower(c.Engine+"\x00"+c.Database+"\x00"+strings.Join(c.AllowedSchemas, "\x00")+"\x00"+strings.Join(c.DeniedTables, "\x00")) + string(vector)))
 	return hex.EncodeToString(sum[:12])
 }

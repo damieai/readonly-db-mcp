@@ -14,6 +14,9 @@ import (
 )
 
 func (t *Target) BatchQuery(ctx context.Context, r core.BatchRequest) (*core.BatchResult, error) {
+	if err := validateVectorOptions(r.PostgreSQLOptions, t.cfg.PostgreSQL.PGVector != nil); err != nil {
+		return nil, err
+	}
 	if err := t.requireHealthy(); err != nil {
 		return nil, err
 	}
@@ -33,6 +36,9 @@ func (t *Target) BatchQuery(ctx context.Context, r core.BatchRequest) (*core.Bat
 	valid := make([]*core.Validation, len(r.Queries))
 	batchParameterBytes := 0
 	for i, q := range r.Queries {
+		if q.PostgreSQLOptions != nil {
+			return nil, fmt.Errorf("use one postgresql_options scope for the whole batch")
+		}
 		v, err := t.policy.Load().Validate(q.SQL, len(q.Parameters))
 		if err != nil {
 			return nil, fmt.Errorf("batch query %d: %w", i+1, err)
@@ -91,6 +97,10 @@ func (t *Target) BatchQuery(ctx context.Context, r core.BatchRequest) (*core.Bat
 		maxRows := q.MaxRows
 		if maxRows <= 0 {
 			maxRows = t.limits.MaxRows
+		}
+		q.PostgreSQLOptions = r.PostgreSQLOptions
+		if err := t.prepareVector(qctx, tx, q); err != nil {
+			return nil, err
 		}
 		rows, err := tx.QueryContext(qctx, q.SQL, q.Parameters...)
 		if err != nil {

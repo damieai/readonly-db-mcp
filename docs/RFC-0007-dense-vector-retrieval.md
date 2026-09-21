@@ -1,6 +1,6 @@
 # RFC-0007: Dense vector retrieval for Redis and PostgreSQL
 
-- Status: P0 Redis implemented; P1 catalog, pre-analysis dependencies and native binding implemented; runtime admission and P2–P3 pending
+- Status: P0 and P1 implemented; P2 runtime retrieval/tuning implemented with local MCP evidence; P3 release qualification pending
 - Created: 2026-09-21
 - Depends on: RFC-0001, RFC-0002, RFC-0003, RFC-0004
 - Scope: Redis Search vector indexes and PostgreSQL pgvector
@@ -21,8 +21,10 @@ and [usage guide](REDIS-VECTOR-RETRIEVAL.md). P1 has an internal
 [catalog/native binding foundation](qualification/2026-09-21-postgresql-vector-proof.md)
 with PostgreSQL fixture evidence. Pre-analysis callback checks and catalog
 dependency traversal now have native tests, including non-execution tripwires.
-Runtime helper/deployment attestation and execution integration remain open;
-no production pgvector exception is enabled.
+P2 now has opt-in runtime helper/role attestation, retrieval, codecs and local
+tuning, with a [22-combination MCP record](qualification/2026-09-21-postgresql-vector-retrieval.md)
+and [operator guide](POSTGRESQL-VECTOR-RETRIEVAL.md). Library identity is an explicit
+operator assertion; catalog inspection cannot authenticate remote library bytes.
 The following table records the pre-implementation assessment that motivated
 the plan.
 
@@ -275,5 +277,6 @@ running and backend memory growth; disable the profile if proof or recovery fail
 All P0–P3 gates pass for each advertised profile. Examples work through the real
 MCP server with a dedicated reader, advanced reads remain usable, persistent
 writes fail at both layers, request resources recover, and the qualification
-record lists actual evidence. Redis P0 now has local standalone dense evidence;
-broader release qualification and pgvector support remain pending.
+record lists actual evidence. Redis and PostgreSQL now have local standalone
+dense retrieval evidence. Production build/topology, scale, cancellation and
+resource qualification remain pending under P3.

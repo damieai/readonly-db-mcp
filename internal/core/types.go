@@ -26,11 +26,22 @@ type TargetInfo struct {
 }
 
 type QueryRequest struct {
-	SQL        string
-	Parameters []any
-	Timeout    time.Duration
-	MaxRows    int
-	Purpose    string
+	PostgreSQLOptions *PostgreSQLQueryOptions
+	SQL               string
+	Parameters        []any
+	Timeout           time.Duration
+	MaxRows           int
+	Purpose           string
+}
+
+type PostgreSQLQueryOptions struct {
+	HNSWEfSearch          *int     `json:"hnsw_ef_search,omitempty"`
+	HNSWIterativeScan     *string  `json:"hnsw_iterative_scan,omitempty"`
+	HNSWMaxScanTuples     *int     `json:"hnsw_max_scan_tuples,omitempty"`
+	HNSWScanMemMultiplier *float64 `json:"hnsw_scan_mem_multiplier,omitempty"`
+	IVFFlatProbes         *int     `json:"ivfflat_probes,omitempty"`
+	IVFFlatMaxProbes      *int     `json:"ivfflat_max_probes,omitempty"`
+	IVFFlatIterativeScan  *string  `json:"ivfflat_iterative_scan,omitempty"`
 }
 
 type QueryResult struct {
