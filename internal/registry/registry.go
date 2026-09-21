@@ -11,6 +11,7 @@ import (
 	"github.com/your-org/readonly-db-mcp/internal/audit"
 	"github.com/your-org/readonly-db-mcp/internal/config"
 	"github.com/your-org/readonly-db-mcp/internal/core"
+	estarget "github.com/your-org/readonly-db-mcp/internal/dialects/elasticsearch"
 	mysqltarget "github.com/your-org/readonly-db-mcp/internal/dialects/mysql"
 	postgresqltarget "github.com/your-org/readonly-db-mcp/internal/dialects/postgresql"
 	redistarget "github.com/your-org/readonly-db-mcp/internal/dialects/redis"
@@ -43,6 +44,8 @@ func Open(ctx context.Context, cfg *config.Config, auditor audit.Auditor, record
 		var target core.Target
 		var err error
 		switch targetCfg.Engine {
+		case config.EngineElasticsearch:
+			target, err = estarget.Open(ctx, targetCfg, cfg.Limits, controller, auditor, recorder)
 		case config.EngineMySQL:
 			target, err = mysqltarget.Open(ctx, targetCfg, cfg.Limits, controller, auditor, recorder)
 		case config.EnginePostgreSQL:
@@ -61,6 +64,18 @@ func Open(ctx context.Context, cfg *config.Config, auditor audit.Auditor, record
 		registry.targets[name] = target
 	}
 	return registry, nil
+}
+
+func (r *Registry) GetElasticsearch(name string) (core.ElasticsearchTarget, error) {
+	target, err := r.Get(name)
+	if err != nil {
+		return nil, err
+	}
+	es, ok := target.(core.ElasticsearchTarget)
+	if !ok {
+		return nil, errors.New("selected target is not Elasticsearch")
+	}
+	return es, nil
 }
 
 func (r *Registry) GetSQL(name string) (core.SQLTarget, error) {

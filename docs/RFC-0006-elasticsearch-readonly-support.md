@@ -1,11 +1,20 @@
 # RFC-0006: Elasticsearch Read-Only Query Support
 
-- Status: Draft — not implemented
+- Status: Phase 1 metadata foundation implemented; advanced query stages and live qualification pending
 - Authors: readonly-db-mcp maintainers
 - Created: 2026-09-12
 - Depends on: RFC-0001 resource governance and the common architecture contract
 - Target release: staged; advanced query acceptance is a completion gate
 - Scope: Elasticsearch over HTTPS through the existing stdio MCP transport
+
+Implementation update (2026-09-21): the first rollout stage now includes
+configuration/registry wiring, fixed metadata tools, the official Go transport,
+pinned 8.19.21/9.1.10 build identities, dedicated-user privilege proofs, glob
+containment, scoped index/alias/data-stream resolution, native mappings and TLS
+adversarial fixtures. `es_metadata` is available; `es_query`, `es_batch`,
+`es_cursor`, API-key/attestor, language and cross-cluster profiles remain pending.
+The selected builds are compatibility pins, not certified deployments. See
+[phase 1 evidence](qualification/2026-09-21-elasticsearch-phase-1.md).
 
 ## Summary
 
@@ -22,8 +31,9 @@ expressions, complex aggregations or expensive query features. Resource limits
 are explicit availability controls, independently configurable from mutation
 policy. The final write boundary is an attested Elasticsearch identity.
 
-This phase produces the RFC. All configuration, tools and packages below are
-proposals; this document does not enable Elasticsearch in the current binary.
+The full query design below remains the completion contract. Only the phase 1
+subset described above is enabled in the current binary; unimplemented reads
+are reported as unavailable capabilities, not mutations.
 
 ## Context and problem
 
@@ -272,7 +282,9 @@ restart the query against fresh data.
 
 ### Proposed configuration
 
-Illustrative only; the current config loader must continue rejecting this:
+Illustrative full-stage configuration. Phase 1 uses `version` and `cluster_uuid`
+with username/password instead of the proposed API-key/profile fields below;
+see `configs/elasticsearch.example.yaml` for its runnable configuration shape:
 
 ```yaml
 targets:
@@ -590,7 +602,8 @@ Dashboards must distinguish client return from confirmed server recovery.
    Test fixture images and licenses must be reproducible. A skip is not a pass.
 
 Document the exact successful commands/builds and observed limits when each
-implementation phase lands. No runtime tests are claimed by this RFC draft.
+implementation phase lands. The linked qualification record distinguishes fixture results from live-server
+evidence; a missing integration environment is an explicit skip.
 
 ## Rollout and operations
 

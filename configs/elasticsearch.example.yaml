@@ -1,0 +1,43 @@
+# Phase 1: metadata only. Replace endpoint, cluster UUID and secret/CA locations.
+# Query DSL, contexts, query languages, API keys and attestors are later stages.
+server:
+  transport: stdio
+  strict_startup: true
+  metrics_summary_interval: 30s
+
+limits:
+  global_concurrency: 16
+  per_target_concurrency: 8
+  default_timeout: 5m
+  max_timeout: 10m
+  max_result_bytes: 8388608
+
+targets:
+  search-reporting:
+    engine: elasticsearch
+    environment: production
+    consistency: eventual
+    username: search_mcp_ro
+    password_env: READONLY_ES_PASSWORD
+    elasticsearch:
+      endpoints: [https://es-reporting.example.invalid:9200]
+      version: 8.19.21
+      cluster_uuid: REPLACE_WITH_CLUSTER_ID
+      allowed_indices: [reports-*]
+      privilege_recheck_interval: 1m
+      max_request_bytes: 1048576
+      max_json_depth: 128
+      max_json_nodes: 100000
+      max_resolved_indices: 1024
+    tls:
+      mode: verify-full
+      ca_file: /run/secrets/es-ca.pem
+      # Each configured endpoint's hostname is verified independently.
+    connection:
+      max_open: 8
+      max_idle: 4
+      connect_timeout: 15s
+      write_timeout: 15s
+      read_timeout: 11m
+      max_lifetime: 30m
+      max_idle_time: 10m

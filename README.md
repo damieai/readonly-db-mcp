@@ -15,9 +15,11 @@ repository.
 > verifiable module artifact. Search index prefixes are checked at startup and
 > before each query. Production rollout still
 > requires validation against your provisioned accounts and server builds.
-> Elasticsearch is not implemented. Its native read-only query design is in
-> [RFC-0006](docs/RFC-0006-elasticsearch-readonly-support.md), including advanced
-> DSL, scripts, aggregations, vector search, pagination and query languages.
+> Elasticsearch phase 1 implements pinned target/permission attestation and
+> native index resolution/mappings through `es_metadata`. Advanced queries,
+> pagination and language tools remain scheduled by
+> [RFC-0006](docs/RFC-0006-elasticsearch-readonly-support.md); ES is not yet
+> advertised as a complete or live-server-certified query adapter.
 
 ## What it provides
 
@@ -177,6 +179,24 @@ node before publishing a client generation. Unknown redirect endpoints are
 refused. See [RFC-0004](docs/RFC-0004-redis-sentinel-cluster-modules.md) for the
 configuration and signed module-profile format.
 
+For Elasticsearch phase 1, configure explicit HTTPS origins, the cluster UUID,
+one of the pinned build versions, and a dedicated realm user. Give that user
+cluster `monitor` and only `read` / `view_index_metadata` on the configured
+index patterns. Startup inspects effective privileges on **every** endpoint;
+write, delegation, remote, unknown and out-of-scope authority fails closed.
+The current profile uses username/password; API-key proofs and a separate
+attestor remain future work. Do not grant security-management privileges to
+work around missing introspection.
+
+`es_metadata` supports `resolve` and `mappings`. Native JSON and large integer
+values remain intact. Wildcards use ES `*` / `?` semantics, with containment
+checked for future index names; aliases and data streams are resolved for each
+call. Date math, custom plugins, cross-cluster and query-language profiles still
+need their respective proof implementations. Missing capabilities are reported
+by `inspect_target`, separately from mutation denial. See the
+[phase 1 qualification record](docs/qualification/2026-09-21-elasticsearch-phase-1.md)
+for setup, tests and remaining gates.
+
 ### 3. Build and verify
 
 The module currently requires Go 1.26.6 or newer because of the maintained
@@ -228,6 +248,7 @@ Use target inventory-test. Inspect the schema and verify whether transaction
 | `query_select` | Runs one validated SELECT. |
 | `query_batch` | Runs several SELECTs in one read-only transaction snapshot. |
 | `query_explain` | Returns an engine-native non-executing plan for a validated SELECT. |
+| `es_metadata` | Resolves scoped Elasticsearch indices, aliases and data streams, or reads their mappings. |
 | `redis_command` | Runs one attested advanced read-only Redis command vector. |
 | `redis_batch` | Runs a bounded read-only Redis batch; non-atomic commands execute sequentially to bound retained reply memory. |
 

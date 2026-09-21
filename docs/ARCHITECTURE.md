@@ -44,6 +44,12 @@ dedicated SELECT-only SQL identity / read-key-only Redis ACL
 - `internal/dialects/redis`: Redis ACL and live command-catalog attestation,
   signed module profiles, canonical Search index/prefix verification, Sentinel and
   Cluster route attestation, RESP normalization and bounded command execution.
+- `internal/dialects/elasticsearch`: pinned metadata routes, effective-user
+  authority proofs, bounded glob containment/resolution, strict native JSON,
+  HTTP/1.1 TLS/socket leases and periodic re-attestation. Phase 1 exposes only
+  resolve/mappings; advanced query/language/lifecycle handlers remain pending.
+- `tools/es-rest-catalog`: reproducible REST catalog extraction from immutable
+  upstream commits, with reviewed endpoint effects and source hashes.
 - `internal/config`: strict YAML decoding, hard ceilings and secret resolution.
 - `internal/audit`: structured, non-content audit events.
 - `internal/admission`: global/per-target bounded queues, workload fairness and
@@ -135,3 +141,22 @@ and makes a response self-describing.
 Allowing a model to supply a host or DSN would turn the MCP server into an SSRF
 and credential-routing primitive. Network destinations and credentials are
 operator configuration, never tool input.
+
+## Elasticsearch phase 1 resource accounting
+
+Metadata calls start the shared deadline before admission. Queued index selectors
+use a process-wide 64 MiB byte budget; admitted adapter work reserves from a
+separate 512 MiB budget before transport or proof parsing. Each reservation is
+`6 * max_result_bytes + 64 * max_json_nodes + max_request_bytes + 2 MiB`.
+The extra proof space bounds glob automata; their own retained-state ceiling is
+1 MiB with separate state/transition caps. Configuration forecasts include ES
+JSON/proof overhead and keep the existing aggregate 1 GiB forecast ceiling.
+These are conservative adapter reservations, not a measured process RSS promise;
+MCP delivery backlog and live-server saturation measurements remain release gates.
+
+One shared transport enforces total open/idle sockets across explicit endpoints.
+It retires expired idle sockets and lets active requests finish before retirement.
+Connect/TLS and writes have their own phase budgets; the request context bounds
+execution and collection. No runtime credential can be selected by a caller.
+Metadata responses fail on oversized native JSON or encoded MCP envelopes, with
+no silent truncation. Target-level metadata caches are not used for ES proofs.

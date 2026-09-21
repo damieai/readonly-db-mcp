@@ -22,6 +22,7 @@ const (
 	EnginePostgreSQL    = "postgresql"
 	EngineSQLServer     = "sqlserver"
 	EngineRedis         = "redis"
+	EngineElasticsearch = "elasticsearch"
 	TransportStdio      = "stdio"
 	TLSDisabled         = "disabled"
 	TLSRequired         = "required"
@@ -78,26 +79,27 @@ type WorkloadClasses struct {
 }
 
 type TargetConfig struct {
-	Name           string              `yaml:"-"`
-	Engine         string              `yaml:"engine"`
-	Environment    string              `yaml:"environment"`
-	Consistency    string              `yaml:"consistency"`
-	Host           string              `yaml:"host"`
-	Port           int                 `yaml:"port"`
-	Database       string              `yaml:"database"`
-	Username       string              `yaml:"username"`
-	PasswordFile   string              `yaml:"password_file"`
-	PasswordEnv    string              `yaml:"password_env"`
-	AllowedSchemas []string            `yaml:"allowed_schemas"`
-	DeniedTables   []string            `yaml:"denied_tables"`
-	Connection     ConnectionConfig    `yaml:"connection"`
-	TLS            TLSConfig           `yaml:"tls"`
-	MySQL          MySQLConfig         `yaml:"mysql"`
-	PostgreSQL     PostgreSQLConfig    `yaml:"postgresql"`
-	SQLServer      SQLServerConfig     `yaml:"sqlserver"`
-	Redis          RedisConfig         `yaml:"redis"`
-	MetadataCache  MetadataCacheConfig `yaml:"metadata_cache"`
-	ResultCache    ResultCacheConfig   `yaml:"result_cache"`
+	Name           string               `yaml:"-"`
+	Engine         string               `yaml:"engine"`
+	Environment    string               `yaml:"environment"`
+	Consistency    string               `yaml:"consistency"`
+	Host           string               `yaml:"host"`
+	Port           int                  `yaml:"port"`
+	Database       string               `yaml:"database"`
+	Username       string               `yaml:"username"`
+	PasswordFile   string               `yaml:"password_file"`
+	PasswordEnv    string               `yaml:"password_env"`
+	AllowedSchemas []string             `yaml:"allowed_schemas"`
+	DeniedTables   []string             `yaml:"denied_tables"`
+	Connection     ConnectionConfig     `yaml:"connection"`
+	TLS            TLSConfig            `yaml:"tls"`
+	MySQL          MySQLConfig          `yaml:"mysql"`
+	PostgreSQL     PostgreSQLConfig     `yaml:"postgresql"`
+	SQLServer      SQLServerConfig      `yaml:"sqlserver"`
+	Redis          RedisConfig          `yaml:"redis"`
+	Elasticsearch  *ElasticsearchConfig `yaml:"elasticsearch"`
+	MetadataCache  MetadataCacheConfig  `yaml:"metadata_cache"`
+	ResultCache    ResultCacheConfig    `yaml:"result_cache"`
 }
 
 type MySQLConfig struct {
@@ -328,8 +330,14 @@ func applyDefaults(cfg *Config) {
 		}
 		if target.Consistency == "" {
 			target.Consistency = ConsistencyCurrent
+			if target.Engine == EngineElasticsearch {
+				target.Consistency = ConsistencyEventual
+			}
 		}
-		if target.Port == 0 {
+		if target.Engine == EngineElasticsearch {
+			defaultElasticsearch(target)
+		}
+		if target.Port == 0 && target.Engine != EngineElasticsearch {
 			if target.Engine == EnginePostgreSQL {
 				target.Port = 5432
 			} else if target.Engine == EngineSQLServer {
@@ -625,9 +633,23 @@ func (cfg *Config) Validate() error {
 // parser state, driver buffers, and database server memory.
 func (cfg *Config) ResourceForecastBytes() int64 {
 	total := int64(cfg.Limits.GlobalConcurrency) * (int64(cfg.Limits.MaxResultBytes)*3 + int64(cfg.Limits.MaxParameterBytes))
+	var esNodes, esRequest, esTargets int
+	for _, target := range cfg.Targets {
+		if target != nil && target.Engine == EngineElasticsearch && target.Elasticsearch != nil {
+			esTargets++
+			esNodes = max(esNodes, target.Elasticsearch.MaxJSONNodes)
+			esRequest = max(esRequest, target.Elasticsearch.MaxRequestBytes)
+		}
+	}
+	if esNodes > 0 {
+		// Include native JSON validation, typed proof data and final MCP encoding.
+		active := min(cfg.Limits.GlobalConcurrency, esTargets*cfg.Limits.PerTargetConcurrency)
+		extraRequest := max(0, esRequest-cfg.Limits.MaxParameterBytes)
+		total += int64(active) * (int64(cfg.Limits.MaxResultBytes)*3 + int64(esNodes)*64 + int64(extraRequest) + (2 << 20))
+	}
 	for _, target := range cfg.Targets {
 		if target != nil {
-			if target.Engine != EngineRedis {
+			if target.Engine != EngineRedis && target.Engine != EngineElasticsearch {
 				total += int64(target.MetadataCache.MaxBytes) + int64(target.ResultCache.MaxBytes)
 			}
 			if target.Engine == EngineRedis && target.Redis.Mode == "cluster" {
@@ -643,8 +665,14 @@ func validateTarget(name string, target *TargetConfig, limits Limits) []string {
 	if !safeName.MatchString(name) {
 		problems = append(problems, "name must match [a-zA-Z0-9][a-zA-Z0-9_.-]{0,63}")
 	}
+	if target.Engine == EngineElasticsearch {
+		return append(problems, validateElasticsearch(target, limits)...)
+	}
+	if target.Elasticsearch != nil {
+		problems = append(problems, "elasticsearch settings are valid only for elasticsearch targets")
+	}
 	if target.Engine != EngineMySQL && target.Engine != EnginePostgreSQL && target.Engine != EngineSQLServer && target.Engine != EngineRedis {
-		problems = append(problems, "engine must be mysql, postgresql, sqlserver, or redis")
+		problems = append(problems, "engine must be mysql, postgresql, sqlserver, redis, or elasticsearch")
 	}
 	if !safeName.MatchString(target.Environment) {
 		problems = append(problems, "environment is required and must be a safe identifier")

@@ -1,0 +1,59 @@
+package elasticsearch
+
+import (
+	"context"
+	"net/http"
+	"os"
+	"strings"
+	"testing"
+	"time"
+
+	"github.com/google/uuid"
+	"github.com/your-org/readonly-db-mcp/internal/admission"
+	"github.com/your-org/readonly-db-mcp/internal/config"
+	"github.com/your-org/readonly-db-mcp/internal/core"
+)
+
+// Run only with an operator-provisioned disposable index/account. The test owns
+// its randomized probe document. No administrator credentials enter this process.
+func TestElasticsearchLiveReadOnlyMetadata(t *testing.T) {
+	path := os.Getenv("READONLY_DB_MCP_ES_CONFIG")
+	if path == "" {
+		t.Skip("READONLY_DB_MCP_ES_CONFIG is not configured")
+	}
+	cfg, err := config.Load(path)
+	if err != nil {
+		t.Fatal("load ES integration configuration")
+	}
+	targetCfg := cfg.Targets[os.Getenv("READONLY_DB_MCP_ES_TARGET")]
+	index := os.Getenv("READONLY_DB_MCP_ES_WRITE_PROBE_INDEX")
+	if targetCfg == nil || targetCfg.Engine != config.EngineElasticsearch || targetCfg.Environment != "test" || !strings.HasPrefix(index, "mcp-es-acceptance-") || !concreteName(index) {
+		t.Fatal("select an environment:test ES target and a disposable mcp-es-acceptance-* probe index")
+	}
+	controller := admission.New(admission.Config{Global: cfg.Limits.GlobalConcurrency, PerTarget: cfg.Limits.PerTargetConcurrency, MaxQueued: cfg.Limits.MaxQueuedRequests, QueueTimeout: cfg.Limits.QueueTimeout, MaintenanceMax: cfg.Limits.WorkloadClasses.MaintenanceMaxConcurrency, MetadataReserved: cfg.Limits.WorkloadClasses.MetadataReserved, BatchMax: cfg.Limits.WorkloadClasses.BatchMaxConcurrency})
+	ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
+	defer cancel()
+	target, err := Open(ctx, targetCfg, cfg.Limits, controller, nil, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer target.Close()
+	for _, operation := range []string{"resolve", "mappings"} {
+		if _, err := target.ElasticsearchMetadata(ctx, core.ElasticsearchMetadataRequest{Operation: operation, Indices: []string{index}}); err != nil {
+			t.Fatal(err)
+		}
+	}
+	request, err := http.NewRequestWithContext(ctx, http.MethodPut, "/"+index+"/_doc/readonly-must-fail-"+uuid.NewString(), strings.NewReader(`{"fixture":"native_write_must_fail"}`))
+	if err != nil {
+		t.Fatal(err)
+	}
+	request.Header.Set("Content-Type", "application/json")
+	response, err := target.wire.clients[0].Perform(request)
+	if err != nil {
+		t.Fatal("native write-denial probe failed at transport")
+	}
+	defer response.Body.Close()
+	if response.StatusCode != http.StatusForbidden {
+		t.Fatalf("native identity must deny document writes with 403, got %d", response.StatusCode)
+	}
+}

@@ -6,20 +6,23 @@ import (
 )
 
 type TargetInfo struct {
-	Name           string   `json:"name"`
-	Engine         string   `json:"engine"`
-	Environment    string   `json:"environment"`
-	Consistency    string   `json:"consistency"`
-	Database       string   `json:"database"`
-	Schemas        []string `json:"allowed_schemas"`
-	Healthy        bool     `json:"healthy"`
-	ReadOnlyUser   bool     `json:"read_only_user"`
-	ServerReadOnly bool     `json:"server_read_only"`
-	ParameterStyle string   `json:"parameter_style"`
-	ServerVersion  string   `json:"server_version,omitempty"`
-	DeploymentMode string   `json:"deployment_mode,omitempty"`
-	KeyPatterns    []string `json:"key_patterns,omitempty"`
-	PolicyRevision string   `json:"policy_revision,omitempty"`
+	Name           string            `json:"name"`
+	Engine         string            `json:"engine"`
+	Environment    string            `json:"environment"`
+	Consistency    string            `json:"consistency"`
+	Database       string            `json:"database"`
+	Schemas        []string          `json:"allowed_schemas"`
+	Healthy        bool              `json:"healthy"`
+	ReadOnlyUser   bool              `json:"read_only_user"`
+	ServerReadOnly bool              `json:"server_read_only"`
+	ParameterStyle string            `json:"parameter_style"`
+	ServerVersion  string            `json:"server_version,omitempty"`
+	DeploymentMode string            `json:"deployment_mode,omitempty"`
+	KeyPatterns    []string          `json:"key_patterns,omitempty"`
+	PolicyRevision string            `json:"policy_revision,omitempty"`
+	AllowedIndices []string          `json:"allowed_indices,omitempty"`
+	Capabilities   map[string]string `json:"capabilities,omitempty"`
+	ProofCheckedAt string            `json:"proof_checked_at,omitempty"`
 }
 
 type QueryRequest struct {

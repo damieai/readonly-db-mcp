@@ -122,6 +122,7 @@ func (s *Server) registerTools() {
 	mcp.AddTool(s.mcp, tool("query_explain", "Return an engine-native non-executing plan for a validated read-only SELECT."), s.queryExplain)
 	mcp.AddTool(s.mcp, tool("redis_command", "Execute one attested advanced read-only Redis command."), s.redisCommand)
 	mcp.AddTool(s.mcp, tool("redis_batch", "Execute a bounded batch of attested read-only Redis commands."), s.redisBatch)
+	s.registerElasticsearchTools()
 }
 
 func tool(name, description string) *mcp.Tool {

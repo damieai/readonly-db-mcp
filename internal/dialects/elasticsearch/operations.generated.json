@@ -1,0 +1,1705 @@
+{
+  "8.19.21": {
+    "bulk": {
+      "api": "bulk",
+      "effect": "mutation",
+      "implemented": false,
+      "parameters": [
+        "_source",
+        "_source_excludes",
+        "_source_includes",
+        "include_source_on_error",
+        "list_executed_pipelines",
+        "pipeline",
+        "refresh",
+        "require_alias",
+        "require_data_stream",
+        "routing",
+        "timeout",
+        "wait_for_active_shards"
+      ],
+      "routes": [
+        {
+          "methods": [
+            "POST",
+            "PUT"
+          ],
+          "path": "/_bulk"
+        },
+        {
+          "methods": [
+            "POST",
+            "PUT"
+          ],
+          "path": "/{index}/_bulk"
+        }
+      ],
+      "sha256": "7306dd2433d3198a70a99799da5def60e9cbf90a8025f3d5eb7d9665446a35e2",
+      "source": "https://raw.githubusercontent.com/elastic/elasticsearch/4fe44c255c3d0da06779b921e132cdc555ed9aff/rest-api-spec/src/main/resources/rest-api-spec/api/bulk.json"
+    },
+    "clear_scroll": {
+      "api": "clear_scroll",
+      "effect": "owned_context",
+      "implemented": false,
+      "parameters": [],
+      "routes": [
+        {
+          "methods": [
+            "DELETE"
+          ],
+          "path": "/_search/scroll"
+        },
+        {
+          "methods": [
+            "DELETE"
+          ],
+          "path": "/_search/scroll/{scroll_id}"
+        }
+      ],
+      "sha256": "1fc1c271f7129f827a471fb43a3a8ab14f543d2969dc411472486a682349cc0b",
+      "source": "https://raw.githubusercontent.com/elastic/elasticsearch/4fe44c255c3d0da06779b921e132cdc555ed9aff/rest-api-spec/src/main/resources/rest-api-spec/api/clear_scroll.json"
+    },
+    "close_point_in_time": {
+      "api": "close_point_in_time",
+      "effect": "owned_context",
+      "implemented": false,
+      "parameters": [],
+      "routes": [
+        {
+          "methods": [
+            "DELETE"
+          ],
+          "path": "/_pit"
+        }
+      ],
+      "sha256": "4c69f4e2496c83fc1be1eab5404b0ffa55fcc75f5be550183f8aa59daecfd5ba",
+      "source": "https://raw.githubusercontent.com/elastic/elasticsearch/4fe44c255c3d0da06779b921e132cdc555ed9aff/rest-api-spec/src/main/resources/rest-api-spec/api/close_point_in_time.json"
+    },
+    "count": {
+      "api": "count",
+      "effect": "read",
+      "implemented": false,
+      "parameters": [
+        "allow_no_indices",
+        "analyze_wildcard",
+        "analyzer",
+        "default_operator",
+        "df",
+        "expand_wildcards",
+        "ignore_throttled",
+        "ignore_unavailable",
+        "lenient",
+        "min_score",
+        "preference",
+        "q",
+        "routing",
+        "terminate_after"
+      ],
+      "routes": [
+        {
+          "methods": [
+            "POST",
+            "GET"
+          ],
+          "path": "/_count"
+        },
+        {
+          "methods": [
+            "POST",
+            "GET"
+          ],
+          "path": "/{index}/_count"
+        }
+      ],
+      "sha256": "8ab7fca0efdc61b58b501906135dc87a5be91d181ec1c05568072276936b5a37",
+      "source": "https://raw.githubusercontent.com/elastic/elasticsearch/4fe44c255c3d0da06779b921e132cdc555ed9aff/rest-api-spec/src/main/resources/rest-api-spec/api/count.json"
+    },
+    "delete": {
+      "api": "delete",
+      "effect": "mutation",
+      "implemented": false,
+      "parameters": [
+        "if_primary_term",
+        "if_seq_no",
+        "refresh",
+        "routing",
+        "timeout",
+        "version",
+        "version_type",
+        "wait_for_active_shards"
+      ],
+      "routes": [
+        {
+          "methods": [
+            "DELETE"
+          ],
+          "path": "/{index}/_doc/{id}"
+        }
+      ],
+      "sha256": "56a9b17d2e29060699bc283aec348a38232bbc292421082bb4abfb03ee491be7",
+      "source": "https://raw.githubusercontent.com/elastic/elasticsearch/4fe44c255c3d0da06779b921e132cdc555ed9aff/rest-api-spec/src/main/resources/rest-api-spec/api/delete.json"
+    },
+    "delete_by_query": {
+      "api": "delete_by_query",
+      "effect": "mutation",
+      "implemented": false,
+      "parameters": [
+        "allow_no_indices",
+        "analyze_wildcard",
+        "analyzer",
+        "conflicts",
+        "default_operator",
+        "df",
+        "expand_wildcards",
+        "from",
+        "ignore_unavailable",
+        "lenient",
+        "max_docs",
+        "preference",
+        "q",
+        "refresh",
+        "request_cache",
+        "requests_per_second",
+        "routing",
+        "scroll",
+        "scroll_size",
+        "search_timeout",
+        "search_type",
+        "slices",
+        "sort",
+        "stats",
+        "terminate_after",
+        "timeout",
+        "version",
+        "wait_for_active_shards",
+        "wait_for_completion"
+      ],
+      "routes": [
+        {
+          "methods": [
+            "POST"
+          ],
+          "path": "/{index}/_delete_by_query"
+        }
+      ],
+      "sha256": "c261e6478f43073d5f587038dedf89bbf1f0e1251d6b222b5713cd640f9e5099",
+      "source": "https://raw.githubusercontent.com/elastic/elasticsearch/4fe44c255c3d0da06779b921e132cdc555ed9aff/rest-api-spec/src/main/resources/rest-api-spec/api/delete_by_query.json"
+    },
+    "get": {
+      "api": "get",
+      "effect": "read",
+      "implemented": false,
+      "parameters": [
+        "_source",
+        "_source_excludes",
+        "_source_includes",
+        "force_synthetic_source",
+        "preference",
+        "realtime",
+        "refresh",
+        "routing",
+        "stored_fields",
+        "version",
+        "version_type"
+      ],
+      "routes": [
+        {
+          "methods": [
+            "GET"
+          ],
+          "path": "/{index}/_doc/{id}"
+        }
+      ],
+      "sha256": "226927c5007ce20c8218f2488c79d3c2258748c8abe72c70d3d1debbc52562db",
+      "source": "https://raw.githubusercontent.com/elastic/elasticsearch/4fe44c255c3d0da06779b921e132cdc555ed9aff/rest-api-spec/src/main/resources/rest-api-spec/api/get.json"
+    },
+    "index": {
+      "api": "index",
+      "effect": "mutation",
+      "implemented": false,
+      "parameters": [
+        "if_primary_term",
+        "if_seq_no",
+        "include_source_on_error",
+        "op_type",
+        "pipeline",
+        "refresh",
+        "require_alias",
+        "require_data_stream",
+        "routing",
+        "timeout",
+        "version",
+        "version_type",
+        "wait_for_active_shards"
+      ],
+      "routes": [
+        {
+          "methods": [
+            "PUT",
+            "POST"
+          ],
+          "path": "/{index}/_doc/{id}"
+        },
+        {
+          "methods": [
+            "POST"
+          ],
+          "path": "/{index}/_doc"
+        }
+      ],
+      "sha256": "93c54c398c002016b653d28fde20200406ee32eda208a3308e6509067ede98e4",
+      "source": "https://raw.githubusercontent.com/elastic/elasticsearch/4fe44c255c3d0da06779b921e132cdc555ed9aff/rest-api-spec/src/main/resources/rest-api-spec/api/index.json"
+    },
+    "indices.flush": {
+      "api": "indices.flush",
+      "effect": "mutation",
+      "implemented": false,
+      "parameters": [
+        "allow_no_indices",
+        "expand_wildcards",
+        "force",
+        "ignore_unavailable",
+        "wait_if_ongoing"
+      ],
+      "routes": [
+        {
+          "methods": [
+            "POST",
+            "GET"
+          ],
+          "path": "/_flush"
+        },
+        {
+          "methods": [
+            "POST",
+            "GET"
+          ],
+          "path": "/{index}/_flush"
+        }
+      ],
+      "sha256": "caab1f3c3a981335054aee206dfd9b0bdb4b8d203288e2ef6cb3a7eb48b35da5",
+      "source": "https://raw.githubusercontent.com/elastic/elasticsearch/4fe44c255c3d0da06779b921e132cdc555ed9aff/rest-api-spec/src/main/resources/rest-api-spec/api/indices.flush.json"
+    },
+    "indices.forcemerge": {
+      "api": "indices.forcemerge",
+      "effect": "mutation",
+      "implemented": false,
+      "parameters": [
+        "allow_no_indices",
+        "expand_wildcards",
+        "flush",
+        "ignore_unavailable",
+        "max_num_segments",
+        "only_expunge_deletes",
+        "wait_for_completion"
+      ],
+      "routes": [
+        {
+          "methods": [
+            "POST"
+          ],
+          "path": "/_forcemerge"
+        },
+        {
+          "methods": [
+            "POST"
+          ],
+          "path": "/{index}/_forcemerge"
+        }
+      ],
+      "sha256": "ee461bf3fc5c6c5e877c03235c8c74be1b0223ef129aa531d33399909971a0fe",
+      "source": "https://raw.githubusercontent.com/elastic/elasticsearch/4fe44c255c3d0da06779b921e132cdc555ed9aff/rest-api-spec/src/main/resources/rest-api-spec/api/indices.forcemerge.json"
+    },
+    "indices.refresh": {
+      "api": "indices.refresh",
+      "effect": "mutation",
+      "implemented": false,
+      "parameters": [
+        "allow_no_indices",
+        "expand_wildcards",
+        "ignore_unavailable"
+      ],
+      "routes": [
+        {
+          "methods": [
+            "POST",
+            "GET"
+          ],
+          "path": "/_refresh"
+        },
+        {
+          "methods": [
+            "POST",
+            "GET"
+          ],
+          "path": "/{index}/_refresh"
+        }
+      ],
+      "sha256": "df7674c78515170a9a4059958b0eaf60404ac7034d10bebb20a0ad258fbbc6a5",
+      "source": "https://raw.githubusercontent.com/elastic/elasticsearch/4fe44c255c3d0da06779b921e132cdc555ed9aff/rest-api-spec/src/main/resources/rest-api-spec/api/indices.refresh.json"
+    },
+    "mappings": {
+      "api": "indices.get_mapping",
+      "effect": "read",
+      "implemented": true,
+      "parameters": [
+        "allow_no_indices",
+        "expand_wildcards",
+        "ignore_unavailable",
+        "local",
+        "master_timeout"
+      ],
+      "routes": [
+        {
+          "methods": [
+            "GET"
+          ],
+          "path": "/_mapping"
+        },
+        {
+          "methods": [
+            "GET"
+          ],
+          "path": "/{index}/_mapping"
+        }
+      ],
+      "sha256": "c9250d8576814a0e2b492de4d87fce44f991fe8a8193fb90a32c0a5179b6b0e7",
+      "source": "https://raw.githubusercontent.com/elastic/elasticsearch/4fe44c255c3d0da06779b921e132cdc555ed9aff/rest-api-spec/src/main/resources/rest-api-spec/api/indices.get_mapping.json"
+    },
+    "mget": {
+      "api": "mget",
+      "effect": "read",
+      "implemented": false,
+      "parameters": [
+        "_source",
+        "_source_excludes",
+        "_source_includes",
+        "force_synthetic_source",
+        "preference",
+        "realtime",
+        "refresh",
+        "routing",
+        "stored_fields"
+      ],
+      "routes": [
+        {
+          "methods": [
+            "GET",
+            "POST"
+          ],
+          "path": "/_mget"
+        },
+        {
+          "methods": [
+            "GET",
+            "POST"
+          ],
+          "path": "/{index}/_mget"
+        }
+      ],
+      "sha256": "1c3feb382f92b9adf7ec17d451ff5ef37e2c67fd1d2fd2fc23e29108474ed78e",
+      "source": "https://raw.githubusercontent.com/elastic/elasticsearch/4fe44c255c3d0da06779b921e132cdc555ed9aff/rest-api-spec/src/main/resources/rest-api-spec/api/mget.json"
+    },
+    "msearch": {
+      "api": "msearch",
+      "effect": "read",
+      "implemented": false,
+      "parameters": [
+        "allow_no_indices",
+        "ccs_minimize_roundtrips",
+        "expand_wildcards",
+        "ignore_throttled",
+        "ignore_unavailable",
+        "include_named_queries_score",
+        "index",
+        "max_concurrent_searches",
+        "max_concurrent_shard_requests",
+        "pre_filter_shard_size",
+        "rest_total_hits_as_int",
+        "routing",
+        "search_type",
+        "typed_keys"
+      ],
+      "routes": [
+        {
+          "methods": [
+            "GET",
+            "POST"
+          ],
+          "path": "/_msearch"
+        },
+        {
+          "methods": [
+            "GET",
+            "POST"
+          ],
+          "path": "/{index}/_msearch"
+        }
+      ],
+      "sha256": "57b7cddfa7eb208ba800f75d57e70fcd638feca5b2fff1b2cdf035f39df00903",
+      "source": "https://raw.githubusercontent.com/elastic/elasticsearch/4fe44c255c3d0da06779b921e132cdc555ed9aff/rest-api-spec/src/main/resources/rest-api-spec/api/msearch.json"
+    },
+    "msearch_template": {
+      "api": "msearch_template",
+      "effect": "read",
+      "implemented": false,
+      "parameters": [
+        "ccs_minimize_roundtrips",
+        "max_concurrent_searches",
+        "rest_total_hits_as_int",
+        "search_type",
+        "typed_keys"
+      ],
+      "routes": [
+        {
+          "methods": [
+            "GET",
+            "POST"
+          ],
+          "path": "/_msearch/template"
+        },
+        {
+          "methods": [
+            "GET",
+            "POST"
+          ],
+          "path": "/{index}/_msearch/template"
+        }
+      ],
+      "sha256": "29d98df6dd296270c123df717f227dec515cd4a4301172c652d20ea1b1ee4313",
+      "source": "https://raw.githubusercontent.com/elastic/elasticsearch/4fe44c255c3d0da06779b921e132cdc555ed9aff/rest-api-spec/src/main/resources/rest-api-spec/api/msearch_template.json"
+    },
+    "mtermvectors": {
+      "api": "mtermvectors",
+      "effect": "read",
+      "implemented": false,
+      "parameters": [
+        "field_statistics",
+        "fields",
+        "ids",
+        "offsets",
+        "payloads",
+        "positions",
+        "preference",
+        "realtime",
+        "routing",
+        "term_statistics",
+        "version",
+        "version_type"
+      ],
+      "routes": [
+        {
+          "methods": [
+            "GET",
+            "POST"
+          ],
+          "path": "/_mtermvectors"
+        },
+        {
+          "methods": [
+            "GET",
+            "POST"
+          ],
+          "path": "/{index}/_mtermvectors"
+        }
+      ],
+      "sha256": "dacd0a18172a434fe44a878f6b37bbb9e26c493bba396bb44caa4c772d41ab11",
+      "source": "https://raw.githubusercontent.com/elastic/elasticsearch/4fe44c255c3d0da06779b921e132cdc555ed9aff/rest-api-spec/src/main/resources/rest-api-spec/api/mtermvectors.json"
+    },
+    "open_point_in_time": {
+      "api": "open_point_in_time",
+      "effect": "owned_context",
+      "implemented": false,
+      "parameters": [
+        "allow_partial_search_results",
+        "expand_wildcards",
+        "ignore_unavailable",
+        "keep_alive",
+        "max_concurrent_shard_requests",
+        "preference",
+        "routing"
+      ],
+      "routes": [
+        {
+          "methods": [
+            "POST"
+          ],
+          "path": "/{index}/_pit"
+        }
+      ],
+      "sha256": "8917054a4eb8d8d986c396f9f842fe85f04c8027b0d2b09e5e78ffee6d632ba7",
+      "source": "https://raw.githubusercontent.com/elastic/elasticsearch/4fe44c255c3d0da06779b921e132cdc555ed9aff/rest-api-spec/src/main/resources/rest-api-spec/api/open_point_in_time.json"
+    },
+    "reindex": {
+      "api": "reindex",
+      "effect": "mutation",
+      "implemented": false,
+      "parameters": [
+        "max_docs",
+        "refresh",
+        "requests_per_second",
+        "require_alias",
+        "scroll",
+        "slices",
+        "timeout",
+        "wait_for_active_shards",
+        "wait_for_completion"
+      ],
+      "routes": [
+        {
+          "methods": [
+            "POST"
+          ],
+          "path": "/_reindex"
+        }
+      ],
+      "sha256": "2515fba7076621b66658fbd980842545dcbddca065fac60c6135324ea59a5785",
+      "source": "https://raw.githubusercontent.com/elastic/elasticsearch/4fe44c255c3d0da06779b921e132cdc555ed9aff/rest-api-spec/src/main/resources/rest-api-spec/api/reindex.json"
+    },
+    "render_search_template": {
+      "api": "render_search_template",
+      "effect": "read",
+      "implemented": false,
+      "parameters": [],
+      "routes": [
+        {
+          "methods": [
+            "GET",
+            "POST"
+          ],
+          "path": "/_render/template"
+        },
+        {
+          "methods": [
+            "GET",
+            "POST"
+          ],
+          "path": "/_render/template/{id}"
+        }
+      ],
+      "sha256": "fca0103b746bb99cee75434c8f0a4dd286fb7fc1f1964f90d5771f1c9c864be3",
+      "source": "https://raw.githubusercontent.com/elastic/elasticsearch/4fe44c255c3d0da06779b921e132cdc555ed9aff/rest-api-spec/src/main/resources/rest-api-spec/api/render_search_template.json"
+    },
+    "resolve": {
+      "api": "indices.resolve_index",
+      "effect": "read",
+      "implemented": true,
+      "parameters": [
+        "allow_no_indices",
+        "expand_wildcards",
+        "ignore_unavailable"
+      ],
+      "routes": [
+        {
+          "methods": [
+            "GET"
+          ],
+          "path": "/_resolve/index/{name}"
+        }
+      ],
+      "sha256": "2c467d4e17e56695316aaef700e6d6c4d3b678fd99a7929fa4ff7a4a82526f01",
+      "source": "https://raw.githubusercontent.com/elastic/elasticsearch/4fe44c255c3d0da06779b921e132cdc555ed9aff/rest-api-spec/src/main/resources/rest-api-spec/api/indices.resolve_index.json"
+    },
+    "scroll": {
+      "api": "scroll",
+      "effect": "owned_context",
+      "implemented": false,
+      "parameters": [
+        "rest_total_hits_as_int",
+        "scroll",
+        "scroll_id"
+      ],
+      "routes": [
+        {
+          "methods": [
+            "GET",
+            "POST"
+          ],
+          "path": "/_search/scroll"
+        },
+        {
+          "methods": [
+            "GET",
+            "POST"
+          ],
+          "path": "/_search/scroll/{scroll_id}"
+        }
+      ],
+      "sha256": "3549307cfd0905daff1bb86d94ff13559bdff7a18ce914975ec1e83abcb73772",
+      "source": "https://raw.githubusercontent.com/elastic/elasticsearch/4fe44c255c3d0da06779b921e132cdc555ed9aff/rest-api-spec/src/main/resources/rest-api-spec/api/scroll.json"
+    },
+    "search": {
+      "api": "search",
+      "effect": "read",
+      "implemented": false,
+      "parameters": [
+        "_source",
+        "_source_excludes",
+        "_source_includes",
+        "allow_no_indices",
+        "allow_partial_search_results",
+        "analyze_wildcard",
+        "analyzer",
+        "batched_reduce_size",
+        "ccs_minimize_roundtrips",
+        "default_operator",
+        "df",
+        "docvalue_fields",
+        "expand_wildcards",
+        "explain",
+        "force_synthetic_source",
+        "from",
+        "ignore_throttled",
+        "ignore_unavailable",
+        "include_named_queries_score",
+        "lenient",
+        "max_concurrent_shard_requests",
+        "min_compatible_shard_node",
+        "pre_filter_shard_size",
+        "preference",
+        "q",
+        "request_cache",
+        "rest_total_hits_as_int",
+        "routing",
+        "scroll",
+        "search_type",
+        "seq_no_primary_term",
+        "size",
+        "sort",
+        "stats",
+        "stored_fields",
+        "suggest_field",
+        "suggest_mode",
+        "suggest_size",
+        "suggest_text",
+        "terminate_after",
+        "timeout",
+        "track_scores",
+        "track_total_hits",
+        "typed_keys",
+        "version"
+      ],
+      "routes": [
+        {
+          "methods": [
+            "GET",
+            "POST"
+          ],
+          "path": "/_search"
+        },
+        {
+          "methods": [
+            "GET",
+            "POST"
+          ],
+          "path": "/{index}/_search"
+        }
+      ],
+      "sha256": "5972368004bc6d382d988ce6652b2a62f56751b470c3596ca96db0025e79bf10",
+      "source": "https://raw.githubusercontent.com/elastic/elasticsearch/4fe44c255c3d0da06779b921e132cdc555ed9aff/rest-api-spec/src/main/resources/rest-api-spec/api/search.json"
+    },
+    "search_template": {
+      "api": "search_template",
+      "effect": "read",
+      "implemented": false,
+      "parameters": [
+        "allow_no_indices",
+        "ccs_minimize_roundtrips",
+        "expand_wildcards",
+        "explain",
+        "ignore_throttled",
+        "ignore_unavailable",
+        "preference",
+        "profile",
+        "rest_total_hits_as_int",
+        "routing",
+        "scroll",
+        "search_type",
+        "typed_keys"
+      ],
+      "routes": [
+        {
+          "methods": [
+            "GET",
+            "POST"
+          ],
+          "path": "/_search/template"
+        },
+        {
+          "methods": [
+            "GET",
+            "POST"
+          ],
+          "path": "/{index}/_search/template"
+        }
+      ],
+      "sha256": "2f778b72b623fdf3025d91109abd86633b12245ccc189bc767cc56f1fadc89fa",
+      "source": "https://raw.githubusercontent.com/elastic/elasticsearch/4fe44c255c3d0da06779b921e132cdc555ed9aff/rest-api-spec/src/main/resources/rest-api-spec/api/search_template.json"
+    },
+    "termvectors": {
+      "api": "termvectors",
+      "effect": "read",
+      "implemented": false,
+      "parameters": [
+        "field_statistics",
+        "fields",
+        "offsets",
+        "payloads",
+        "positions",
+        "preference",
+        "realtime",
+        "routing",
+        "term_statistics",
+        "version",
+        "version_type"
+      ],
+      "routes": [
+        {
+          "methods": [
+            "GET",
+            "POST"
+          ],
+          "path": "/{index}/_termvectors/{id}"
+        },
+        {
+          "methods": [
+            "GET",
+            "POST"
+          ],
+          "path": "/{index}/_termvectors"
+        }
+      ],
+      "sha256": "6202da412ba923c91095d2a7ef76c0302431b3e2e39f886ee346c65ccca5bac6",
+      "source": "https://raw.githubusercontent.com/elastic/elasticsearch/4fe44c255c3d0da06779b921e132cdc555ed9aff/rest-api-spec/src/main/resources/rest-api-spec/api/termvectors.json"
+    },
+    "update": {
+      "api": "update",
+      "effect": "mutation",
+      "implemented": false,
+      "parameters": [
+        "_source",
+        "_source_excludes",
+        "_source_includes",
+        "if_primary_term",
+        "if_seq_no",
+        "include_source_on_error",
+        "lang",
+        "refresh",
+        "require_alias",
+        "retry_on_conflict",
+        "routing",
+        "timeout",
+        "wait_for_active_shards"
+      ],
+      "routes": [
+        {
+          "methods": [
+            "POST"
+          ],
+          "path": "/{index}/_update/{id}"
+        }
+      ],
+      "sha256": "6884a007c2c3b71d49a3ef68b7145a314f1c59bcf9935a8687e30ea23d7c7f1c",
+      "source": "https://raw.githubusercontent.com/elastic/elasticsearch/4fe44c255c3d0da06779b921e132cdc555ed9aff/rest-api-spec/src/main/resources/rest-api-spec/api/update.json"
+    },
+    "update_by_query": {
+      "api": "update_by_query",
+      "effect": "mutation",
+      "implemented": false,
+      "parameters": [
+        "allow_no_indices",
+        "analyze_wildcard",
+        "analyzer",
+        "conflicts",
+        "default_operator",
+        "df",
+        "expand_wildcards",
+        "from",
+        "ignore_unavailable",
+        "lenient",
+        "max_docs",
+        "pipeline",
+        "preference",
+        "q",
+        "refresh",
+        "request_cache",
+        "requests_per_second",
+        "routing",
+        "scroll",
+        "scroll_size",
+        "search_timeout",
+        "search_type",
+        "slices",
+        "sort",
+        "stats",
+        "terminate_after",
+        "timeout",
+        "version",
+        "version_type",
+        "wait_for_active_shards",
+        "wait_for_completion"
+      ],
+      "routes": [
+        {
+          "methods": [
+            "POST"
+          ],
+          "path": "/{index}/_update_by_query"
+        }
+      ],
+      "sha256": "5efb146fdf094aca29366fcdfcf166eccee09277e7ff0f90f01ea248d770c8c7",
+      "source": "https://raw.githubusercontent.com/elastic/elasticsearch/4fe44c255c3d0da06779b921e132cdc555ed9aff/rest-api-spec/src/main/resources/rest-api-spec/api/update_by_query.json"
+    }
+  },
+  "9.1.10": {
+    "bulk": {
+      "api": "bulk",
+      "effect": "mutation",
+      "implemented": false,
+      "parameters": [
+        "_source",
+        "_source_excludes",
+        "_source_includes",
+        "include_source_on_error",
+        "list_executed_pipelines",
+        "pipeline",
+        "refresh",
+        "require_alias",
+        "require_data_stream",
+        "routing",
+        "timeout",
+        "wait_for_active_shards"
+      ],
+      "routes": [
+        {
+          "methods": [
+            "POST",
+            "PUT"
+          ],
+          "path": "/_bulk"
+        },
+        {
+          "methods": [
+            "POST",
+            "PUT"
+          ],
+          "path": "/{index}/_bulk"
+        }
+      ],
+      "sha256": "981684fc00282165be5c0ae56a1d2ff080479b69de6907c74201da3d4b30c2c5",
+      "source": "https://raw.githubusercontent.com/elastic/elasticsearch/f2e019bd8110088070638ca779ec1543188c0f43/rest-api-spec/src/main/resources/rest-api-spec/api/bulk.json"
+    },
+    "clear_scroll": {
+      "api": "clear_scroll",
+      "effect": "owned_context",
+      "implemented": false,
+      "parameters": [],
+      "routes": [
+        {
+          "methods": [
+            "DELETE"
+          ],
+          "path": "/_search/scroll"
+        },
+        {
+          "methods": [
+            "DELETE"
+          ],
+          "path": "/_search/scroll/{scroll_id}"
+        }
+      ],
+      "sha256": "8eff40c12a0e0bc92d142db405e04c454b373dd8c0ee2e8bd8c1fd381b278767",
+      "source": "https://raw.githubusercontent.com/elastic/elasticsearch/f2e019bd8110088070638ca779ec1543188c0f43/rest-api-spec/src/main/resources/rest-api-spec/api/clear_scroll.json"
+    },
+    "close_point_in_time": {
+      "api": "close_point_in_time",
+      "effect": "owned_context",
+      "implemented": false,
+      "parameters": [],
+      "routes": [
+        {
+          "methods": [
+            "DELETE"
+          ],
+          "path": "/_pit"
+        }
+      ],
+      "sha256": "44dc8707b7870fc5c22f9c871d898e418fa2e6ed2d62aa8fc8c7d695cc7e0c5f",
+      "source": "https://raw.githubusercontent.com/elastic/elasticsearch/f2e019bd8110088070638ca779ec1543188c0f43/rest-api-spec/src/main/resources/rest-api-spec/api/close_point_in_time.json"
+    },
+    "count": {
+      "api": "count",
+      "effect": "read",
+      "implemented": false,
+      "parameters": [
+        "allow_no_indices",
+        "analyze_wildcard",
+        "analyzer",
+        "default_operator",
+        "df",
+        "expand_wildcards",
+        "ignore_throttled",
+        "ignore_unavailable",
+        "lenient",
+        "min_score",
+        "preference",
+        "q",
+        "routing",
+        "terminate_after"
+      ],
+      "routes": [
+        {
+          "methods": [
+            "POST",
+            "GET"
+          ],
+          "path": "/_count"
+        },
+        {
+          "methods": [
+            "POST",
+            "GET"
+          ],
+          "path": "/{index}/_count"
+        }
+      ],
+      "sha256": "acb2f40f878e02f1f1e072d66a47850421b55601becb5949fb2c25370797517f",
+      "source": "https://raw.githubusercontent.com/elastic/elasticsearch/f2e019bd8110088070638ca779ec1543188c0f43/rest-api-spec/src/main/resources/rest-api-spec/api/count.json"
+    },
+    "delete": {
+      "api": "delete",
+      "effect": "mutation",
+      "implemented": false,
+      "parameters": [
+        "if_primary_term",
+        "if_seq_no",
+        "refresh",
+        "routing",
+        "timeout",
+        "version",
+        "version_type",
+        "wait_for_active_shards"
+      ],
+      "routes": [
+        {
+          "methods": [
+            "DELETE"
+          ],
+          "path": "/{index}/_doc/{id}"
+        }
+      ],
+      "sha256": "00f5ab91db3e818c94f9c66ea9be3980ce220b9363247e938ac3c33bc8b99cbc",
+      "source": "https://raw.githubusercontent.com/elastic/elasticsearch/f2e019bd8110088070638ca779ec1543188c0f43/rest-api-spec/src/main/resources/rest-api-spec/api/delete.json"
+    },
+    "delete_by_query": {
+      "api": "delete_by_query",
+      "effect": "mutation",
+      "implemented": false,
+      "parameters": [
+        "allow_no_indices",
+        "analyze_wildcard",
+        "analyzer",
+        "conflicts",
+        "default_operator",
+        "df",
+        "expand_wildcards",
+        "from",
+        "ignore_unavailable",
+        "lenient",
+        "max_docs",
+        "preference",
+        "q",
+        "refresh",
+        "request_cache",
+        "requests_per_second",
+        "routing",
+        "scroll",
+        "scroll_size",
+        "search_timeout",
+        "search_type",
+        "slices",
+        "sort",
+        "stats",
+        "terminate_after",
+        "timeout",
+        "version",
+        "wait_for_active_shards",
+        "wait_for_completion"
+      ],
+      "routes": [
+        {
+          "methods": [
+            "POST"
+          ],
+          "path": "/{index}/_delete_by_query"
+        }
+      ],
+      "sha256": "9937e36089d29bd77baf9b2409c6aaa834fc691092f942d1a9b85b2f86af2ac5",
+      "source": "https://raw.githubusercontent.com/elastic/elasticsearch/f2e019bd8110088070638ca779ec1543188c0f43/rest-api-spec/src/main/resources/rest-api-spec/api/delete_by_query.json"
+    },
+    "get": {
+      "api": "get",
+      "effect": "read",
+      "implemented": false,
+      "parameters": [
+        "_source",
+        "_source_excludes",
+        "_source_includes",
+        "force_synthetic_source",
+        "preference",
+        "realtime",
+        "refresh",
+        "routing",
+        "stored_fields",
+        "version",
+        "version_type"
+      ],
+      "routes": [
+        {
+          "methods": [
+            "GET"
+          ],
+          "path": "/{index}/_doc/{id}"
+        }
+      ],
+      "sha256": "c363eeb8168ac8fa5369a7e79fa26563d5d82f5908dfd8c3cfc124ea4c8552e5",
+      "source": "https://raw.githubusercontent.com/elastic/elasticsearch/f2e019bd8110088070638ca779ec1543188c0f43/rest-api-spec/src/main/resources/rest-api-spec/api/get.json"
+    },
+    "index": {
+      "api": "index",
+      "effect": "mutation",
+      "implemented": false,
+      "parameters": [
+        "if_primary_term",
+        "if_seq_no",
+        "include_source_on_error",
+        "op_type",
+        "pipeline",
+        "refresh",
+        "require_alias",
+        "require_data_stream",
+        "routing",
+        "timeout",
+        "version",
+        "version_type",
+        "wait_for_active_shards"
+      ],
+      "routes": [
+        {
+          "methods": [
+            "PUT",
+            "POST"
+          ],
+          "path": "/{index}/_doc/{id}"
+        },
+        {
+          "methods": [
+            "POST"
+          ],
+          "path": "/{index}/_doc"
+        }
+      ],
+      "sha256": "82e88361bad73ce2e02dffa4b12e2586fddd3591c9f17152338d32fd03dc68d0",
+      "source": "https://raw.githubusercontent.com/elastic/elasticsearch/f2e019bd8110088070638ca779ec1543188c0f43/rest-api-spec/src/main/resources/rest-api-spec/api/index.json"
+    },
+    "indices.flush": {
+      "api": "indices.flush",
+      "effect": "mutation",
+      "implemented": false,
+      "parameters": [
+        "allow_no_indices",
+        "expand_wildcards",
+        "force",
+        "ignore_unavailable",
+        "wait_if_ongoing"
+      ],
+      "routes": [
+        {
+          "methods": [
+            "POST",
+            "GET"
+          ],
+          "path": "/_flush"
+        },
+        {
+          "methods": [
+            "POST",
+            "GET"
+          ],
+          "path": "/{index}/_flush"
+        }
+      ],
+      "sha256": "f32fe55e6b32fe635dd32fd3bf557853e2d22f51d8a03fb5e8682744d02b67f2",
+      "source": "https://raw.githubusercontent.com/elastic/elasticsearch/f2e019bd8110088070638ca779ec1543188c0f43/rest-api-spec/src/main/resources/rest-api-spec/api/indices.flush.json"
+    },
+    "indices.forcemerge": {
+      "api": "indices.forcemerge",
+      "effect": "mutation",
+      "implemented": false,
+      "parameters": [
+        "allow_no_indices",
+        "expand_wildcards",
+        "flush",
+        "ignore_unavailable",
+        "max_num_segments",
+        "only_expunge_deletes",
+        "wait_for_completion"
+      ],
+      "routes": [
+        {
+          "methods": [
+            "POST"
+          ],
+          "path": "/_forcemerge"
+        },
+        {
+          "methods": [
+            "POST"
+          ],
+          "path": "/{index}/_forcemerge"
+        }
+      ],
+      "sha256": "2920da194e14173e77955f1acc507107cd4d57a4485bef7231e874a275f692dd",
+      "source": "https://raw.githubusercontent.com/elastic/elasticsearch/f2e019bd8110088070638ca779ec1543188c0f43/rest-api-spec/src/main/resources/rest-api-spec/api/indices.forcemerge.json"
+    },
+    "indices.refresh": {
+      "api": "indices.refresh",
+      "effect": "mutation",
+      "implemented": false,
+      "parameters": [
+        "allow_no_indices",
+        "expand_wildcards",
+        "ignore_unavailable"
+      ],
+      "routes": [
+        {
+          "methods": [
+            "POST",
+            "GET"
+          ],
+          "path": "/_refresh"
+        },
+        {
+          "methods": [
+            "POST",
+            "GET"
+          ],
+          "path": "/{index}/_refresh"
+        }
+      ],
+      "sha256": "182c6b21cee72e612ae6f6e789e1757e56cba98b1c569981959f29691d7bd703",
+      "source": "https://raw.githubusercontent.com/elastic/elasticsearch/f2e019bd8110088070638ca779ec1543188c0f43/rest-api-spec/src/main/resources/rest-api-spec/api/indices.refresh.json"
+    },
+    "mappings": {
+      "api": "indices.get_mapping",
+      "effect": "read",
+      "implemented": true,
+      "parameters": [
+        "allow_no_indices",
+        "expand_wildcards",
+        "ignore_unavailable",
+        "local",
+        "master_timeout"
+      ],
+      "routes": [
+        {
+          "methods": [
+            "GET"
+          ],
+          "path": "/_mapping"
+        },
+        {
+          "methods": [
+            "GET"
+          ],
+          "path": "/{index}/_mapping"
+        }
+      ],
+      "sha256": "ee510fab1e3faa4485adf40c577c3d8272862c82a40b4d00c86596de6798b6b3",
+      "source": "https://raw.githubusercontent.com/elastic/elasticsearch/f2e019bd8110088070638ca779ec1543188c0f43/rest-api-spec/src/main/resources/rest-api-spec/api/indices.get_mapping.json"
+    },
+    "mget": {
+      "api": "mget",
+      "effect": "read",
+      "implemented": false,
+      "parameters": [
+        "_source",
+        "_source_excludes",
+        "_source_includes",
+        "force_synthetic_source",
+        "preference",
+        "realtime",
+        "refresh",
+        "routing",
+        "stored_fields"
+      ],
+      "routes": [
+        {
+          "methods": [
+            "GET",
+            "POST"
+          ],
+          "path": "/_mget"
+        },
+        {
+          "methods": [
+            "GET",
+            "POST"
+          ],
+          "path": "/{index}/_mget"
+        }
+      ],
+      "sha256": "7664e2c0ef909bcedb6dd88059b5314dd1d01fa6d072a1b492d8da1a31e43df7",
+      "source": "https://raw.githubusercontent.com/elastic/elasticsearch/f2e019bd8110088070638ca779ec1543188c0f43/rest-api-spec/src/main/resources/rest-api-spec/api/mget.json"
+    },
+    "msearch": {
+      "api": "msearch",
+      "effect": "read",
+      "implemented": false,
+      "parameters": [
+        "allow_no_indices",
+        "ccs_minimize_roundtrips",
+        "expand_wildcards",
+        "ignore_throttled",
+        "ignore_unavailable",
+        "include_named_queries_score",
+        "index",
+        "max_concurrent_searches",
+        "max_concurrent_shard_requests",
+        "pre_filter_shard_size",
+        "rest_total_hits_as_int",
+        "routing",
+        "search_type",
+        "typed_keys"
+      ],
+      "routes": [
+        {
+          "methods": [
+            "GET",
+            "POST"
+          ],
+          "path": "/_msearch"
+        },
+        {
+          "methods": [
+            "GET",
+            "POST"
+          ],
+          "path": "/{index}/_msearch"
+        }
+      ],
+      "sha256": "e8bd8bea114d1aafa6544518d868cdeed1ab4a80d78cf503408a242d89c53e99",
+      "source": "https://raw.githubusercontent.com/elastic/elasticsearch/f2e019bd8110088070638ca779ec1543188c0f43/rest-api-spec/src/main/resources/rest-api-spec/api/msearch.json"
+    },
+    "msearch_template": {
+      "api": "msearch_template",
+      "effect": "read",
+      "implemented": false,
+      "parameters": [
+        "ccs_minimize_roundtrips",
+        "max_concurrent_searches",
+        "rest_total_hits_as_int",
+        "search_type",
+        "typed_keys"
+      ],
+      "routes": [
+        {
+          "methods": [
+            "GET",
+            "POST"
+          ],
+          "path": "/_msearch/template"
+        },
+        {
+          "methods": [
+            "GET",
+            "POST"
+          ],
+          "path": "/{index}/_msearch/template"
+        }
+      ],
+      "sha256": "343ddbb9a327eefe33a7f9844f5974b77e3cd226a73294cf479299e0b4919937",
+      "source": "https://raw.githubusercontent.com/elastic/elasticsearch/f2e019bd8110088070638ca779ec1543188c0f43/rest-api-spec/src/main/resources/rest-api-spec/api/msearch_template.json"
+    },
+    "mtermvectors": {
+      "api": "mtermvectors",
+      "effect": "read",
+      "implemented": false,
+      "parameters": [
+        "field_statistics",
+        "fields",
+        "ids",
+        "offsets",
+        "payloads",
+        "positions",
+        "preference",
+        "realtime",
+        "routing",
+        "term_statistics",
+        "version",
+        "version_type"
+      ],
+      "routes": [
+        {
+          "methods": [
+            "GET",
+            "POST"
+          ],
+          "path": "/_mtermvectors"
+        },
+        {
+          "methods": [
+            "GET",
+            "POST"
+          ],
+          "path": "/{index}/_mtermvectors"
+        }
+      ],
+      "sha256": "640d2def5129d84ccba88ef2fbc2f519c703b4daae18133e5d9b2c48ab84a05c",
+      "source": "https://raw.githubusercontent.com/elastic/elasticsearch/f2e019bd8110088070638ca779ec1543188c0f43/rest-api-spec/src/main/resources/rest-api-spec/api/mtermvectors.json"
+    },
+    "open_point_in_time": {
+      "api": "open_point_in_time",
+      "effect": "owned_context",
+      "implemented": false,
+      "parameters": [
+        "allow_partial_search_results",
+        "expand_wildcards",
+        "ignore_unavailable",
+        "keep_alive",
+        "max_concurrent_shard_requests",
+        "preference",
+        "routing"
+      ],
+      "routes": [
+        {
+          "methods": [
+            "POST"
+          ],
+          "path": "/{index}/_pit"
+        }
+      ],
+      "sha256": "32f265dc5870b04ac0e4eb385fcb0adc7b3de32da06112143d38362b82578059",
+      "source": "https://raw.githubusercontent.com/elastic/elasticsearch/f2e019bd8110088070638ca779ec1543188c0f43/rest-api-spec/src/main/resources/rest-api-spec/api/open_point_in_time.json"
+    },
+    "reindex": {
+      "api": "reindex",
+      "effect": "mutation",
+      "implemented": false,
+      "parameters": [
+        "max_docs",
+        "refresh",
+        "requests_per_second",
+        "require_alias",
+        "scroll",
+        "slices",
+        "timeout",
+        "wait_for_active_shards",
+        "wait_for_completion"
+      ],
+      "routes": [
+        {
+          "methods": [
+            "POST"
+          ],
+          "path": "/_reindex"
+        }
+      ],
+      "sha256": "b3b328815313335a7e65a6aacef7b0f9327a72d3b2783aabcd7c4c7975765d20",
+      "source": "https://raw.githubusercontent.com/elastic/elasticsearch/f2e019bd8110088070638ca779ec1543188c0f43/rest-api-spec/src/main/resources/rest-api-spec/api/reindex.json"
+    },
+    "render_search_template": {
+      "api": "render_search_template",
+      "effect": "read",
+      "implemented": false,
+      "parameters": [],
+      "routes": [
+        {
+          "methods": [
+            "GET",
+            "POST"
+          ],
+          "path": "/_render/template"
+        },
+        {
+          "methods": [
+            "GET",
+            "POST"
+          ],
+          "path": "/_render/template/{id}"
+        }
+      ],
+      "sha256": "dc75a9787275d6ad16bb975eacdae36301b3818263a6205e9e8beb887a08f8bf",
+      "source": "https://raw.githubusercontent.com/elastic/elasticsearch/f2e019bd8110088070638ca779ec1543188c0f43/rest-api-spec/src/main/resources/rest-api-spec/api/render_search_template.json"
+    },
+    "resolve": {
+      "api": "indices.resolve_index",
+      "effect": "read",
+      "implemented": true,
+      "parameters": [
+        "allow_no_indices",
+        "expand_wildcards",
+        "ignore_unavailable"
+      ],
+      "routes": [
+        {
+          "methods": [
+            "GET"
+          ],
+          "path": "/_resolve/index/{name}"
+        }
+      ],
+      "sha256": "8af8f68aa2a109ef086d3f537e18fb4db665bfc04b8aff5769c7f2ffc724f318",
+      "source": "https://raw.githubusercontent.com/elastic/elasticsearch/f2e019bd8110088070638ca779ec1543188c0f43/rest-api-spec/src/main/resources/rest-api-spec/api/indices.resolve_index.json"
+    },
+    "scroll": {
+      "api": "scroll",
+      "effect": "owned_context",
+      "implemented": false,
+      "parameters": [
+        "rest_total_hits_as_int",
+        "scroll",
+        "scroll_id"
+      ],
+      "routes": [
+        {
+          "methods": [
+            "GET",
+            "POST"
+          ],
+          "path": "/_search/scroll"
+        },
+        {
+          "methods": [
+            "GET",
+            "POST"
+          ],
+          "path": "/_search/scroll/{scroll_id}"
+        }
+      ],
+      "sha256": "0c986290aaa114bc5c0977148bc16b63e9f98c7ba3b1637c647cbbea4e4f2777",
+      "source": "https://raw.githubusercontent.com/elastic/elasticsearch/f2e019bd8110088070638ca779ec1543188c0f43/rest-api-spec/src/main/resources/rest-api-spec/api/scroll.json"
+    },
+    "search": {
+      "api": "search",
+      "effect": "read",
+      "implemented": false,
+      "parameters": [
+        "_source",
+        "_source_excludes",
+        "_source_includes",
+        "allow_no_indices",
+        "allow_partial_search_results",
+        "analyze_wildcard",
+        "analyzer",
+        "batched_reduce_size",
+        "ccs_minimize_roundtrips",
+        "default_operator",
+        "df",
+        "docvalue_fields",
+        "expand_wildcards",
+        "explain",
+        "force_synthetic_source",
+        "from",
+        "ignore_throttled",
+        "ignore_unavailable",
+        "include_named_queries_score",
+        "lenient",
+        "max_concurrent_shard_requests",
+        "pre_filter_shard_size",
+        "preference",
+        "q",
+        "request_cache",
+        "rest_total_hits_as_int",
+        "routing",
+        "scroll",
+        "search_type",
+        "seq_no_primary_term",
+        "size",
+        "sort",
+        "stats",
+        "stored_fields",
+        "suggest_field",
+        "suggest_mode",
+        "suggest_size",
+        "suggest_text",
+        "terminate_after",
+        "timeout",
+        "track_scores",
+        "track_total_hits",
+        "typed_keys",
+        "version"
+      ],
+      "routes": [
+        {
+          "methods": [
+            "GET",
+            "POST"
+          ],
+          "path": "/_search"
+        },
+        {
+          "methods": [
+            "GET",
+            "POST"
+          ],
+          "path": "/{index}/_search"
+        }
+      ],
+      "sha256": "80c4a43a051a110a5f5add359392362abf3d13ab3778245272484ee17c683c57",
+      "source": "https://raw.githubusercontent.com/elastic/elasticsearch/f2e019bd8110088070638ca779ec1543188c0f43/rest-api-spec/src/main/resources/rest-api-spec/api/search.json"
+    },
+    "search_template": {
+      "api": "search_template",
+      "effect": "read",
+      "implemented": false,
+      "parameters": [
+        "allow_no_indices",
+        "ccs_minimize_roundtrips",
+        "expand_wildcards",
+        "explain",
+        "ignore_throttled",
+        "ignore_unavailable",
+        "preference",
+        "profile",
+        "rest_total_hits_as_int",
+        "routing",
+        "scroll",
+        "search_type",
+        "typed_keys"
+      ],
+      "routes": [
+        {
+          "methods": [
+            "GET",
+            "POST"
+          ],
+          "path": "/_search/template"
+        },
+        {
+          "methods": [
+            "GET",
+            "POST"
+          ],
+          "path": "/{index}/_search/template"
+        }
+      ],
+      "sha256": "fbdab250aa06491e433d7582edb6162c14d1c6203f4d59a7fea909649152119b",
+      "source": "https://raw.githubusercontent.com/elastic/elasticsearch/f2e019bd8110088070638ca779ec1543188c0f43/rest-api-spec/src/main/resources/rest-api-spec/api/search_template.json"
+    },
+    "termvectors": {
+      "api": "termvectors",
+      "effect": "read",
+      "implemented": false,
+      "parameters": [
+        "field_statistics",
+        "fields",
+        "offsets",
+        "payloads",
+        "positions",
+        "preference",
+        "realtime",
+        "routing",
+        "term_statistics",
+        "version",
+        "version_type"
+      ],
+      "routes": [
+        {
+          "methods": [
+            "GET",
+            "POST"
+          ],
+          "path": "/{index}/_termvectors/{id}"
+        },
+        {
+          "methods": [
+            "GET",
+            "POST"
+          ],
+          "path": "/{index}/_termvectors"
+        }
+      ],
+      "sha256": "68a4895ad6c4f50c978fade93d4d4c50377faae6e9079b72f96a911653be59fd",
+      "source": "https://raw.githubusercontent.com/elastic/elasticsearch/f2e019bd8110088070638ca779ec1543188c0f43/rest-api-spec/src/main/resources/rest-api-spec/api/termvectors.json"
+    },
+    "update": {
+      "api": "update",
+      "effect": "mutation",
+      "implemented": false,
+      "parameters": [
+        "_source",
+        "_source_excludes",
+        "_source_includes",
+        "if_primary_term",
+        "if_seq_no",
+        "include_source_on_error",
+        "lang",
+        "refresh",
+        "require_alias",
+        "retry_on_conflict",
+        "routing",
+        "timeout",
+        "wait_for_active_shards"
+      ],
+      "routes": [
+        {
+          "methods": [
+            "POST"
+          ],
+          "path": "/{index}/_update/{id}"
+        }
+      ],
+      "sha256": "053490fa856476fe467a2c8299339a69b8f6acba2c281afbbda1bf219cc744a7",
+      "source": "https://raw.githubusercontent.com/elastic/elasticsearch/f2e019bd8110088070638ca779ec1543188c0f43/rest-api-spec/src/main/resources/rest-api-spec/api/update.json"
+    },
+    "update_by_query": {
+      "api": "update_by_query",
+      "effect": "mutation",
+      "implemented": false,
+      "parameters": [
+        "allow_no_indices",
+        "analyze_wildcard",
+        "analyzer",
+        "conflicts",
+        "default_operator",
+        "df",
+        "expand_wildcards",
+        "from",
+        "ignore_unavailable",
+        "lenient",
+        "max_docs",
+        "pipeline",
+        "preference",
+        "q",
+        "refresh",
+        "request_cache",
+        "requests_per_second",
+        "routing",
+        "scroll",
+        "scroll_size",
+        "search_timeout",
+        "search_type",
+        "slices",
+        "sort",
+        "stats",
+        "terminate_after",
+        "timeout",
+        "version",
+        "version_type",
+        "wait_for_active_shards",
+        "wait_for_completion"
+      ],
+      "routes": [
+        {
+          "methods": [
+            "POST"
+          ],
+          "path": "/{index}/_update_by_query"
+        }
+      ],
+      "sha256": "18a0b8302d44d3be9f01cb2f5640a66c35f6affcef66e7bccd6e9f5997350b87",
+      "source": "https://raw.githubusercontent.com/elastic/elasticsearch/f2e019bd8110088070638ca779ec1543188c0f43/rest-api-spec/src/main/resources/rest-api-spec/api/update_by_query.json"
+    }
+  }
+}
