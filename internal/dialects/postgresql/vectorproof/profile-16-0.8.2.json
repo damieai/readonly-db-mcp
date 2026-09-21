@@ -1,0 +1,5706 @@
+{
+  "format": 1,
+  "postgresql_major": 16,
+  "version": "0.8.2",
+  "source_commit": "cab9da72c04353f143bb06b42ab70a403daac64a",
+  "objects": [
+    {
+      "class": "pg_am",
+      "identity": "hnsw",
+      "definition": {
+        "amhandler": "@.hnswhandler(internal)",
+        "amname": "hnsw",
+        "amtype": "i"
+      },
+      "member": true
+    },
+    {
+      "class": "pg_am",
+      "identity": "ivfflat",
+      "definition": {
+        "amhandler": "@.ivfflathandler(internal)",
+        "amname": "ivfflat",
+        "amtype": "i"
+      },
+      "member": true
+    },
+    {
+      "class": "pg_amop",
+      "identity": "operator 1 (@.halfvec, @.halfvec) of @.halfvec_cosine_ops USING hnsw",
+      "definition": {
+        "family": "halfvec_cosine_ops",
+        "family_schema": "@",
+        "left": "@.halfvec",
+        "method": "hnsw",
+        "operator": "@.\u003c=\u003e(@.halfvec,@.halfvec)",
+        "purpose": "o",
+        "right": "@.halfvec",
+        "sort_family": "float_ops",
+        "sort_schema": "pg_catalog",
+        "strategy": 1
+      },
+      "member": false
+    },
+    {
+      "class": "pg_amop",
+      "identity": "operator 1 (@.halfvec, @.halfvec) of @.halfvec_cosine_ops USING ivfflat",
+      "definition": {
+        "family": "halfvec_cosine_ops",
+        "family_schema": "@",
+        "left": "@.halfvec",
+        "method": "ivfflat",
+        "operator": "@.\u003c=\u003e(@.halfvec,@.halfvec)",
+        "purpose": "o",
+        "right": "@.halfvec",
+        "sort_family": "float_ops",
+        "sort_schema": "pg_catalog",
+        "strategy": 1
+      },
+      "member": false
+    },
+    {
+      "class": "pg_amop",
+      "identity": "operator 1 (@.halfvec, @.halfvec) of @.halfvec_ip_ops USING hnsw",
+      "definition": {
+        "family": "halfvec_ip_ops",
+        "family_schema": "@",
+        "left": "@.halfvec",
+        "method": "hnsw",
+        "operator": "@.\u003c#\u003e(@.halfvec,@.halfvec)",
+        "purpose": "o",
+        "right": "@.halfvec",
+        "sort_family": "float_ops",
+        "sort_schema": "pg_catalog",
+        "strategy": 1
+      },
+      "member": false
+    },
+    {
+      "class": "pg_amop",
+      "identity": "operator 1 (@.halfvec, @.halfvec) of @.halfvec_ip_ops USING ivfflat",
+      "definition": {
+        "family": "halfvec_ip_ops",
+        "family_schema": "@",
+        "left": "@.halfvec",
+        "method": "ivfflat",
+        "operator": "@.\u003c#\u003e(@.halfvec,@.halfvec)",
+        "purpose": "o",
+        "right": "@.halfvec",
+        "sort_family": "float_ops",
+        "sort_schema": "pg_catalog",
+        "strategy": 1
+      },
+      "member": false
+    },
+    {
+      "class": "pg_amop",
+      "identity": "operator 1 (@.halfvec, @.halfvec) of @.halfvec_l1_ops USING hnsw",
+      "definition": {
+        "family": "halfvec_l1_ops",
+        "family_schema": "@",
+        "left": "@.halfvec",
+        "method": "hnsw",
+        "operator": "@.\u003c+\u003e(@.halfvec,@.halfvec)",
+        "purpose": "o",
+        "right": "@.halfvec",
+        "sort_family": "float_ops",
+        "sort_schema": "pg_catalog",
+        "strategy": 1
+      },
+      "member": false
+    },
+    {
+      "class": "pg_amop",
+      "identity": "operator 1 (@.halfvec, @.halfvec) of @.halfvec_l2_ops USING hnsw",
+      "definition": {
+        "family": "halfvec_l2_ops",
+        "family_schema": "@",
+        "left": "@.halfvec",
+        "method": "hnsw",
+        "operator": "@.\u003c-\u003e(@.halfvec,@.halfvec)",
+        "purpose": "o",
+        "right": "@.halfvec",
+        "sort_family": "float_ops",
+        "sort_schema": "pg_catalog",
+        "strategy": 1
+      },
+      "member": false
+    },
+    {
+      "class": "pg_amop",
+      "identity": "operator 1 (@.halfvec, @.halfvec) of @.halfvec_l2_ops USING ivfflat",
+      "definition": {
+        "family": "halfvec_l2_ops",
+        "family_schema": "@",
+        "left": "@.halfvec",
+        "method": "ivfflat",
+        "operator": "@.\u003c-\u003e(@.halfvec,@.halfvec)",
+        "purpose": "o",
+        "right": "@.halfvec",
+        "sort_family": "float_ops",
+        "sort_schema": "pg_catalog",
+        "strategy": 1
+      },
+      "member": false
+    },
+    {
+      "class": "pg_amop",
+      "identity": "operator 1 (@.halfvec, @.halfvec) of @.halfvec_ops USING btree",
+      "definition": {
+        "family": "halfvec_ops",
+        "family_schema": "@",
+        "left": "@.halfvec",
+        "method": "btree",
+        "operator": "@.\u003c(@.halfvec,@.halfvec)",
+        "purpose": "s",
+        "right": "@.halfvec",
+        "sort_family": null,
+        "sort_schema": null,
+        "strategy": 1
+      },
+      "member": false
+    },
+    {
+      "class": "pg_amop",
+      "identity": "operator 1 (@.sparsevec, @.sparsevec) of @.sparsevec_cosine_ops USING hnsw",
+      "definition": {
+        "family": "sparsevec_cosine_ops",
+        "family_schema": "@",
+        "left": "@.sparsevec",
+        "method": "hnsw",
+        "operator": "@.\u003c=\u003e(@.sparsevec,@.sparsevec)",
+        "purpose": "o",
+        "right": "@.sparsevec",
+        "sort_family": "float_ops",
+        "sort_schema": "pg_catalog",
+        "strategy": 1
+      },
+      "member": false
+    },
+    {
+      "class": "pg_amop",
+      "identity": "operator 1 (@.sparsevec, @.sparsevec) of @.sparsevec_ip_ops USING hnsw",
+      "definition": {
+        "family": "sparsevec_ip_ops",
+        "family_schema": "@",
+        "left": "@.sparsevec",
+        "method": "hnsw",
+        "operator": "@.\u003c#\u003e(@.sparsevec,@.sparsevec)",
+        "purpose": "o",
+        "right": "@.sparsevec",
+        "sort_family": "float_ops",
+        "sort_schema": "pg_catalog",
+        "strategy": 1
+      },
+      "member": false
+    },
+    {
+      "class": "pg_amop",
+      "identity": "operator 1 (@.sparsevec, @.sparsevec) of @.sparsevec_l1_ops USING hnsw",
+      "definition": {
+        "family": "sparsevec_l1_ops",
+        "family_schema": "@",
+        "left": "@.sparsevec",
+        "method": "hnsw",
+        "operator": "@.\u003c+\u003e(@.sparsevec,@.sparsevec)",
+        "purpose": "o",
+        "right": "@.sparsevec",
+        "sort_family": "float_ops",
+        "sort_schema": "pg_catalog",
+        "strategy": 1
+      },
+      "member": false
+    },
+    {
+      "class": "pg_amop",
+      "identity": "operator 1 (@.sparsevec, @.sparsevec) of @.sparsevec_l2_ops USING hnsw",
+      "definition": {
+        "family": "sparsevec_l2_ops",
+        "family_schema": "@",
+        "left": "@.sparsevec",
+        "method": "hnsw",
+        "operator": "@.\u003c-\u003e(@.sparsevec,@.sparsevec)",
+        "purpose": "o",
+        "right": "@.sparsevec",
+        "sort_family": "float_ops",
+        "sort_schema": "pg_catalog",
+        "strategy": 1
+      },
+      "member": false
+    },
+    {
+      "class": "pg_amop",
+      "identity": "operator 1 (@.sparsevec, @.sparsevec) of @.sparsevec_ops USING btree",
+      "definition": {
+        "family": "sparsevec_ops",
+        "family_schema": "@",
+        "left": "@.sparsevec",
+        "method": "btree",
+        "operator": "@.\u003c(@.sparsevec,@.sparsevec)",
+        "purpose": "s",
+        "right": "@.sparsevec",
+        "sort_family": null,
+        "sort_schema": null,
+        "strategy": 1
+      },
+      "member": false
+    },
+    {
+      "class": "pg_amop",
+      "identity": "operator 1 (@.vector, @.vector) of @.vector_cosine_ops USING hnsw",
+      "definition": {
+        "family": "vector_cosine_ops",
+        "family_schema": "@",
+        "left": "@.vector",
+        "method": "hnsw",
+        "operator": "@.\u003c=\u003e(@.vector,@.vector)",
+        "purpose": "o",
+        "right": "@.vector",
+        "sort_family": "float_ops",
+        "sort_schema": "pg_catalog",
+        "strategy": 1
+      },
+      "member": false
+    },
+    {
+      "class": "pg_amop",
+      "identity": "operator 1 (@.vector, @.vector) of @.vector_cosine_ops USING ivfflat",
+      "definition": {
+        "family": "vector_cosine_ops",
+        "family_schema": "@",
+        "left": "@.vector",
+        "method": "ivfflat",
+        "operator": "@.\u003c=\u003e(@.vector,@.vector)",
+        "purpose": "o",
+        "right": "@.vector",
+        "sort_family": "float_ops",
+        "sort_schema": "pg_catalog",
+        "strategy": 1
+      },
+      "member": false
+    },
+    {
+      "class": "pg_amop",
+      "identity": "operator 1 (@.vector, @.vector) of @.vector_ip_ops USING hnsw",
+      "definition": {
+        "family": "vector_ip_ops",
+        "family_schema": "@",
+        "left": "@.vector",
+        "method": "hnsw",
+        "operator": "@.\u003c#\u003e(@.vector,@.vector)",
+        "purpose": "o",
+        "right": "@.vector",
+        "sort_family": "float_ops",
+        "sort_schema": "pg_catalog",
+        "strategy": 1
+      },
+      "member": false
+    },
+    {
+      "class": "pg_amop",
+      "identity": "operator 1 (@.vector, @.vector) of @.vector_ip_ops USING ivfflat",
+      "definition": {
+        "family": "vector_ip_ops",
+        "family_schema": "@",
+        "left": "@.vector",
+        "method": "ivfflat",
+        "operator": "@.\u003c#\u003e(@.vector,@.vector)",
+        "purpose": "o",
+        "right": "@.vector",
+        "sort_family": "float_ops",
+        "sort_schema": "pg_catalog",
+        "strategy": 1
+      },
+      "member": false
+    },
+    {
+      "class": "pg_amop",
+      "identity": "operator 1 (@.vector, @.vector) of @.vector_l1_ops USING hnsw",
+      "definition": {
+        "family": "vector_l1_ops",
+        "family_schema": "@",
+        "left": "@.vector",
+        "method": "hnsw",
+        "operator": "@.\u003c+\u003e(@.vector,@.vector)",
+        "purpose": "o",
+        "right": "@.vector",
+        "sort_family": "float_ops",
+        "sort_schema": "pg_catalog",
+        "strategy": 1
+      },
+      "member": false
+    },
+    {
+      "class": "pg_amop",
+      "identity": "operator 1 (@.vector, @.vector) of @.vector_l2_ops USING hnsw",
+      "definition": {
+        "family": "vector_l2_ops",
+        "family_schema": "@",
+        "left": "@.vector",
+        "method": "hnsw",
+        "operator": "@.\u003c-\u003e(@.vector,@.vector)",
+        "purpose": "o",
+        "right": "@.vector",
+        "sort_family": "float_ops",
+        "sort_schema": "pg_catalog",
+        "strategy": 1
+      },
+      "member": false
+    },
+    {
+      "class": "pg_amop",
+      "identity": "operator 1 (@.vector, @.vector) of @.vector_l2_ops USING ivfflat",
+      "definition": {
+        "family": "vector_l2_ops",
+        "family_schema": "@",
+        "left": "@.vector",
+        "method": "ivfflat",
+        "operator": "@.\u003c-\u003e(@.vector,@.vector)",
+        "purpose": "o",
+        "right": "@.vector",
+        "sort_family": "float_ops",
+        "sort_schema": "pg_catalog",
+        "strategy": 1
+      },
+      "member": false
+    },
+    {
+      "class": "pg_amop",
+      "identity": "operator 1 (@.vector, @.vector) of @.vector_ops USING btree",
+      "definition": {
+        "family": "vector_ops",
+        "family_schema": "@",
+        "left": "@.vector",
+        "method": "btree",
+        "operator": "@.\u003c(@.vector,@.vector)",
+        "purpose": "s",
+        "right": "@.vector",
+        "sort_family": null,
+        "sort_schema": null,
+        "strategy": 1
+      },
+      "member": false
+    },
+    {
+      "class": "pg_amop",
+      "identity": "operator 1 (bit, bit) of @.bit_hamming_ops USING hnsw",
+      "definition": {
+        "family": "bit_hamming_ops",
+        "family_schema": "@",
+        "left": "bit",
+        "method": "hnsw",
+        "operator": "@.\u003c~\u003e(bit,bit)",
+        "purpose": "o",
+        "right": "bit",
+        "sort_family": "float_ops",
+        "sort_schema": "pg_catalog",
+        "strategy": 1
+      },
+      "member": false
+    },
+    {
+      "class": "pg_amop",
+      "identity": "operator 1 (bit, bit) of @.bit_hamming_ops USING ivfflat",
+      "definition": {
+        "family": "bit_hamming_ops",
+        "family_schema": "@",
+        "left": "bit",
+        "method": "ivfflat",
+        "operator": "@.\u003c~\u003e(bit,bit)",
+        "purpose": "o",
+        "right": "bit",
+        "sort_family": "float_ops",
+        "sort_schema": "pg_catalog",
+        "strategy": 1
+      },
+      "member": false
+    },
+    {
+      "class": "pg_amop",
+      "identity": "operator 1 (bit, bit) of @.bit_jaccard_ops USING hnsw",
+      "definition": {
+        "family": "bit_jaccard_ops",
+        "family_schema": "@",
+        "left": "bit",
+        "method": "hnsw",
+        "operator": "@.\u003c%\u003e(bit,bit)",
+        "purpose": "o",
+        "right": "bit",
+        "sort_family": "float_ops",
+        "sort_schema": "pg_catalog",
+        "strategy": 1
+      },
+      "member": false
+    },
+    {
+      "class": "pg_amop",
+      "identity": "operator 2 (@.halfvec, @.halfvec) of @.halfvec_ops USING btree",
+      "definition": {
+        "family": "halfvec_ops",
+        "family_schema": "@",
+        "left": "@.halfvec",
+        "method": "btree",
+        "operator": "@.\u003c=(@.halfvec,@.halfvec)",
+        "purpose": "s",
+        "right": "@.halfvec",
+        "sort_family": null,
+        "sort_schema": null,
+        "strategy": 2
+      },
+      "member": false
+    },
+    {
+      "class": "pg_amop",
+      "identity": "operator 2 (@.sparsevec, @.sparsevec) of @.sparsevec_ops USING btree",
+      "definition": {
+        "family": "sparsevec_ops",
+        "family_schema": "@",
+        "left": "@.sparsevec",
+        "method": "btree",
+        "operator": "@.\u003c=(@.sparsevec,@.sparsevec)",
+        "purpose": "s",
+        "right": "@.sparsevec",
+        "sort_family": null,
+        "sort_schema": null,
+        "strategy": 2
+      },
+      "member": false
+    },
+    {
+      "class": "pg_amop",
+      "identity": "operator 2 (@.vector, @.vector) of @.vector_ops USING btree",
+      "definition": {
+        "family": "vector_ops",
+        "family_schema": "@",
+        "left": "@.vector",
+        "method": "btree",
+        "operator": "@.\u003c=(@.vector,@.vector)",
+        "purpose": "s",
+        "right": "@.vector",
+        "sort_family": null,
+        "sort_schema": null,
+        "strategy": 2
+      },
+      "member": false
+    },
+    {
+      "class": "pg_amop",
+      "identity": "operator 3 (@.halfvec, @.halfvec) of @.halfvec_ops USING btree",
+      "definition": {
+        "family": "halfvec_ops",
+        "family_schema": "@",
+        "left": "@.halfvec",
+        "method": "btree",
+        "operator": "@.=(@.halfvec,@.halfvec)",
+        "purpose": "s",
+        "right": "@.halfvec",
+        "sort_family": null,
+        "sort_schema": null,
+        "strategy": 3
+      },
+      "member": false
+    },
+    {
+      "class": "pg_amop",
+      "identity": "operator 3 (@.sparsevec, @.sparsevec) of @.sparsevec_ops USING btree",
+      "definition": {
+        "family": "sparsevec_ops",
+        "family_schema": "@",
+        "left": "@.sparsevec",
+        "method": "btree",
+        "operator": "@.=(@.sparsevec,@.sparsevec)",
+        "purpose": "s",
+        "right": "@.sparsevec",
+        "sort_family": null,
+        "sort_schema": null,
+        "strategy": 3
+      },
+      "member": false
+    },
+    {
+      "class": "pg_amop",
+      "identity": "operator 3 (@.vector, @.vector) of @.vector_ops USING btree",
+      "definition": {
+        "family": "vector_ops",
+        "family_schema": "@",
+        "left": "@.vector",
+        "method": "btree",
+        "operator": "@.=(@.vector,@.vector)",
+        "purpose": "s",
+        "right": "@.vector",
+        "sort_family": null,
+        "sort_schema": null,
+        "strategy": 3
+      },
+      "member": false
+    },
+    {
+      "class": "pg_amop",
+      "identity": "operator 4 (@.halfvec, @.halfvec) of @.halfvec_ops USING btree",
+      "definition": {
+        "family": "halfvec_ops",
+        "family_schema": "@",
+        "left": "@.halfvec",
+        "method": "btree",
+        "operator": "@.\u003e=(@.halfvec,@.halfvec)",
+        "purpose": "s",
+        "right": "@.halfvec",
+        "sort_family": null,
+        "sort_schema": null,
+        "strategy": 4
+      },
+      "member": false
+    },
+    {
+      "class": "pg_amop",
+      "identity": "operator 4 (@.sparsevec, @.sparsevec) of @.sparsevec_ops USING btree",
+      "definition": {
+        "family": "sparsevec_ops",
+        "family_schema": "@",
+        "left": "@.sparsevec",
+        "method": "btree",
+        "operator": "@.\u003e=(@.sparsevec,@.sparsevec)",
+        "purpose": "s",
+        "right": "@.sparsevec",
+        "sort_family": null,
+        "sort_schema": null,
+        "strategy": 4
+      },
+      "member": false
+    },
+    {
+      "class": "pg_amop",
+      "identity": "operator 4 (@.vector, @.vector) of @.vector_ops USING btree",
+      "definition": {
+        "family": "vector_ops",
+        "family_schema": "@",
+        "left": "@.vector",
+        "method": "btree",
+        "operator": "@.\u003e=(@.vector,@.vector)",
+        "purpose": "s",
+        "right": "@.vector",
+        "sort_family": null,
+        "sort_schema": null,
+        "strategy": 4
+      },
+      "member": false
+    },
+    {
+      "class": "pg_amop",
+      "identity": "operator 5 (@.halfvec, @.halfvec) of @.halfvec_ops USING btree",
+      "definition": {
+        "family": "halfvec_ops",
+        "family_schema": "@",
+        "left": "@.halfvec",
+        "method": "btree",
+        "operator": "@.\u003e(@.halfvec,@.halfvec)",
+        "purpose": "s",
+        "right": "@.halfvec",
+        "sort_family": null,
+        "sort_schema": null,
+        "strategy": 5
+      },
+      "member": false
+    },
+    {
+      "class": "pg_amop",
+      "identity": "operator 5 (@.sparsevec, @.sparsevec) of @.sparsevec_ops USING btree",
+      "definition": {
+        "family": "sparsevec_ops",
+        "family_schema": "@",
+        "left": "@.sparsevec",
+        "method": "btree",
+        "operator": "@.\u003e(@.sparsevec,@.sparsevec)",
+        "purpose": "s",
+        "right": "@.sparsevec",
+        "sort_family": null,
+        "sort_schema": null,
+        "strategy": 5
+      },
+      "member": false
+    },
+    {
+      "class": "pg_amop",
+      "identity": "operator 5 (@.vector, @.vector) of @.vector_ops USING btree",
+      "definition": {
+        "family": "vector_ops",
+        "family_schema": "@",
+        "left": "@.vector",
+        "method": "btree",
+        "operator": "@.\u003e(@.vector,@.vector)",
+        "purpose": "s",
+        "right": "@.vector",
+        "sort_family": null,
+        "sort_schema": null,
+        "strategy": 5
+      },
+      "member": false
+    },
+    {
+      "class": "pg_amproc",
+      "identity": "function 1 (@.halfvec, @.halfvec) of @.halfvec_cosine_ops USING hnsw",
+      "definition": {
+        "family": "halfvec_cosine_ops",
+        "family_schema": "@",
+        "function": "@.halfvec_negative_inner_product(@.halfvec,@.halfvec)",
+        "left": "@.halfvec",
+        "number": 1,
+        "right": "@.halfvec"
+      },
+      "member": false
+    },
+    {
+      "class": "pg_amproc",
+      "identity": "function 1 (@.halfvec, @.halfvec) of @.halfvec_cosine_ops USING ivfflat",
+      "definition": {
+        "family": "halfvec_cosine_ops",
+        "family_schema": "@",
+        "function": "@.halfvec_negative_inner_product(@.halfvec,@.halfvec)",
+        "left": "@.halfvec",
+        "number": 1,
+        "right": "@.halfvec"
+      },
+      "member": false
+    },
+    {
+      "class": "pg_amproc",
+      "identity": "function 1 (@.halfvec, @.halfvec) of @.halfvec_ip_ops USING hnsw",
+      "definition": {
+        "family": "halfvec_ip_ops",
+        "family_schema": "@",
+        "function": "@.halfvec_negative_inner_product(@.halfvec,@.halfvec)",
+        "left": "@.halfvec",
+        "number": 1,
+        "right": "@.halfvec"
+      },
+      "member": false
+    },
+    {
+      "class": "pg_amproc",
+      "identity": "function 1 (@.halfvec, @.halfvec) of @.halfvec_ip_ops USING ivfflat",
+      "definition": {
+        "family": "halfvec_ip_ops",
+        "family_schema": "@",
+        "function": "@.halfvec_negative_inner_product(@.halfvec,@.halfvec)",
+        "left": "@.halfvec",
+        "number": 1,
+        "right": "@.halfvec"
+      },
+      "member": false
+    },
+    {
+      "class": "pg_amproc",
+      "identity": "function 1 (@.halfvec, @.halfvec) of @.halfvec_l1_ops USING hnsw",
+      "definition": {
+        "family": "halfvec_l1_ops",
+        "family_schema": "@",
+        "function": "@.l1_distance(@.halfvec,@.halfvec)",
+        "left": "@.halfvec",
+        "number": 1,
+        "right": "@.halfvec"
+      },
+      "member": false
+    },
+    {
+      "class": "pg_amproc",
+      "identity": "function 1 (@.halfvec, @.halfvec) of @.halfvec_l2_ops USING hnsw",
+      "definition": {
+        "family": "halfvec_l2_ops",
+        "family_schema": "@",
+        "function": "@.halfvec_l2_squared_distance(@.halfvec,@.halfvec)",
+        "left": "@.halfvec",
+        "number": 1,
+        "right": "@.halfvec"
+      },
+      "member": false
+    },
+    {
+      "class": "pg_amproc",
+      "identity": "function 1 (@.halfvec, @.halfvec) of @.halfvec_l2_ops USING ivfflat",
+      "definition": {
+        "family": "halfvec_l2_ops",
+        "family_schema": "@",
+        "function": "@.halfvec_l2_squared_distance(@.halfvec,@.halfvec)",
+        "left": "@.halfvec",
+        "number": 1,
+        "right": "@.halfvec"
+      },
+      "member": false
+    },
+    {
+      "class": "pg_amproc",
+      "identity": "function 1 (@.halfvec, @.halfvec) of @.halfvec_ops USING btree",
+      "definition": {
+        "family": "halfvec_ops",
+        "family_schema": "@",
+        "function": "@.halfvec_cmp(@.halfvec,@.halfvec)",
+        "left": "@.halfvec",
+        "number": 1,
+        "right": "@.halfvec"
+      },
+      "member": false
+    },
+    {
+      "class": "pg_amproc",
+      "identity": "function 1 (@.sparsevec, @.sparsevec) of @.sparsevec_cosine_ops USING hnsw",
+      "definition": {
+        "family": "sparsevec_cosine_ops",
+        "family_schema": "@",
+        "function": "@.sparsevec_negative_inner_product(@.sparsevec,@.sparsevec)",
+        "left": "@.sparsevec",
+        "number": 1,
+        "right": "@.sparsevec"
+      },
+      "member": false
+    },
+    {
+      "class": "pg_amproc",
+      "identity": "function 1 (@.sparsevec, @.sparsevec) of @.sparsevec_ip_ops USING hnsw",
+      "definition": {
+        "family": "sparsevec_ip_ops",
+        "family_schema": "@",
+        "function": "@.sparsevec_negative_inner_product(@.sparsevec,@.sparsevec)",
+        "left": "@.sparsevec",
+        "number": 1,
+        "right": "@.sparsevec"
+      },
+      "member": false
+    },
+    {
+      "class": "pg_amproc",
+      "identity": "function 1 (@.sparsevec, @.sparsevec) of @.sparsevec_l1_ops USING hnsw",
+      "definition": {
+        "family": "sparsevec_l1_ops",
+        "family_schema": "@",
+        "function": "@.l1_distance(@.sparsevec,@.sparsevec)",
+        "left": "@.sparsevec",
+        "number": 1,
+        "right": "@.sparsevec"
+      },
+      "member": false
+    },
+    {
+      "class": "pg_amproc",
+      "identity": "function 1 (@.sparsevec, @.sparsevec) of @.sparsevec_l2_ops USING hnsw",
+      "definition": {
+        "family": "sparsevec_l2_ops",
+        "family_schema": "@",
+        "function": "@.sparsevec_l2_squared_distance(@.sparsevec,@.sparsevec)",
+        "left": "@.sparsevec",
+        "number": 1,
+        "right": "@.sparsevec"
+      },
+      "member": false
+    },
+    {
+      "class": "pg_amproc",
+      "identity": "function 1 (@.sparsevec, @.sparsevec) of @.sparsevec_ops USING btree",
+      "definition": {
+        "family": "sparsevec_ops",
+        "family_schema": "@",
+        "function": "@.sparsevec_cmp(@.sparsevec,@.sparsevec)",
+        "left": "@.sparsevec",
+        "number": 1,
+        "right": "@.sparsevec"
+      },
+      "member": false
+    },
+    {
+      "class": "pg_amproc",
+      "identity": "function 1 (@.vector, @.vector) of @.vector_cosine_ops USING hnsw",
+      "definition": {
+        "family": "vector_cosine_ops",
+        "family_schema": "@",
+        "function": "@.vector_negative_inner_product(@.vector,@.vector)",
+        "left": "@.vector",
+        "number": 1,
+        "right": "@.vector"
+      },
+      "member": false
+    },
+    {
+      "class": "pg_amproc",
+      "identity": "function 1 (@.vector, @.vector) of @.vector_cosine_ops USING ivfflat",
+      "definition": {
+        "family": "vector_cosine_ops",
+        "family_schema": "@",
+        "function": "@.vector_negative_inner_product(@.vector,@.vector)",
+        "left": "@.vector",
+        "number": 1,
+        "right": "@.vector"
+      },
+      "member": false
+    },
+    {
+      "class": "pg_amproc",
+      "identity": "function 1 (@.vector, @.vector) of @.vector_ip_ops USING hnsw",
+      "definition": {
+        "family": "vector_ip_ops",
+        "family_schema": "@",
+        "function": "@.vector_negative_inner_product(@.vector,@.vector)",
+        "left": "@.vector",
+        "number": 1,
+        "right": "@.vector"
+      },
+      "member": false
+    },
+    {
+      "class": "pg_amproc",
+      "identity": "function 1 (@.vector, @.vector) of @.vector_ip_ops USING ivfflat",
+      "definition": {
+        "family": "vector_ip_ops",
+        "family_schema": "@",
+        "function": "@.vector_negative_inner_product(@.vector,@.vector)",
+        "left": "@.vector",
+        "number": 1,
+        "right": "@.vector"
+      },
+      "member": false
+    },
+    {
+      "class": "pg_amproc",
+      "identity": "function 1 (@.vector, @.vector) of @.vector_l1_ops USING hnsw",
+      "definition": {
+        "family": "vector_l1_ops",
+        "family_schema": "@",
+        "function": "@.l1_distance(@.vector,@.vector)",
+        "left": "@.vector",
+        "number": 1,
+        "right": "@.vector"
+      },
+      "member": false
+    },
+    {
+      "class": "pg_amproc",
+      "identity": "function 1 (@.vector, @.vector) of @.vector_l2_ops USING hnsw",
+      "definition": {
+        "family": "vector_l2_ops",
+        "family_schema": "@",
+        "function": "@.vector_l2_squared_distance(@.vector,@.vector)",
+        "left": "@.vector",
+        "number": 1,
+        "right": "@.vector"
+      },
+      "member": false
+    },
+    {
+      "class": "pg_amproc",
+      "identity": "function 1 (@.vector, @.vector) of @.vector_l2_ops USING ivfflat",
+      "definition": {
+        "family": "vector_l2_ops",
+        "family_schema": "@",
+        "function": "@.vector_l2_squared_distance(@.vector,@.vector)",
+        "left": "@.vector",
+        "number": 1,
+        "right": "@.vector"
+      },
+      "member": false
+    },
+    {
+      "class": "pg_amproc",
+      "identity": "function 1 (@.vector, @.vector) of @.vector_ops USING btree",
+      "definition": {
+        "family": "vector_ops",
+        "family_schema": "@",
+        "function": "@.vector_cmp(@.vector,@.vector)",
+        "left": "@.vector",
+        "number": 1,
+        "right": "@.vector"
+      },
+      "member": false
+    },
+    {
+      "class": "pg_amproc",
+      "identity": "function 1 (bit, bit) of @.bit_hamming_ops USING hnsw",
+      "definition": {
+        "family": "bit_hamming_ops",
+        "family_schema": "@",
+        "function": "@.hamming_distance(bit,bit)",
+        "left": "bit",
+        "number": 1,
+        "right": "bit"
+      },
+      "member": false
+    },
+    {
+      "class": "pg_amproc",
+      "identity": "function 1 (bit, bit) of @.bit_hamming_ops USING ivfflat",
+      "definition": {
+        "family": "bit_hamming_ops",
+        "family_schema": "@",
+        "function": "@.hamming_distance(bit,bit)",
+        "left": "bit",
+        "number": 1,
+        "right": "bit"
+      },
+      "member": false
+    },
+    {
+      "class": "pg_amproc",
+      "identity": "function 1 (bit, bit) of @.bit_jaccard_ops USING hnsw",
+      "definition": {
+        "family": "bit_jaccard_ops",
+        "family_schema": "@",
+        "function": "@.jaccard_distance(bit,bit)",
+        "left": "bit",
+        "number": 1,
+        "right": "bit"
+      },
+      "member": false
+    },
+    {
+      "class": "pg_amproc",
+      "identity": "function 2 (@.halfvec, @.halfvec) of @.halfvec_cosine_ops USING hnsw",
+      "definition": {
+        "family": "halfvec_cosine_ops",
+        "family_schema": "@",
+        "function": "@.l2_norm(@.halfvec)",
+        "left": "@.halfvec",
+        "number": 2,
+        "right": "@.halfvec"
+      },
+      "member": false
+    },
+    {
+      "class": "pg_amproc",
+      "identity": "function 2 (@.halfvec, @.halfvec) of @.halfvec_cosine_ops USING ivfflat",
+      "definition": {
+        "family": "halfvec_cosine_ops",
+        "family_schema": "@",
+        "function": "@.l2_norm(@.halfvec)",
+        "left": "@.halfvec",
+        "number": 2,
+        "right": "@.halfvec"
+      },
+      "member": false
+    },
+    {
+      "class": "pg_amproc",
+      "identity": "function 2 (@.sparsevec, @.sparsevec) of @.sparsevec_cosine_ops USING hnsw",
+      "definition": {
+        "family": "sparsevec_cosine_ops",
+        "family_schema": "@",
+        "function": "@.l2_norm(@.sparsevec)",
+        "left": "@.sparsevec",
+        "number": 2,
+        "right": "@.sparsevec"
+      },
+      "member": false
+    },
+    {
+      "class": "pg_amproc",
+      "identity": "function 2 (@.vector, @.vector) of @.vector_cosine_ops USING hnsw",
+      "definition": {
+        "family": "vector_cosine_ops",
+        "family_schema": "@",
+        "function": "@.vector_norm(@.vector)",
+        "left": "@.vector",
+        "number": 2,
+        "right": "@.vector"
+      },
+      "member": false
+    },
+    {
+      "class": "pg_amproc",
+      "identity": "function 2 (@.vector, @.vector) of @.vector_cosine_ops USING ivfflat",
+      "definition": {
+        "family": "vector_cosine_ops",
+        "family_schema": "@",
+        "function": "@.vector_norm(@.vector)",
+        "left": "@.vector",
+        "number": 2,
+        "right": "@.vector"
+      },
+      "member": false
+    },
+    {
+      "class": "pg_amproc",
+      "identity": "function 3 (@.halfvec, @.halfvec) of @.halfvec_cosine_ops USING hnsw",
+      "definition": {
+        "family": "halfvec_cosine_ops",
+        "family_schema": "@",
+        "function": "@.hnsw_halfvec_support(internal)",
+        "left": "@.halfvec",
+        "number": 3,
+        "right": "@.halfvec"
+      },
+      "member": false
+    },
+    {
+      "class": "pg_amproc",
+      "identity": "function 3 (@.halfvec, @.halfvec) of @.halfvec_cosine_ops USING ivfflat",
+      "definition": {
+        "family": "halfvec_cosine_ops",
+        "family_schema": "@",
+        "function": "@.halfvec_spherical_distance(@.halfvec,@.halfvec)",
+        "left": "@.halfvec",
+        "number": 3,
+        "right": "@.halfvec"
+      },
+      "member": false
+    },
+    {
+      "class": "pg_amproc",
+      "identity": "function 3 (@.halfvec, @.halfvec) of @.halfvec_ip_ops USING hnsw",
+      "definition": {
+        "family": "halfvec_ip_ops",
+        "family_schema": "@",
+        "function": "@.hnsw_halfvec_support(internal)",
+        "left": "@.halfvec",
+        "number": 3,
+        "right": "@.halfvec"
+      },
+      "member": false
+    },
+    {
+      "class": "pg_amproc",
+      "identity": "function 3 (@.halfvec, @.halfvec) of @.halfvec_ip_ops USING ivfflat",
+      "definition": {
+        "family": "halfvec_ip_ops",
+        "family_schema": "@",
+        "function": "@.halfvec_spherical_distance(@.halfvec,@.halfvec)",
+        "left": "@.halfvec",
+        "number": 3,
+        "right": "@.halfvec"
+      },
+      "member": false
+    },
+    {
+      "class": "pg_amproc",
+      "identity": "function 3 (@.halfvec, @.halfvec) of @.halfvec_l1_ops USING hnsw",
+      "definition": {
+        "family": "halfvec_l1_ops",
+        "family_schema": "@",
+        "function": "@.hnsw_halfvec_support(internal)",
+        "left": "@.halfvec",
+        "number": 3,
+        "right": "@.halfvec"
+      },
+      "member": false
+    },
+    {
+      "class": "pg_amproc",
+      "identity": "function 3 (@.halfvec, @.halfvec) of @.halfvec_l2_ops USING hnsw",
+      "definition": {
+        "family": "halfvec_l2_ops",
+        "family_schema": "@",
+        "function": "@.hnsw_halfvec_support(internal)",
+        "left": "@.halfvec",
+        "number": 3,
+        "right": "@.halfvec"
+      },
+      "member": false
+    },
+    {
+      "class": "pg_amproc",
+      "identity": "function 3 (@.halfvec, @.halfvec) of @.halfvec_l2_ops USING ivfflat",
+      "definition": {
+        "family": "halfvec_l2_ops",
+        "family_schema": "@",
+        "function": "@.l2_distance(@.halfvec,@.halfvec)",
+        "left": "@.halfvec",
+        "number": 3,
+        "right": "@.halfvec"
+      },
+      "member": false
+    },
+    {
+      "class": "pg_amproc",
+      "identity": "function 3 (@.sparsevec, @.sparsevec) of @.sparsevec_cosine_ops USING hnsw",
+      "definition": {
+        "family": "sparsevec_cosine_ops",
+        "family_schema": "@",
+        "function": "@.hnsw_sparsevec_support(internal)",
+        "left": "@.sparsevec",
+        "number": 3,
+        "right": "@.sparsevec"
+      },
+      "member": false
+    },
+    {
+      "class": "pg_amproc",
+      "identity": "function 3 (@.sparsevec, @.sparsevec) of @.sparsevec_ip_ops USING hnsw",
+      "definition": {
+        "family": "sparsevec_ip_ops",
+        "family_schema": "@",
+        "function": "@.hnsw_sparsevec_support(internal)",
+        "left": "@.sparsevec",
+        "number": 3,
+        "right": "@.sparsevec"
+      },
+      "member": false
+    },
+    {
+      "class": "pg_amproc",
+      "identity": "function 3 (@.sparsevec, @.sparsevec) of @.sparsevec_l1_ops USING hnsw",
+      "definition": {
+        "family": "sparsevec_l1_ops",
+        "family_schema": "@",
+        "function": "@.hnsw_sparsevec_support(internal)",
+        "left": "@.sparsevec",
+        "number": 3,
+        "right": "@.sparsevec"
+      },
+      "member": false
+    },
+    {
+      "class": "pg_amproc",
+      "identity": "function 3 (@.sparsevec, @.sparsevec) of @.sparsevec_l2_ops USING hnsw",
+      "definition": {
+        "family": "sparsevec_l2_ops",
+        "family_schema": "@",
+        "function": "@.hnsw_sparsevec_support(internal)",
+        "left": "@.sparsevec",
+        "number": 3,
+        "right": "@.sparsevec"
+      },
+      "member": false
+    },
+    {
+      "class": "pg_amproc",
+      "identity": "function 3 (@.vector, @.vector) of @.vector_cosine_ops USING ivfflat",
+      "definition": {
+        "family": "vector_cosine_ops",
+        "family_schema": "@",
+        "function": "@.vector_spherical_distance(@.vector,@.vector)",
+        "left": "@.vector",
+        "number": 3,
+        "right": "@.vector"
+      },
+      "member": false
+    },
+    {
+      "class": "pg_amproc",
+      "identity": "function 3 (@.vector, @.vector) of @.vector_ip_ops USING ivfflat",
+      "definition": {
+        "family": "vector_ip_ops",
+        "family_schema": "@",
+        "function": "@.vector_spherical_distance(@.vector,@.vector)",
+        "left": "@.vector",
+        "number": 3,
+        "right": "@.vector"
+      },
+      "member": false
+    },
+    {
+      "class": "pg_amproc",
+      "identity": "function 3 (@.vector, @.vector) of @.vector_l2_ops USING ivfflat",
+      "definition": {
+        "family": "vector_l2_ops",
+        "family_schema": "@",
+        "function": "@.l2_distance(@.vector,@.vector)",
+        "left": "@.vector",
+        "number": 3,
+        "right": "@.vector"
+      },
+      "member": false
+    },
+    {
+      "class": "pg_amproc",
+      "identity": "function 3 (bit, bit) of @.bit_hamming_ops USING hnsw",
+      "definition": {
+        "family": "bit_hamming_ops",
+        "family_schema": "@",
+        "function": "@.hnsw_bit_support(internal)",
+        "left": "bit",
+        "number": 3,
+        "right": "bit"
+      },
+      "member": false
+    },
+    {
+      "class": "pg_amproc",
+      "identity": "function 3 (bit, bit) of @.bit_hamming_ops USING ivfflat",
+      "definition": {
+        "family": "bit_hamming_ops",
+        "family_schema": "@",
+        "function": "@.hamming_distance(bit,bit)",
+        "left": "bit",
+        "number": 3,
+        "right": "bit"
+      },
+      "member": false
+    },
+    {
+      "class": "pg_amproc",
+      "identity": "function 3 (bit, bit) of @.bit_jaccard_ops USING hnsw",
+      "definition": {
+        "family": "bit_jaccard_ops",
+        "family_schema": "@",
+        "function": "@.hnsw_bit_support(internal)",
+        "left": "bit",
+        "number": 3,
+        "right": "bit"
+      },
+      "member": false
+    },
+    {
+      "class": "pg_amproc",
+      "identity": "function 4 (@.halfvec, @.halfvec) of @.halfvec_cosine_ops USING ivfflat",
+      "definition": {
+        "family": "halfvec_cosine_ops",
+        "family_schema": "@",
+        "function": "@.l2_norm(@.halfvec)",
+        "left": "@.halfvec",
+        "number": 4,
+        "right": "@.halfvec"
+      },
+      "member": false
+    },
+    {
+      "class": "pg_amproc",
+      "identity": "function 4 (@.halfvec, @.halfvec) of @.halfvec_ip_ops USING ivfflat",
+      "definition": {
+        "family": "halfvec_ip_ops",
+        "family_schema": "@",
+        "function": "@.l2_norm(@.halfvec)",
+        "left": "@.halfvec",
+        "number": 4,
+        "right": "@.halfvec"
+      },
+      "member": false
+    },
+    {
+      "class": "pg_amproc",
+      "identity": "function 4 (@.vector, @.vector) of @.vector_cosine_ops USING ivfflat",
+      "definition": {
+        "family": "vector_cosine_ops",
+        "family_schema": "@",
+        "function": "@.vector_norm(@.vector)",
+        "left": "@.vector",
+        "number": 4,
+        "right": "@.vector"
+      },
+      "member": false
+    },
+    {
+      "class": "pg_amproc",
+      "identity": "function 4 (@.vector, @.vector) of @.vector_ip_ops USING ivfflat",
+      "definition": {
+        "family": "vector_ip_ops",
+        "family_schema": "@",
+        "function": "@.vector_norm(@.vector)",
+        "left": "@.vector",
+        "number": 4,
+        "right": "@.vector"
+      },
+      "member": false
+    },
+    {
+      "class": "pg_amproc",
+      "identity": "function 5 (@.halfvec, @.halfvec) of @.halfvec_cosine_ops USING ivfflat",
+      "definition": {
+        "family": "halfvec_cosine_ops",
+        "family_schema": "@",
+        "function": "@.ivfflat_halfvec_support(internal)",
+        "left": "@.halfvec",
+        "number": 5,
+        "right": "@.halfvec"
+      },
+      "member": false
+    },
+    {
+      "class": "pg_amproc",
+      "identity": "function 5 (@.halfvec, @.halfvec) of @.halfvec_ip_ops USING ivfflat",
+      "definition": {
+        "family": "halfvec_ip_ops",
+        "family_schema": "@",
+        "function": "@.ivfflat_halfvec_support(internal)",
+        "left": "@.halfvec",
+        "number": 5,
+        "right": "@.halfvec"
+      },
+      "member": false
+    },
+    {
+      "class": "pg_amproc",
+      "identity": "function 5 (@.halfvec, @.halfvec) of @.halfvec_l2_ops USING ivfflat",
+      "definition": {
+        "family": "halfvec_l2_ops",
+        "family_schema": "@",
+        "function": "@.ivfflat_halfvec_support(internal)",
+        "left": "@.halfvec",
+        "number": 5,
+        "right": "@.halfvec"
+      },
+      "member": false
+    },
+    {
+      "class": "pg_amproc",
+      "identity": "function 5 (bit, bit) of @.bit_hamming_ops USING ivfflat",
+      "definition": {
+        "family": "bit_hamming_ops",
+        "family_schema": "@",
+        "function": "@.ivfflat_bit_support(internal)",
+        "left": "bit",
+        "number": 5,
+        "right": "bit"
+      },
+      "member": false
+    },
+    {
+      "class": "pg_cast",
+      "identity": "(@.halfvec AS @.halfvec)",
+      "definition": {
+        "context": "i",
+        "function": "@.halfvec(@.halfvec,integer,boolean)",
+        "method": "f",
+        "source": "@.halfvec",
+        "target": "@.halfvec"
+      },
+      "member": true
+    },
+    {
+      "class": "pg_cast",
+      "identity": "(@.halfvec AS @.sparsevec)",
+      "definition": {
+        "context": "i",
+        "function": "@.halfvec_to_sparsevec(@.halfvec,integer,boolean)",
+        "method": "f",
+        "source": "@.halfvec",
+        "target": "@.sparsevec"
+      },
+      "member": true
+    },
+    {
+      "class": "pg_cast",
+      "identity": "(@.halfvec AS @.vector)",
+      "definition": {
+        "context": "a",
+        "function": "@.halfvec_to_vector(@.halfvec,integer,boolean)",
+        "method": "f",
+        "source": "@.halfvec",
+        "target": "@.vector"
+      },
+      "member": true
+    },
+    {
+      "class": "pg_cast",
+      "identity": "(@.halfvec AS real[])",
+      "definition": {
+        "context": "a",
+        "function": "@.halfvec_to_float4(@.halfvec,integer,boolean)",
+        "method": "f",
+        "source": "@.halfvec",
+        "target": "real[]"
+      },
+      "member": true
+    },
+    {
+      "class": "pg_cast",
+      "identity": "(@.sparsevec AS @.halfvec)",
+      "definition": {
+        "context": "a",
+        "function": "@.sparsevec_to_halfvec(@.sparsevec,integer,boolean)",
+        "method": "f",
+        "source": "@.sparsevec",
+        "target": "@.halfvec"
+      },
+      "member": true
+    },
+    {
+      "class": "pg_cast",
+      "identity": "(@.sparsevec AS @.sparsevec)",
+      "definition": {
+        "context": "i",
+        "function": "@.sparsevec(@.sparsevec,integer,boolean)",
+        "method": "f",
+        "source": "@.sparsevec",
+        "target": "@.sparsevec"
+      },
+      "member": true
+    },
+    {
+      "class": "pg_cast",
+      "identity": "(@.sparsevec AS @.vector)",
+      "definition": {
+        "context": "a",
+        "function": "@.sparsevec_to_vector(@.sparsevec,integer,boolean)",
+        "method": "f",
+        "source": "@.sparsevec",
+        "target": "@.vector"
+      },
+      "member": true
+    },
+    {
+      "class": "pg_cast",
+      "identity": "(@.vector AS @.halfvec)",
+      "definition": {
+        "context": "i",
+        "function": "@.vector_to_halfvec(@.vector,integer,boolean)",
+        "method": "f",
+        "source": "@.vector",
+        "target": "@.halfvec"
+      },
+      "member": true
+    },
+    {
+      "class": "pg_cast",
+      "identity": "(@.vector AS @.sparsevec)",
+      "definition": {
+        "context": "i",
+        "function": "@.vector_to_sparsevec(@.vector,integer,boolean)",
+        "method": "f",
+        "source": "@.vector",
+        "target": "@.sparsevec"
+      },
+      "member": true
+    },
+    {
+      "class": "pg_cast",
+      "identity": "(@.vector AS @.vector)",
+      "definition": {
+        "context": "i",
+        "function": "@.vector(@.vector,integer,boolean)",
+        "method": "f",
+        "source": "@.vector",
+        "target": "@.vector"
+      },
+      "member": true
+    },
+    {
+      "class": "pg_cast",
+      "identity": "(@.vector AS real[])",
+      "definition": {
+        "context": "i",
+        "function": "@.vector_to_float4(@.vector,integer,boolean)",
+        "method": "f",
+        "source": "@.vector",
+        "target": "real[]"
+      },
+      "member": true
+    },
+    {
+      "class": "pg_cast",
+      "identity": "(double precision[] AS @.halfvec)",
+      "definition": {
+        "context": "a",
+        "function": "@.array_to_halfvec(double precision[],integer,boolean)",
+        "method": "f",
+        "source": "double precision[]",
+        "target": "@.halfvec"
+      },
+      "member": true
+    },
+    {
+      "class": "pg_cast",
+      "identity": "(double precision[] AS @.sparsevec)",
+      "definition": {
+        "context": "a",
+        "function": "@.array_to_sparsevec(double precision[],integer,boolean)",
+        "method": "f",
+        "source": "double precision[]",
+        "target": "@.sparsevec"
+      },
+      "member": true
+    },
+    {
+      "class": "pg_cast",
+      "identity": "(double precision[] AS @.vector)",
+      "definition": {
+        "context": "a",
+        "function": "@.array_to_vector(double precision[],integer,boolean)",
+        "method": "f",
+        "source": "double precision[]",
+        "target": "@.vector"
+      },
+      "member": true
+    },
+    {
+      "class": "pg_cast",
+      "identity": "(integer[] AS @.halfvec)",
+      "definition": {
+        "context": "a",
+        "function": "@.array_to_halfvec(integer[],integer,boolean)",
+        "method": "f",
+        "source": "integer[]",
+        "target": "@.halfvec"
+      },
+      "member": true
+    },
+    {
+      "class": "pg_cast",
+      "identity": "(integer[] AS @.sparsevec)",
+      "definition": {
+        "context": "a",
+        "function": "@.array_to_sparsevec(integer[],integer,boolean)",
+        "method": "f",
+        "source": "integer[]",
+        "target": "@.sparsevec"
+      },
+      "member": true
+    },
+    {
+      "class": "pg_cast",
+      "identity": "(integer[] AS @.vector)",
+      "definition": {
+        "context": "a",
+        "function": "@.array_to_vector(integer[],integer,boolean)",
+        "method": "f",
+        "source": "integer[]",
+        "target": "@.vector"
+      },
+      "member": true
+    },
+    {
+      "class": "pg_cast",
+      "identity": "(numeric[] AS @.halfvec)",
+      "definition": {
+        "context": "a",
+        "function": "@.array_to_halfvec(numeric[],integer,boolean)",
+        "method": "f",
+        "source": "numeric[]",
+        "target": "@.halfvec"
+      },
+      "member": true
+    },
+    {
+      "class": "pg_cast",
+      "identity": "(numeric[] AS @.sparsevec)",
+      "definition": {
+        "context": "a",
+        "function": "@.array_to_sparsevec(numeric[],integer,boolean)",
+        "method": "f",
+        "source": "numeric[]",
+        "target": "@.sparsevec"
+      },
+      "member": true
+    },
+    {
+      "class": "pg_cast",
+      "identity": "(numeric[] AS @.vector)",
+      "definition": {
+        "context": "a",
+        "function": "@.array_to_vector(numeric[],integer,boolean)",
+        "method": "f",
+        "source": "numeric[]",
+        "target": "@.vector"
+      },
+      "member": true
+    },
+    {
+      "class": "pg_cast",
+      "identity": "(real[] AS @.halfvec)",
+      "definition": {
+        "context": "a",
+        "function": "@.array_to_halfvec(real[],integer,boolean)",
+        "method": "f",
+        "source": "real[]",
+        "target": "@.halfvec"
+      },
+      "member": true
+    },
+    {
+      "class": "pg_cast",
+      "identity": "(real[] AS @.sparsevec)",
+      "definition": {
+        "context": "a",
+        "function": "@.array_to_sparsevec(real[],integer,boolean)",
+        "method": "f",
+        "source": "real[]",
+        "target": "@.sparsevec"
+      },
+      "member": true
+    },
+    {
+      "class": "pg_cast",
+      "identity": "(real[] AS @.vector)",
+      "definition": {
+        "context": "a",
+        "function": "@.array_to_vector(real[],integer,boolean)",
+        "method": "f",
+        "source": "real[]",
+        "target": "@.vector"
+      },
+      "member": true
+    },
+    {
+      "class": "pg_opclass",
+      "identity": "@.bit_hamming_ops USING hnsw",
+      "definition": {
+        "default": false,
+        "family": "bit_hamming_ops",
+        "family_schema": "@",
+        "input": "bit",
+        "key": "-",
+        "method": "hnsw",
+        "name": "bit_hamming_ops"
+      },
+      "member": true
+    },
+    {
+      "class": "pg_opclass",
+      "identity": "@.bit_hamming_ops USING ivfflat",
+      "definition": {
+        "default": false,
+        "family": "bit_hamming_ops",
+        "family_schema": "@",
+        "input": "bit",
+        "key": "-",
+        "method": "ivfflat",
+        "name": "bit_hamming_ops"
+      },
+      "member": true
+    },
+    {
+      "class": "pg_opclass",
+      "identity": "@.bit_jaccard_ops USING hnsw",
+      "definition": {
+        "default": false,
+        "family": "bit_jaccard_ops",
+        "family_schema": "@",
+        "input": "bit",
+        "key": "-",
+        "method": "hnsw",
+        "name": "bit_jaccard_ops"
+      },
+      "member": true
+    },
+    {
+      "class": "pg_opclass",
+      "identity": "@.halfvec_cosine_ops USING hnsw",
+      "definition": {
+        "default": false,
+        "family": "halfvec_cosine_ops",
+        "family_schema": "@",
+        "input": "@.halfvec",
+        "key": "-",
+        "method": "hnsw",
+        "name": "halfvec_cosine_ops"
+      },
+      "member": true
+    },
+    {
+      "class": "pg_opclass",
+      "identity": "@.halfvec_cosine_ops USING ivfflat",
+      "definition": {
+        "default": false,
+        "family": "halfvec_cosine_ops",
+        "family_schema": "@",
+        "input": "@.halfvec",
+        "key": "-",
+        "method": "ivfflat",
+        "name": "halfvec_cosine_ops"
+      },
+      "member": true
+    },
+    {
+      "class": "pg_opclass",
+      "identity": "@.halfvec_ip_ops USING hnsw",
+      "definition": {
+        "default": false,
+        "family": "halfvec_ip_ops",
+        "family_schema": "@",
+        "input": "@.halfvec",
+        "key": "-",
+        "method": "hnsw",
+        "name": "halfvec_ip_ops"
+      },
+      "member": true
+    },
+    {
+      "class": "pg_opclass",
+      "identity": "@.halfvec_ip_ops USING ivfflat",
+      "definition": {
+        "default": false,
+        "family": "halfvec_ip_ops",
+        "family_schema": "@",
+        "input": "@.halfvec",
+        "key": "-",
+        "method": "ivfflat",
+        "name": "halfvec_ip_ops"
+      },
+      "member": true
+    },
+    {
+      "class": "pg_opclass",
+      "identity": "@.halfvec_l1_ops USING hnsw",
+      "definition": {
+        "default": false,
+        "family": "halfvec_l1_ops",
+        "family_schema": "@",
+        "input": "@.halfvec",
+        "key": "-",
+        "method": "hnsw",
+        "name": "halfvec_l1_ops"
+      },
+      "member": true
+    },
+    {
+      "class": "pg_opclass",
+      "identity": "@.halfvec_l2_ops USING hnsw",
+      "definition": {
+        "default": false,
+        "family": "halfvec_l2_ops",
+        "family_schema": "@",
+        "input": "@.halfvec",
+        "key": "-",
+        "method": "hnsw",
+        "name": "halfvec_l2_ops"
+      },
+      "member": true
+    },
+    {
+      "class": "pg_opclass",
+      "identity": "@.halfvec_l2_ops USING ivfflat",
+      "definition": {
+        "default": false,
+        "family": "halfvec_l2_ops",
+        "family_schema": "@",
+        "input": "@.halfvec",
+        "key": "-",
+        "method": "ivfflat",
+        "name": "halfvec_l2_ops"
+      },
+      "member": true
+    },
+    {
+      "class": "pg_opclass",
+      "identity": "@.halfvec_ops USING btree",
+      "definition": {
+        "default": true,
+        "family": "halfvec_ops",
+        "family_schema": "@",
+        "input": "@.halfvec",
+        "key": "-",
+        "method": "btree",
+        "name": "halfvec_ops"
+      },
+      "member": true
+    },
+    {
+      "class": "pg_opclass",
+      "identity": "@.sparsevec_cosine_ops USING hnsw",
+      "definition": {
+        "default": false,
+        "family": "sparsevec_cosine_ops",
+        "family_schema": "@",
+        "input": "@.sparsevec",
+        "key": "-",
+        "method": "hnsw",
+        "name": "sparsevec_cosine_ops"
+      },
+      "member": true
+    },
+    {
+      "class": "pg_opclass",
+      "identity": "@.sparsevec_ip_ops USING hnsw",
+      "definition": {
+        "default": false,
+        "family": "sparsevec_ip_ops",
+        "family_schema": "@",
+        "input": "@.sparsevec",
+        "key": "-",
+        "method": "hnsw",
+        "name": "sparsevec_ip_ops"
+      },
+      "member": true
+    },
+    {
+      "class": "pg_opclass",
+      "identity": "@.sparsevec_l1_ops USING hnsw",
+      "definition": {
+        "default": false,
+        "family": "sparsevec_l1_ops",
+        "family_schema": "@",
+        "input": "@.sparsevec",
+        "key": "-",
+        "method": "hnsw",
+        "name": "sparsevec_l1_ops"
+      },
+      "member": true
+    },
+    {
+      "class": "pg_opclass",
+      "identity": "@.sparsevec_l2_ops USING hnsw",
+      "definition": {
+        "default": false,
+        "family": "sparsevec_l2_ops",
+        "family_schema": "@",
+        "input": "@.sparsevec",
+        "key": "-",
+        "method": "hnsw",
+        "name": "sparsevec_l2_ops"
+      },
+      "member": true
+    },
+    {
+      "class": "pg_opclass",
+      "identity": "@.sparsevec_ops USING btree",
+      "definition": {
+        "default": true,
+        "family": "sparsevec_ops",
+        "family_schema": "@",
+        "input": "@.sparsevec",
+        "key": "-",
+        "method": "btree",
+        "name": "sparsevec_ops"
+      },
+      "member": true
+    },
+    {
+      "class": "pg_opclass",
+      "identity": "@.vector_cosine_ops USING hnsw",
+      "definition": {
+        "default": false,
+        "family": "vector_cosine_ops",
+        "family_schema": "@",
+        "input": "@.vector",
+        "key": "-",
+        "method": "hnsw",
+        "name": "vector_cosine_ops"
+      },
+      "member": true
+    },
+    {
+      "class": "pg_opclass",
+      "identity": "@.vector_cosine_ops USING ivfflat",
+      "definition": {
+        "default": false,
+        "family": "vector_cosine_ops",
+        "family_schema": "@",
+        "input": "@.vector",
+        "key": "-",
+        "method": "ivfflat",
+        "name": "vector_cosine_ops"
+      },
+      "member": true
+    },
+    {
+      "class": "pg_opclass",
+      "identity": "@.vector_ip_ops USING hnsw",
+      "definition": {
+        "default": false,
+        "family": "vector_ip_ops",
+        "family_schema": "@",
+        "input": "@.vector",
+        "key": "-",
+        "method": "hnsw",
+        "name": "vector_ip_ops"
+      },
+      "member": true
+    },
+    {
+      "class": "pg_opclass",
+      "identity": "@.vector_ip_ops USING ivfflat",
+      "definition": {
+        "default": false,
+        "family": "vector_ip_ops",
+        "family_schema": "@",
+        "input": "@.vector",
+        "key": "-",
+        "method": "ivfflat",
+        "name": "vector_ip_ops"
+      },
+      "member": true
+    },
+    {
+      "class": "pg_opclass",
+      "identity": "@.vector_l1_ops USING hnsw",
+      "definition": {
+        "default": false,
+        "family": "vector_l1_ops",
+        "family_schema": "@",
+        "input": "@.vector",
+        "key": "-",
+        "method": "hnsw",
+        "name": "vector_l1_ops"
+      },
+      "member": true
+    },
+    {
+      "class": "pg_opclass",
+      "identity": "@.vector_l2_ops USING hnsw",
+      "definition": {
+        "default": false,
+        "family": "vector_l2_ops",
+        "family_schema": "@",
+        "input": "@.vector",
+        "key": "-",
+        "method": "hnsw",
+        "name": "vector_l2_ops"
+      },
+      "member": true
+    },
+    {
+      "class": "pg_opclass",
+      "identity": "@.vector_l2_ops USING ivfflat",
+      "definition": {
+        "default": true,
+        "family": "vector_l2_ops",
+        "family_schema": "@",
+        "input": "@.vector",
+        "key": "-",
+        "method": "ivfflat",
+        "name": "vector_l2_ops"
+      },
+      "member": true
+    },
+    {
+      "class": "pg_opclass",
+      "identity": "@.vector_ops USING btree",
+      "definition": {
+        "default": true,
+        "family": "vector_ops",
+        "family_schema": "@",
+        "input": "@.vector",
+        "key": "-",
+        "method": "btree",
+        "name": "vector_ops"
+      },
+      "member": true
+    },
+    {
+      "class": "pg_operator",
+      "identity": "@.*(@.halfvec,@.halfvec)",
+      "definition": {
+        "oprcanhash": false,
+        "oprcanmerge": false,
+        "oprcode": "@.halfvec_mul(@.halfvec,@.halfvec)",
+        "oprcom": "@.*(@.halfvec,@.halfvec)",
+        "oprjoin": "-",
+        "oprkind": "b",
+        "oprleft": "@.halfvec",
+        "oprname": "*",
+        "oprnegate": "0",
+        "oprrest": "-",
+        "oprresult": "@.halfvec",
+        "oprright": "@.halfvec"
+      },
+      "member": true
+    },
+    {
+      "class": "pg_operator",
+      "identity": "@.*(@.vector,@.vector)",
+      "definition": {
+        "oprcanhash": false,
+        "oprcanmerge": false,
+        "oprcode": "@.vector_mul(@.vector,@.vector)",
+        "oprcom": "@.*(@.vector,@.vector)",
+        "oprjoin": "-",
+        "oprkind": "b",
+        "oprleft": "@.vector",
+        "oprname": "*",
+        "oprnegate": "0",
+        "oprrest": "-",
+        "oprresult": "@.vector",
+        "oprright": "@.vector"
+      },
+      "member": true
+    },
+    {
+      "class": "pg_operator",
+      "identity": "@.+(@.halfvec,@.halfvec)",
+      "definition": {
+        "oprcanhash": false,
+        "oprcanmerge": false,
+        "oprcode": "@.halfvec_add(@.halfvec,@.halfvec)",
+        "oprcom": "@.+(@.halfvec,@.halfvec)",
+        "oprjoin": "-",
+        "oprkind": "b",
+        "oprleft": "@.halfvec",
+        "oprname": "+",
+        "oprnegate": "0",
+        "oprrest": "-",
+        "oprresult": "@.halfvec",
+        "oprright": "@.halfvec"
+      },
+      "member": true
+    },
+    {
+      "class": "pg_operator",
+      "identity": "@.+(@.vector,@.vector)",
+      "definition": {
+        "oprcanhash": false,
+        "oprcanmerge": false,
+        "oprcode": "@.vector_add(@.vector,@.vector)",
+        "oprcom": "@.+(@.vector,@.vector)",
+        "oprjoin": "-",
+        "oprkind": "b",
+        "oprleft": "@.vector",
+        "oprname": "+",
+        "oprnegate": "0",
+        "oprrest": "-",
+        "oprresult": "@.vector",
+        "oprright": "@.vector"
+      },
+      "member": true
+    },
+    {
+      "class": "pg_operator",
+      "identity": "@.-(@.halfvec,@.halfvec)",
+      "definition": {
+        "oprcanhash": false,
+        "oprcanmerge": false,
+        "oprcode": "@.halfvec_sub(@.halfvec,@.halfvec)",
+        "oprcom": "0",
+        "oprjoin": "-",
+        "oprkind": "b",
+        "oprleft": "@.halfvec",
+        "oprname": "-",
+        "oprnegate": "0",
+        "oprrest": "-",
+        "oprresult": "@.halfvec",
+        "oprright": "@.halfvec"
+      },
+      "member": true
+    },
+    {
+      "class": "pg_operator",
+      "identity": "@.-(@.vector,@.vector)",
+      "definition": {
+        "oprcanhash": false,
+        "oprcanmerge": false,
+        "oprcode": "@.vector_sub(@.vector,@.vector)",
+        "oprcom": "0",
+        "oprjoin": "-",
+        "oprkind": "b",
+        "oprleft": "@.vector",
+        "oprname": "-",
+        "oprnegate": "0",
+        "oprrest": "-",
+        "oprresult": "@.vector",
+        "oprright": "@.vector"
+      },
+      "member": true
+    },
+    {
+      "class": "pg_operator",
+      "identity": "@.\u003c#\u003e(@.halfvec,@.halfvec)",
+      "definition": {
+        "oprcanhash": false,
+        "oprcanmerge": false,
+        "oprcode": "@.halfvec_negative_inner_product(@.halfvec,@.halfvec)",
+        "oprcom": "@.\u003c#\u003e(@.halfvec,@.halfvec)",
+        "oprjoin": "-",
+        "oprkind": "b",
+        "oprleft": "@.halfvec",
+        "oprname": "\u003c#\u003e",
+        "oprnegate": "0",
+        "oprrest": "-",
+        "oprresult": "double precision",
+        "oprright": "@.halfvec"
+      },
+      "member": true
+    },
+    {
+      "class": "pg_operator",
+      "identity": "@.\u003c#\u003e(@.sparsevec,@.sparsevec)",
+      "definition": {
+        "oprcanhash": false,
+        "oprcanmerge": false,
+        "oprcode": "@.sparsevec_negative_inner_product(@.sparsevec,@.sparsevec)",
+        "oprcom": "@.\u003c#\u003e(@.sparsevec,@.sparsevec)",
+        "oprjoin": "-",
+        "oprkind": "b",
+        "oprleft": "@.sparsevec",
+        "oprname": "\u003c#\u003e",
+        "oprnegate": "0",
+        "oprrest": "-",
+        "oprresult": "double precision",
+        "oprright": "@.sparsevec"
+      },
+      "member": true
+    },
+    {
+      "class": "pg_operator",
+      "identity": "@.\u003c#\u003e(@.vector,@.vector)",
+      "definition": {
+        "oprcanhash": false,
+        "oprcanmerge": false,
+        "oprcode": "@.vector_negative_inner_product(@.vector,@.vector)",
+        "oprcom": "@.\u003c#\u003e(@.vector,@.vector)",
+        "oprjoin": "-",
+        "oprkind": "b",
+        "oprleft": "@.vector",
+        "oprname": "\u003c#\u003e",
+        "oprnegate": "0",
+        "oprrest": "-",
+        "oprresult": "double precision",
+        "oprright": "@.vector"
+      },
+      "member": true
+    },
+    {
+      "class": "pg_operator",
+      "identity": "@.\u003c%\u003e(bit,bit)",
+      "definition": {
+        "oprcanhash": false,
+        "oprcanmerge": false,
+        "oprcode": "@.jaccard_distance(bit,bit)",
+        "oprcom": "@.\u003c%\u003e(bit,bit)",
+        "oprjoin": "-",
+        "oprkind": "b",
+        "oprleft": "bit",
+        "oprname": "\u003c%\u003e",
+        "oprnegate": "0",
+        "oprrest": "-",
+        "oprresult": "double precision",
+        "oprright": "bit"
+      },
+      "member": true
+    },
+    {
+      "class": "pg_operator",
+      "identity": "@.\u003c(@.halfvec,@.halfvec)",
+      "definition": {
+        "oprcanhash": false,
+        "oprcanmerge": false,
+        "oprcode": "@.halfvec_lt(@.halfvec,@.halfvec)",
+        "oprcom": "@.\u003e(@.halfvec,@.halfvec)",
+        "oprjoin": "scalarltjoinsel(internal,oid,internal,smallint,internal)",
+        "oprkind": "b",
+        "oprleft": "@.halfvec",
+        "oprname": "\u003c",
+        "oprnegate": "@.\u003e=(@.halfvec,@.halfvec)",
+        "oprrest": "scalarltsel(internal,oid,internal,integer)",
+        "oprresult": "boolean",
+        "oprright": "@.halfvec"
+      },
+      "member": true
+    },
+    {
+      "class": "pg_operator",
+      "identity": "@.\u003c(@.sparsevec,@.sparsevec)",
+      "definition": {
+        "oprcanhash": false,
+        "oprcanmerge": false,
+        "oprcode": "@.sparsevec_lt(@.sparsevec,@.sparsevec)",
+        "oprcom": "@.\u003e(@.sparsevec,@.sparsevec)",
+        "oprjoin": "scalarltjoinsel(internal,oid,internal,smallint,internal)",
+        "oprkind": "b",
+        "oprleft": "@.sparsevec",
+        "oprname": "\u003c",
+        "oprnegate": "@.\u003e=(@.sparsevec,@.sparsevec)",
+        "oprrest": "scalarltsel(internal,oid,internal,integer)",
+        "oprresult": "boolean",
+        "oprright": "@.sparsevec"
+      },
+      "member": true
+    },
+    {
+      "class": "pg_operator",
+      "identity": "@.\u003c(@.vector,@.vector)",
+      "definition": {
+        "oprcanhash": false,
+        "oprcanmerge": false,
+        "oprcode": "@.vector_lt(@.vector,@.vector)",
+        "oprcom": "@.\u003e(@.vector,@.vector)",
+        "oprjoin": "scalarltjoinsel(internal,oid,internal,smallint,internal)",
+        "oprkind": "b",
+        "oprleft": "@.vector",
+        "oprname": "\u003c",
+        "oprnegate": "@.\u003e=(@.vector,@.vector)",
+        "oprrest": "scalarltsel(internal,oid,internal,integer)",
+        "oprresult": "boolean",
+        "oprright": "@.vector"
+      },
+      "member": true
+    },
+    {
+      "class": "pg_operator",
+      "identity": "@.\u003c+\u003e(@.halfvec,@.halfvec)",
+      "definition": {
+        "oprcanhash": false,
+        "oprcanmerge": false,
+        "oprcode": "@.l1_distance(@.halfvec,@.halfvec)",
+        "oprcom": "@.\u003c+\u003e(@.halfvec,@.halfvec)",
+        "oprjoin": "-",
+        "oprkind": "b",
+        "oprleft": "@.halfvec",
+        "oprname": "\u003c+\u003e",
+        "oprnegate": "0",
+        "oprrest": "-",
+        "oprresult": "double precision",
+        "oprright": "@.halfvec"
+      },
+      "member": true
+    },
+    {
+      "class": "pg_operator",
+      "identity": "@.\u003c+\u003e(@.sparsevec,@.sparsevec)",
+      "definition": {
+        "oprcanhash": false,
+        "oprcanmerge": false,
+        "oprcode": "@.l1_distance(@.sparsevec,@.sparsevec)",
+        "oprcom": "@.\u003c+\u003e(@.sparsevec,@.sparsevec)",
+        "oprjoin": "-",
+        "oprkind": "b",
+        "oprleft": "@.sparsevec",
+        "oprname": "\u003c+\u003e",
+        "oprnegate": "0",
+        "oprrest": "-",
+        "oprresult": "double precision",
+        "oprright": "@.sparsevec"
+      },
+      "member": true
+    },
+    {
+      "class": "pg_operator",
+      "identity": "@.\u003c+\u003e(@.vector,@.vector)",
+      "definition": {
+        "oprcanhash": false,
+        "oprcanmerge": false,
+        "oprcode": "@.l1_distance(@.vector,@.vector)",
+        "oprcom": "@.\u003c+\u003e(@.vector,@.vector)",
+        "oprjoin": "-",
+        "oprkind": "b",
+        "oprleft": "@.vector",
+        "oprname": "\u003c+\u003e",
+        "oprnegate": "0",
+        "oprrest": "-",
+        "oprresult": "double precision",
+        "oprright": "@.vector"
+      },
+      "member": true
+    },
+    {
+      "class": "pg_operator",
+      "identity": "@.\u003c-\u003e(@.halfvec,@.halfvec)",
+      "definition": {
+        "oprcanhash": false,
+        "oprcanmerge": false,
+        "oprcode": "@.l2_distance(@.halfvec,@.halfvec)",
+        "oprcom": "@.\u003c-\u003e(@.halfvec,@.halfvec)",
+        "oprjoin": "-",
+        "oprkind": "b",
+        "oprleft": "@.halfvec",
+        "oprname": "\u003c-\u003e",
+        "oprnegate": "0",
+        "oprrest": "-",
+        "oprresult": "double precision",
+        "oprright": "@.halfvec"
+      },
+      "member": true
+    },
+    {
+      "class": "pg_operator",
+      "identity": "@.\u003c-\u003e(@.sparsevec,@.sparsevec)",
+      "definition": {
+        "oprcanhash": false,
+        "oprcanmerge": false,
+        "oprcode": "@.l2_distance(@.sparsevec,@.sparsevec)",
+        "oprcom": "@.\u003c-\u003e(@.sparsevec,@.sparsevec)",
+        "oprjoin": "-",
+        "oprkind": "b",
+        "oprleft": "@.sparsevec",
+        "oprname": "\u003c-\u003e",
+        "oprnegate": "0",
+        "oprrest": "-",
+        "oprresult": "double precision",
+        "oprright": "@.sparsevec"
+      },
+      "member": true
+    },
+    {
+      "class": "pg_operator",
+      "identity": "@.\u003c-\u003e(@.vector,@.vector)",
+      "definition": {
+        "oprcanhash": false,
+        "oprcanmerge": false,
+        "oprcode": "@.l2_distance(@.vector,@.vector)",
+        "oprcom": "@.\u003c-\u003e(@.vector,@.vector)",
+        "oprjoin": "-",
+        "oprkind": "b",
+        "oprleft": "@.vector",
+        "oprname": "\u003c-\u003e",
+        "oprnegate": "0",
+        "oprrest": "-",
+        "oprresult": "double precision",
+        "oprright": "@.vector"
+      },
+      "member": true
+    },
+    {
+      "class": "pg_operator",
+      "identity": "@.\u003c=(@.halfvec,@.halfvec)",
+      "definition": {
+        "oprcanhash": false,
+        "oprcanmerge": false,
+        "oprcode": "@.halfvec_le(@.halfvec,@.halfvec)",
+        "oprcom": "@.\u003e=(@.halfvec,@.halfvec)",
+        "oprjoin": "scalarlejoinsel(internal,oid,internal,smallint,internal)",
+        "oprkind": "b",
+        "oprleft": "@.halfvec",
+        "oprname": "\u003c=",
+        "oprnegate": "@.\u003e(@.halfvec,@.halfvec)",
+        "oprrest": "scalarlesel(internal,oid,internal,integer)",
+        "oprresult": "boolean",
+        "oprright": "@.halfvec"
+      },
+      "member": true
+    },
+    {
+      "class": "pg_operator",
+      "identity": "@.\u003c=(@.sparsevec,@.sparsevec)",
+      "definition": {
+        "oprcanhash": false,
+        "oprcanmerge": false,
+        "oprcode": "@.sparsevec_le(@.sparsevec,@.sparsevec)",
+        "oprcom": "@.\u003e=(@.sparsevec,@.sparsevec)",
+        "oprjoin": "scalarlejoinsel(internal,oid,internal,smallint,internal)",
+        "oprkind": "b",
+        "oprleft": "@.sparsevec",
+        "oprname": "\u003c=",
+        "oprnegate": "@.\u003e(@.sparsevec,@.sparsevec)",
+        "oprrest": "scalarlesel(internal,oid,internal,integer)",
+        "oprresult": "boolean",
+        "oprright": "@.sparsevec"
+      },
+      "member": true
+    },
+    {
+      "class": "pg_operator",
+      "identity": "@.\u003c=(@.vector,@.vector)",
+      "definition": {
+        "oprcanhash": false,
+        "oprcanmerge": false,
+        "oprcode": "@.vector_le(@.vector,@.vector)",
+        "oprcom": "@.\u003e=(@.vector,@.vector)",
+        "oprjoin": "scalarlejoinsel(internal,oid,internal,smallint,internal)",
+        "oprkind": "b",
+        "oprleft": "@.vector",
+        "oprname": "\u003c=",
+        "oprnegate": "@.\u003e(@.vector,@.vector)",
+        "oprrest": "scalarlesel(internal,oid,internal,integer)",
+        "oprresult": "boolean",
+        "oprright": "@.vector"
+      },
+      "member": true
+    },
+    {
+      "class": "pg_operator",
+      "identity": "@.\u003c=\u003e(@.halfvec,@.halfvec)",
+      "definition": {
+        "oprcanhash": false,
+        "oprcanmerge": false,
+        "oprcode": "@.cosine_distance(@.halfvec,@.halfvec)",
+        "oprcom": "@.\u003c=\u003e(@.halfvec,@.halfvec)",
+        "oprjoin": "-",
+        "oprkind": "b",
+        "oprleft": "@.halfvec",
+        "oprname": "\u003c=\u003e",
+        "oprnegate": "0",
+        "oprrest": "-",
+        "oprresult": "double precision",
+        "oprright": "@.halfvec"
+      },
+      "member": true
+    },
+    {
+      "class": "pg_operator",
+      "identity": "@.\u003c=\u003e(@.sparsevec,@.sparsevec)",
+      "definition": {
+        "oprcanhash": false,
+        "oprcanmerge": false,
+        "oprcode": "@.cosine_distance(@.sparsevec,@.sparsevec)",
+        "oprcom": "@.\u003c=\u003e(@.sparsevec,@.sparsevec)",
+        "oprjoin": "-",
+        "oprkind": "b",
+        "oprleft": "@.sparsevec",
+        "oprname": "\u003c=\u003e",
+        "oprnegate": "0",
+        "oprrest": "-",
+        "oprresult": "double precision",
+        "oprright": "@.sparsevec"
+      },
+      "member": true
+    },
+    {
+      "class": "pg_operator",
+      "identity": "@.\u003c=\u003e(@.vector,@.vector)",
+      "definition": {
+        "oprcanhash": false,
+        "oprcanmerge": false,
+        "oprcode": "@.cosine_distance(@.vector,@.vector)",
+        "oprcom": "@.\u003c=\u003e(@.vector,@.vector)",
+        "oprjoin": "-",
+        "oprkind": "b",
+        "oprleft": "@.vector",
+        "oprname": "\u003c=\u003e",
+        "oprnegate": "0",
+        "oprrest": "-",
+        "oprresult": "double precision",
+        "oprright": "@.vector"
+      },
+      "member": true
+    },
+    {
+      "class": "pg_operator",
+      "identity": "@.\u003c\u003e(@.halfvec,@.halfvec)",
+      "definition": {
+        "oprcanhash": false,
+        "oprcanmerge": false,
+        "oprcode": "@.halfvec_ne(@.halfvec,@.halfvec)",
+        "oprcom": "@.\u003c\u003e(@.halfvec,@.halfvec)",
+        "oprjoin": "eqjoinsel(internal,oid,internal,smallint,internal)",
+        "oprkind": "b",
+        "oprleft": "@.halfvec",
+        "oprname": "\u003c\u003e",
+        "oprnegate": "@.=(@.halfvec,@.halfvec)",
+        "oprrest": "eqsel(internal,oid,internal,integer)",
+        "oprresult": "boolean",
+        "oprright": "@.halfvec"
+      },
+      "member": true
+    },
+    {
+      "class": "pg_operator",
+      "identity": "@.\u003c\u003e(@.sparsevec,@.sparsevec)",
+      "definition": {
+        "oprcanhash": false,
+        "oprcanmerge": false,
+        "oprcode": "@.sparsevec_ne(@.sparsevec,@.sparsevec)",
+        "oprcom": "@.\u003c\u003e(@.sparsevec,@.sparsevec)",
+        "oprjoin": "eqjoinsel(internal,oid,internal,smallint,internal)",
+        "oprkind": "b",
+        "oprleft": "@.sparsevec",
+        "oprname": "\u003c\u003e",
+        "oprnegate": "@.=(@.sparsevec,@.sparsevec)",
+        "oprrest": "eqsel(internal,oid,internal,integer)",
+        "oprresult": "boolean",
+        "oprright": "@.sparsevec"
+      },
+      "member": true
+    },
+    {
+      "class": "pg_operator",
+      "identity": "@.\u003c\u003e(@.vector,@.vector)",
+      "definition": {
+        "oprcanhash": false,
+        "oprcanmerge": false,
+        "oprcode": "@.vector_ne(@.vector,@.vector)",
+        "oprcom": "@.\u003c\u003e(@.vector,@.vector)",
+        "oprjoin": "eqjoinsel(internal,oid,internal,smallint,internal)",
+        "oprkind": "b",
+        "oprleft": "@.vector",
+        "oprname": "\u003c\u003e",
+        "oprnegate": "@.=(@.vector,@.vector)",
+        "oprrest": "eqsel(internal,oid,internal,integer)",
+        "oprresult": "boolean",
+        "oprright": "@.vector"
+      },
+      "member": true
+    },
+    {
+      "class": "pg_operator",
+      "identity": "@.\u003c~\u003e(bit,bit)",
+      "definition": {
+        "oprcanhash": false,
+        "oprcanmerge": false,
+        "oprcode": "@.hamming_distance(bit,bit)",
+        "oprcom": "@.\u003c~\u003e(bit,bit)",
+        "oprjoin": "-",
+        "oprkind": "b",
+        "oprleft": "bit",
+        "oprname": "\u003c~\u003e",
+        "oprnegate": "0",
+        "oprrest": "-",
+        "oprresult": "double precision",
+        "oprright": "bit"
+      },
+      "member": true
+    },
+    {
+      "class": "pg_operator",
+      "identity": "@.=(@.halfvec,@.halfvec)",
+      "definition": {
+        "oprcanhash": false,
+        "oprcanmerge": false,
+        "oprcode": "@.halfvec_eq(@.halfvec,@.halfvec)",
+        "oprcom": "@.=(@.halfvec,@.halfvec)",
+        "oprjoin": "eqjoinsel(internal,oid,internal,smallint,internal)",
+        "oprkind": "b",
+        "oprleft": "@.halfvec",
+        "oprname": "=",
+        "oprnegate": "@.\u003c\u003e(@.halfvec,@.halfvec)",
+        "oprrest": "eqsel(internal,oid,internal,integer)",
+        "oprresult": "boolean",
+        "oprright": "@.halfvec"
+      },
+      "member": true
+    },
+    {
+      "class": "pg_operator",
+      "identity": "@.=(@.sparsevec,@.sparsevec)",
+      "definition": {
+        "oprcanhash": false,
+        "oprcanmerge": false,
+        "oprcode": "@.sparsevec_eq(@.sparsevec,@.sparsevec)",
+        "oprcom": "@.=(@.sparsevec,@.sparsevec)",
+        "oprjoin": "eqjoinsel(internal,oid,internal,smallint,internal)",
+        "oprkind": "b",
+        "oprleft": "@.sparsevec",
+        "oprname": "=",
+        "oprnegate": "@.\u003c\u003e(@.sparsevec,@.sparsevec)",
+        "oprrest": "eqsel(internal,oid,internal,integer)",
+        "oprresult": "boolean",
+        "oprright": "@.sparsevec"
+      },
+      "member": true
+    },
+    {
+      "class": "pg_operator",
+      "identity": "@.=(@.vector,@.vector)",
+      "definition": {
+        "oprcanhash": false,
+        "oprcanmerge": false,
+        "oprcode": "@.vector_eq(@.vector,@.vector)",
+        "oprcom": "@.=(@.vector,@.vector)",
+        "oprjoin": "eqjoinsel(internal,oid,internal,smallint,internal)",
+        "oprkind": "b",
+        "oprleft": "@.vector",
+        "oprname": "=",
+        "oprnegate": "@.\u003c\u003e(@.vector,@.vector)",
+        "oprrest": "eqsel(internal,oid,internal,integer)",
+        "oprresult": "boolean",
+        "oprright": "@.vector"
+      },
+      "member": true
+    },
+    {
+      "class": "pg_operator",
+      "identity": "@.\u003e(@.halfvec,@.halfvec)",
+      "definition": {
+        "oprcanhash": false,
+        "oprcanmerge": false,
+        "oprcode": "@.halfvec_gt(@.halfvec,@.halfvec)",
+        "oprcom": "@.\u003c(@.halfvec,@.halfvec)",
+        "oprjoin": "scalargtjoinsel(internal,oid,internal,smallint,internal)",
+        "oprkind": "b",
+        "oprleft": "@.halfvec",
+        "oprname": "\u003e",
+        "oprnegate": "@.\u003c=(@.halfvec,@.halfvec)",
+        "oprrest": "scalargtsel(internal,oid,internal,integer)",
+        "oprresult": "boolean",
+        "oprright": "@.halfvec"
+      },
+      "member": true
+    },
+    {
+      "class": "pg_operator",
+      "identity": "@.\u003e(@.sparsevec,@.sparsevec)",
+      "definition": {
+        "oprcanhash": false,
+        "oprcanmerge": false,
+        "oprcode": "@.sparsevec_gt(@.sparsevec,@.sparsevec)",
+        "oprcom": "@.\u003c(@.sparsevec,@.sparsevec)",
+        "oprjoin": "scalargtjoinsel(internal,oid,internal,smallint,internal)",
+        "oprkind": "b",
+        "oprleft": "@.sparsevec",
+        "oprname": "\u003e",
+        "oprnegate": "@.\u003c=(@.sparsevec,@.sparsevec)",
+        "oprrest": "scalargtsel(internal,oid,internal,integer)",
+        "oprresult": "boolean",
+        "oprright": "@.sparsevec"
+      },
+      "member": true
+    },
+    {
+      "class": "pg_operator",
+      "identity": "@.\u003e(@.vector,@.vector)",
+      "definition": {
+        "oprcanhash": false,
+        "oprcanmerge": false,
+        "oprcode": "@.vector_gt(@.vector,@.vector)",
+        "oprcom": "@.\u003c(@.vector,@.vector)",
+        "oprjoin": "scalargtjoinsel(internal,oid,internal,smallint,internal)",
+        "oprkind": "b",
+        "oprleft": "@.vector",
+        "oprname": "\u003e",
+        "oprnegate": "@.\u003c=(@.vector,@.vector)",
+        "oprrest": "scalargtsel(internal,oid,internal,integer)",
+        "oprresult": "boolean",
+        "oprright": "@.vector"
+      },
+      "member": true
+    },
+    {
+      "class": "pg_operator",
+      "identity": "@.\u003e=(@.halfvec,@.halfvec)",
+      "definition": {
+        "oprcanhash": false,
+        "oprcanmerge": false,
+        "oprcode": "@.halfvec_ge(@.halfvec,@.halfvec)",
+        "oprcom": "@.\u003c=(@.halfvec,@.halfvec)",
+        "oprjoin": "scalargejoinsel(internal,oid,internal,smallint,internal)",
+        "oprkind": "b",
+        "oprleft": "@.halfvec",
+        "oprname": "\u003e=",
+        "oprnegate": "@.\u003c(@.halfvec,@.halfvec)",
+        "oprrest": "scalargesel(internal,oid,internal,integer)",
+        "oprresult": "boolean",
+        "oprright": "@.halfvec"
+      },
+      "member": true
+    },
+    {
+      "class": "pg_operator",
+      "identity": "@.\u003e=(@.sparsevec,@.sparsevec)",
+      "definition": {
+        "oprcanhash": false,
+        "oprcanmerge": false,
+        "oprcode": "@.sparsevec_ge(@.sparsevec,@.sparsevec)",
+        "oprcom": "@.\u003c=(@.sparsevec,@.sparsevec)",
+        "oprjoin": "scalargejoinsel(internal,oid,internal,smallint,internal)",
+        "oprkind": "b",
+        "oprleft": "@.sparsevec",
+        "oprname": "\u003e=",
+        "oprnegate": "@.\u003c(@.sparsevec,@.sparsevec)",
+        "oprrest": "scalargesel(internal,oid,internal,integer)",
+        "oprresult": "boolean",
+        "oprright": "@.sparsevec"
+      },
+      "member": true
+    },
+    {
+      "class": "pg_operator",
+      "identity": "@.\u003e=(@.vector,@.vector)",
+      "definition": {
+        "oprcanhash": false,
+        "oprcanmerge": false,
+        "oprcode": "@.vector_ge(@.vector,@.vector)",
+        "oprcom": "@.\u003c=(@.vector,@.vector)",
+        "oprjoin": "scalargejoinsel(internal,oid,internal,smallint,internal)",
+        "oprkind": "b",
+        "oprleft": "@.vector",
+        "oprname": "\u003e=",
+        "oprnegate": "@.\u003c(@.vector,@.vector)",
+        "oprrest": "scalargesel(internal,oid,internal,integer)",
+        "oprresult": "boolean",
+        "oprright": "@.vector"
+      },
+      "member": true
+    },
+    {
+      "class": "pg_operator",
+      "identity": "@.||(@.halfvec,@.halfvec)",
+      "definition": {
+        "oprcanhash": false,
+        "oprcanmerge": false,
+        "oprcode": "@.halfvec_concat(@.halfvec,@.halfvec)",
+        "oprcom": "0",
+        "oprjoin": "-",
+        "oprkind": "b",
+        "oprleft": "@.halfvec",
+        "oprname": "||",
+        "oprnegate": "0",
+        "oprrest": "-",
+        "oprresult": "@.halfvec",
+        "oprright": "@.halfvec"
+      },
+      "member": true
+    },
+    {
+      "class": "pg_operator",
+      "identity": "@.||(@.vector,@.vector)",
+      "definition": {
+        "oprcanhash": false,
+        "oprcanmerge": false,
+        "oprcode": "@.vector_concat(@.vector,@.vector)",
+        "oprcom": "0",
+        "oprjoin": "-",
+        "oprkind": "b",
+        "oprleft": "@.vector",
+        "oprname": "||",
+        "oprnegate": "0",
+        "oprrest": "-",
+        "oprresult": "@.vector",
+        "oprright": "@.vector"
+      },
+      "member": true
+    },
+    {
+      "class": "pg_opfamily",
+      "identity": "@.bit_hamming_ops USING hnsw",
+      "definition": {
+        "method": "hnsw",
+        "name": "bit_hamming_ops"
+      },
+      "member": true
+    },
+    {
+      "class": "pg_opfamily",
+      "identity": "@.bit_hamming_ops USING ivfflat",
+      "definition": {
+        "method": "ivfflat",
+        "name": "bit_hamming_ops"
+      },
+      "member": true
+    },
+    {
+      "class": "pg_opfamily",
+      "identity": "@.bit_jaccard_ops USING hnsw",
+      "definition": {
+        "method": "hnsw",
+        "name": "bit_jaccard_ops"
+      },
+      "member": true
+    },
+    {
+      "class": "pg_opfamily",
+      "identity": "@.halfvec_cosine_ops USING hnsw",
+      "definition": {
+        "method": "hnsw",
+        "name": "halfvec_cosine_ops"
+      },
+      "member": true
+    },
+    {
+      "class": "pg_opfamily",
+      "identity": "@.halfvec_cosine_ops USING ivfflat",
+      "definition": {
+        "method": "ivfflat",
+        "name": "halfvec_cosine_ops"
+      },
+      "member": true
+    },
+    {
+      "class": "pg_opfamily",
+      "identity": "@.halfvec_ip_ops USING hnsw",
+      "definition": {
+        "method": "hnsw",
+        "name": "halfvec_ip_ops"
+      },
+      "member": true
+    },
+    {
+      "class": "pg_opfamily",
+      "identity": "@.halfvec_ip_ops USING ivfflat",
+      "definition": {
+        "method": "ivfflat",
+        "name": "halfvec_ip_ops"
+      },
+      "member": true
+    },
+    {
+      "class": "pg_opfamily",
+      "identity": "@.halfvec_l1_ops USING hnsw",
+      "definition": {
+        "method": "hnsw",
+        "name": "halfvec_l1_ops"
+      },
+      "member": true
+    },
+    {
+      "class": "pg_opfamily",
+      "identity": "@.halfvec_l2_ops USING hnsw",
+      "definition": {
+        "method": "hnsw",
+        "name": "halfvec_l2_ops"
+      },
+      "member": true
+    },
+    {
+      "class": "pg_opfamily",
+      "identity": "@.halfvec_l2_ops USING ivfflat",
+      "definition": {
+        "method": "ivfflat",
+        "name": "halfvec_l2_ops"
+      },
+      "member": true
+    },
+    {
+      "class": "pg_opfamily",
+      "identity": "@.halfvec_ops USING btree",
+      "definition": {
+        "method": "btree",
+        "name": "halfvec_ops"
+      },
+      "member": true
+    },
+    {
+      "class": "pg_opfamily",
+      "identity": "@.sparsevec_cosine_ops USING hnsw",
+      "definition": {
+        "method": "hnsw",
+        "name": "sparsevec_cosine_ops"
+      },
+      "member": true
+    },
+    {
+      "class": "pg_opfamily",
+      "identity": "@.sparsevec_ip_ops USING hnsw",
+      "definition": {
+        "method": "hnsw",
+        "name": "sparsevec_ip_ops"
+      },
+      "member": true
+    },
+    {
+      "class": "pg_opfamily",
+      "identity": "@.sparsevec_l1_ops USING hnsw",
+      "definition": {
+        "method": "hnsw",
+        "name": "sparsevec_l1_ops"
+      },
+      "member": true
+    },
+    {
+      "class": "pg_opfamily",
+      "identity": "@.sparsevec_l2_ops USING hnsw",
+      "definition": {
+        "method": "hnsw",
+        "name": "sparsevec_l2_ops"
+      },
+      "member": true
+    },
+    {
+      "class": "pg_opfamily",
+      "identity": "@.sparsevec_ops USING btree",
+      "definition": {
+        "method": "btree",
+        "name": "sparsevec_ops"
+      },
+      "member": true
+    },
+    {
+      "class": "pg_opfamily",
+      "identity": "@.vector_cosine_ops USING hnsw",
+      "definition": {
+        "method": "hnsw",
+        "name": "vector_cosine_ops"
+      },
+      "member": true
+    },
+    {
+      "class": "pg_opfamily",
+      "identity": "@.vector_cosine_ops USING ivfflat",
+      "definition": {
+        "method": "ivfflat",
+        "name": "vector_cosine_ops"
+      },
+      "member": true
+    },
+    {
+      "class": "pg_opfamily",
+      "identity": "@.vector_ip_ops USING hnsw",
+      "definition": {
+        "method": "hnsw",
+        "name": "vector_ip_ops"
+      },
+      "member": true
+    },
+    {
+      "class": "pg_opfamily",
+      "identity": "@.vector_ip_ops USING ivfflat",
+      "definition": {
+        "method": "ivfflat",
+        "name": "vector_ip_ops"
+      },
+      "member": true
+    },
+    {
+      "class": "pg_opfamily",
+      "identity": "@.vector_l1_ops USING hnsw",
+      "definition": {
+        "method": "hnsw",
+        "name": "vector_l1_ops"
+      },
+      "member": true
+    },
+    {
+      "class": "pg_opfamily",
+      "identity": "@.vector_l2_ops USING hnsw",
+      "definition": {
+        "method": "hnsw",
+        "name": "vector_l2_ops"
+      },
+      "member": true
+    },
+    {
+      "class": "pg_opfamily",
+      "identity": "@.vector_l2_ops USING ivfflat",
+      "definition": {
+        "method": "ivfflat",
+        "name": "vector_l2_ops"
+      },
+      "member": true
+    },
+    {
+      "class": "pg_opfamily",
+      "identity": "@.vector_ops USING btree",
+      "definition": {
+        "method": "btree",
+        "name": "vector_ops"
+      },
+      "member": true
+    },
+    {
+      "class": "pg_proc",
+      "identity": "@.array_to_halfvec(double precision[],integer,boolean)",
+      "definition": {
+        "aggregate": null,
+        "config": null,
+        "cost": 1,
+        "definition": "CREATE OR REPLACE FUNCTION @.array_to_halfvec(double precision[], integer, boolean)\n RETURNS @.halfvec\n LANGUAGE c\n IMMUTABLE PARALLEL SAFE STRICT\nAS '$libdir/vector', $function$array_to_halfvec$function$\n",
+        "kind": "f",
+        "leakproof": false,
+        "parallel": "s",
+        "returns_set": false,
+        "rows": 0,
+        "security_definer": false,
+        "signature": "@.array_to_halfvec(double precision[],integer,boolean)",
+        "strict": true,
+        "support": "-",
+        "volatility": "i"
+      },
+      "member": true
+    },
+    {
+      "class": "pg_proc",
+      "identity": "@.array_to_halfvec(integer[],integer,boolean)",
+      "definition": {
+        "aggregate": null,
+        "config": null,
+        "cost": 1,
+        "definition": "CREATE OR REPLACE FUNCTION @.array_to_halfvec(integer[], integer, boolean)\n RETURNS @.halfvec\n LANGUAGE c\n IMMUTABLE PARALLEL SAFE STRICT\nAS '$libdir/vector', $function$array_to_halfvec$function$\n",
+        "kind": "f",
+        "leakproof": false,
+        "parallel": "s",
+        "returns_set": false,
+        "rows": 0,
+        "security_definer": false,
+        "signature": "@.array_to_halfvec(integer[],integer,boolean)",
+        "strict": true,
+        "support": "-",
+        "volatility": "i"
+      },
+      "member": true
+    },
+    {
+      "class": "pg_proc",
+      "identity": "@.array_to_halfvec(numeric[],integer,boolean)",
+      "definition": {
+        "aggregate": null,
+        "config": null,
+        "cost": 1,
+        "definition": "CREATE OR REPLACE FUNCTION @.array_to_halfvec(numeric[], integer, boolean)\n RETURNS @.halfvec\n LANGUAGE c\n IMMUTABLE PARALLEL SAFE STRICT\nAS '$libdir/vector', $function$array_to_halfvec$function$\n",
+        "kind": "f",
+        "leakproof": false,
+        "parallel": "s",
+        "returns_set": false,
+        "rows": 0,
+        "security_definer": false,
+        "signature": "@.array_to_halfvec(numeric[],integer,boolean)",
+        "strict": true,
+        "support": "-",
+        "volatility": "i"
+      },
+      "member": true
+    },
+    {
+      "class": "pg_proc",
+      "identity": "@.array_to_halfvec(real[],integer,boolean)",
+      "definition": {
+        "aggregate": null,
+        "config": null,
+        "cost": 1,
+        "definition": "CREATE OR REPLACE FUNCTION @.array_to_halfvec(real[], integer, boolean)\n RETURNS @.halfvec\n LANGUAGE c\n IMMUTABLE PARALLEL SAFE STRICT\nAS '$libdir/vector', $function$array_to_halfvec$function$\n",
+        "kind": "f",
+        "leakproof": false,
+        "parallel": "s",
+        "returns_set": false,
+        "rows": 0,
+        "security_definer": false,
+        "signature": "@.array_to_halfvec(real[],integer,boolean)",
+        "strict": true,
+        "support": "-",
+        "volatility": "i"
+      },
+      "member": true
+    },
+    {
+      "class": "pg_proc",
+      "identity": "@.array_to_sparsevec(double precision[],integer,boolean)",
+      "definition": {
+        "aggregate": null,
+        "config": null,
+        "cost": 1,
+        "definition": "CREATE OR REPLACE FUNCTION @.array_to_sparsevec(double precision[], integer, boolean)\n RETURNS @.sparsevec\n LANGUAGE c\n IMMUTABLE PARALLEL SAFE STRICT\nAS '$libdir/vector', $function$array_to_sparsevec$function$\n",
+        "kind": "f",
+        "leakproof": false,
+        "parallel": "s",
+        "returns_set": false,
+        "rows": 0,
+        "security_definer": false,
+        "signature": "@.array_to_sparsevec(double precision[],integer,boolean)",
+        "strict": true,
+        "support": "-",
+        "volatility": "i"
+      },
+      "member": true
+    },
+    {
+      "class": "pg_proc",
+      "identity": "@.array_to_sparsevec(integer[],integer,boolean)",
+      "definition": {
+        "aggregate": null,
+        "config": null,
+        "cost": 1,
+        "definition": "CREATE OR REPLACE FUNCTION @.array_to_sparsevec(integer[], integer, boolean)\n RETURNS @.sparsevec\n LANGUAGE c\n IMMUTABLE PARALLEL SAFE STRICT\nAS '$libdir/vector', $function$array_to_sparsevec$function$\n",
+        "kind": "f",
+        "leakproof": false,
+        "parallel": "s",
+        "returns_set": false,
+        "rows": 0,
+        "security_definer": false,
+        "signature": "@.array_to_sparsevec(integer[],integer,boolean)",
+        "strict": true,
+        "support": "-",
+        "volatility": "i"
+      },
+      "member": true
+    },
+    {
+      "class": "pg_proc",
+      "identity": "@.array_to_sparsevec(numeric[],integer,boolean)",
+      "definition": {
+        "aggregate": null,
+        "config": null,
+        "cost": 1,
+        "definition": "CREATE OR REPLACE FUNCTION @.array_to_sparsevec(numeric[], integer, boolean)\n RETURNS @.sparsevec\n LANGUAGE c\n IMMUTABLE PARALLEL SAFE STRICT\nAS '$libdir/vector', $function$array_to_sparsevec$function$\n",
+        "kind": "f",
+        "leakproof": false,
+        "parallel": "s",
+        "returns_set": false,
+        "rows": 0,
+        "security_definer": false,
+        "signature": "@.array_to_sparsevec(numeric[],integer,boolean)",
+        "strict": true,
+        "support": "-",
+        "volatility": "i"
+      },
+      "member": true
+    },
+    {
+      "class": "pg_proc",
+      "identity": "@.array_to_sparsevec(real[],integer,boolean)",
+      "definition": {
+        "aggregate": null,
+        "config": null,
+        "cost": 1,
+        "definition": "CREATE OR REPLACE FUNCTION @.array_to_sparsevec(real[], integer, boolean)\n RETURNS @.sparsevec\n LANGUAGE c\n IMMUTABLE PARALLEL SAFE STRICT\nAS '$libdir/vector', $function$array_to_sparsevec$function$\n",
+        "kind": "f",
+        "leakproof": false,
+        "parallel": "s",
+        "returns_set": false,
+        "rows": 0,
+        "security_definer": false,
+        "signature": "@.array_to_sparsevec(real[],integer,boolean)",
+        "strict": true,
+        "support": "-",
+        "volatility": "i"
+      },
+      "member": true
+    },
+    {
+      "class": "pg_proc",
+      "identity": "@.array_to_vector(double precision[],integer,boolean)",
+      "definition": {
+        "aggregate": null,
+        "config": null,
+        "cost": 1,
+        "definition": "CREATE OR REPLACE FUNCTION @.array_to_vector(double precision[], integer, boolean)\n RETURNS @.vector\n LANGUAGE c\n IMMUTABLE PARALLEL SAFE STRICT\nAS '$libdir/vector', $function$array_to_vector$function$\n",
+        "kind": "f",
+        "leakproof": false,
+        "parallel": "s",
+        "returns_set": false,
+        "rows": 0,
+        "security_definer": false,
+        "signature": "@.array_to_vector(double precision[],integer,boolean)",
+        "strict": true,
+        "support": "-",
+        "volatility": "i"
+      },
+      "member": true
+    },
+    {
+      "class": "pg_proc",
+      "identity": "@.array_to_vector(integer[],integer,boolean)",
+      "definition": {
+        "aggregate": null,
+        "config": null,
+        "cost": 1,
+        "definition": "CREATE OR REPLACE FUNCTION @.array_to_vector(integer[], integer, boolean)\n RETURNS @.vector\n LANGUAGE c\n IMMUTABLE PARALLEL SAFE STRICT\nAS '$libdir/vector', $function$array_to_vector$function$\n",
+        "kind": "f",
+        "leakproof": false,
+        "parallel": "s",
+        "returns_set": false,
+        "rows": 0,
+        "security_definer": false,
+        "signature": "@.array_to_vector(integer[],integer,boolean)",
+        "strict": true,
+        "support": "-",
+        "volatility": "i"
+      },
+      "member": true
+    },
+    {
+      "class": "pg_proc",
+      "identity": "@.array_to_vector(numeric[],integer,boolean)",
+      "definition": {
+        "aggregate": null,
+        "config": null,
+        "cost": 1,
+        "definition": "CREATE OR REPLACE FUNCTION @.array_to_vector(numeric[], integer, boolean)\n RETURNS @.vector\n LANGUAGE c\n IMMUTABLE PARALLEL SAFE STRICT\nAS '$libdir/vector', $function$array_to_vector$function$\n",
+        "kind": "f",
+        "leakproof": false,
+        "parallel": "s",
+        "returns_set": false,
+        "rows": 0,
+        "security_definer": false,
+        "signature": "@.array_to_vector(numeric[],integer,boolean)",
+        "strict": true,
+        "support": "-",
+        "volatility": "i"
+      },
+      "member": true
+    },
+    {
+      "class": "pg_proc",
+      "identity": "@.array_to_vector(real[],integer,boolean)",
+      "definition": {
+        "aggregate": null,
+        "config": null,
+        "cost": 1,
+        "definition": "CREATE OR REPLACE FUNCTION @.array_to_vector(real[], integer, boolean)\n RETURNS @.vector\n LANGUAGE c\n IMMUTABLE PARALLEL SAFE STRICT\nAS '$libdir/vector', $function$array_to_vector$function$\n",
+        "kind": "f",
+        "leakproof": false,
+        "parallel": "s",
+        "returns_set": false,
+        "rows": 0,
+        "security_definer": false,
+        "signature": "@.array_to_vector(real[],integer,boolean)",
+        "strict": true,
+        "support": "-",
+        "volatility": "i"
+      },
+      "member": true
+    },
+    {
+      "class": "pg_proc",
+      "identity": "@.avg(@.halfvec)",
+      "definition": {
+        "aggregate": {
+          "aggcombinefn": "@.halfvec_combine(double precision[],double precision[])",
+          "aggdeserialfn": "-",
+          "aggfinalextra": false,
+          "aggfinalfn": "@.halfvec_avg(double precision[])",
+          "aggfinalmodify": "r",
+          "agginitval": "{0}",
+          "aggkind": "n",
+          "aggmfinalextra": false,
+          "aggmfinalfn": "-",
+          "aggmfinalmodify": "r",
+          "aggminitval": null,
+          "aggminvtransfn": "-",
+          "aggmtransfn": "-",
+          "aggmtransspace": 0,
+          "aggmtranstype": "-",
+          "aggnumdirectargs": 0,
+          "aggserialfn": "-",
+          "aggsortop": "0",
+          "aggtransfn": "@.halfvec_accum(double precision[],@.halfvec)",
+          "aggtransspace": 0,
+          "aggtranstype": "double precision[]"
+        },
+        "config": null,
+        "cost": 1,
+        "definition": null,
+        "kind": "a",
+        "leakproof": false,
+        "parallel": "s",
+        "returns_set": false,
+        "rows": 0,
+        "security_definer": false,
+        "signature": "@.avg(@.halfvec)",
+        "strict": false,
+        "support": "-",
+        "volatility": "i"
+      },
+      "member": true
+    },
+    {
+      "class": "pg_proc",
+      "identity": "@.avg(@.vector)",
+      "definition": {
+        "aggregate": {
+          "aggcombinefn": "@.vector_combine(double precision[],double precision[])",
+          "aggdeserialfn": "-",
+          "aggfinalextra": false,
+          "aggfinalfn": "@.vector_avg(double precision[])",
+          "aggfinalmodify": "r",
+          "agginitval": "{0}",
+          "aggkind": "n",
+          "aggmfinalextra": false,
+          "aggmfinalfn": "-",
+          "aggmfinalmodify": "r",
+          "aggminitval": null,
+          "aggminvtransfn": "-",
+          "aggmtransfn": "-",
+          "aggmtransspace": 0,
+          "aggmtranstype": "-",
+          "aggnumdirectargs": 0,
+          "aggserialfn": "-",
+          "aggsortop": "0",
+          "aggtransfn": "@.vector_accum(double precision[],@.vector)",
+          "aggtransspace": 0,
+          "aggtranstype": "double precision[]"
+        },
+        "config": null,
+        "cost": 1,
+        "definition": null,
+        "kind": "a",
+        "leakproof": false,
+        "parallel": "s",
+        "returns_set": false,
+        "rows": 0,
+        "security_definer": false,
+        "signature": "@.avg(@.vector)",
+        "strict": false,
+        "support": "-",
+        "volatility": "i"
+      },
+      "member": true
+    },
+    {
+      "class": "pg_proc",
+      "identity": "@.binary_quantize(@.halfvec)",
+      "definition": {
+        "aggregate": null,
+        "config": null,
+        "cost": 1,
+        "definition": "CREATE OR REPLACE FUNCTION @.binary_quantize(@.halfvec)\n RETURNS bit\n LANGUAGE c\n IMMUTABLE PARALLEL SAFE STRICT\nAS '$libdir/vector', $function$halfvec_binary_quantize$function$\n",
+        "kind": "f",
+        "leakproof": false,
+        "parallel": "s",
+        "returns_set": false,
+        "rows": 0,
+        "security_definer": false,
+        "signature": "@.binary_quantize(@.halfvec)",
+        "strict": true,
+        "support": "-",
+        "volatility": "i"
+      },
+      "member": true
+    },
+    {
+      "class": "pg_proc",
+      "identity": "@.binary_quantize(@.vector)",
+      "definition": {
+        "aggregate": null,
+        "config": null,
+        "cost": 1,
+        "definition": "CREATE OR REPLACE FUNCTION @.binary_quantize(@.vector)\n RETURNS bit\n LANGUAGE c\n IMMUTABLE PARALLEL SAFE STRICT\nAS '$libdir/vector', $function$binary_quantize$function$\n",
+        "kind": "f",
+        "leakproof": false,
+        "parallel": "s",
+        "returns_set": false,
+        "rows": 0,
+        "security_definer": false,
+        "signature": "@.binary_quantize(@.vector)",
+        "strict": true,
+        "support": "-",
+        "volatility": "i"
+      },
+      "member": true
+    },
+    {
+      "class": "pg_proc",
+      "identity": "@.cosine_distance(@.halfvec,@.halfvec)",
+      "definition": {
+        "aggregate": null,
+        "config": null,
+        "cost": 1,
+        "definition": "CREATE OR REPLACE FUNCTION @.cosine_distance(@.halfvec, @.halfvec)\n RETURNS double precision\n LANGUAGE c\n IMMUTABLE PARALLEL SAFE STRICT\nAS '$libdir/vector', $function$halfvec_cosine_distance$function$\n",
+        "kind": "f",
+        "leakproof": false,
+        "parallel": "s",
+        "returns_set": false,
+        "rows": 0,
+        "security_definer": false,
+        "signature": "@.cosine_distance(@.halfvec,@.halfvec)",
+        "strict": true,
+        "support": "-",
+        "volatility": "i"
+      },
+      "member": true
+    },
+    {
+      "class": "pg_proc",
+      "identity": "@.cosine_distance(@.sparsevec,@.sparsevec)",
+      "definition": {
+        "aggregate": null,
+        "config": null,
+        "cost": 1,
+        "definition": "CREATE OR REPLACE FUNCTION @.cosine_distance(@.sparsevec, @.sparsevec)\n RETURNS double precision\n LANGUAGE c\n IMMUTABLE PARALLEL SAFE STRICT\nAS '$libdir/vector', $function$sparsevec_cosine_distance$function$\n",
+        "kind": "f",
+        "leakproof": false,
+        "parallel": "s",
+        "returns_set": false,
+        "rows": 0,
+        "security_definer": false,
+        "signature": "@.cosine_distance(@.sparsevec,@.sparsevec)",
+        "strict": true,
+        "support": "-",
+        "volatility": "i"
+      },
+      "member": true
+    },
+    {
+      "class": "pg_proc",
+      "identity": "@.cosine_distance(@.vector,@.vector)",
+      "definition": {
+        "aggregate": null,
+        "config": null,
+        "cost": 1,
+        "definition": "CREATE OR REPLACE FUNCTION @.cosine_distance(@.vector, @.vector)\n RETURNS double precision\n LANGUAGE c\n IMMUTABLE PARALLEL SAFE STRICT\nAS '$libdir/vector', $function$cosine_distance$function$\n",
+        "kind": "f",
+        "leakproof": false,
+        "parallel": "s",
+        "returns_set": false,
+        "rows": 0,
+        "security_definer": false,
+        "signature": "@.cosine_distance(@.vector,@.vector)",
+        "strict": true,
+        "support": "-",
+        "volatility": "i"
+      },
+      "member": true
+    },
+    {
+      "class": "pg_proc",
+      "identity": "@.halfvec(@.halfvec,integer,boolean)",
+      "definition": {
+        "aggregate": null,
+        "config": null,
+        "cost": 1,
+        "definition": "CREATE OR REPLACE FUNCTION @.halfvec(@.halfvec, integer, boolean)\n RETURNS @.halfvec\n LANGUAGE c\n IMMUTABLE PARALLEL SAFE STRICT\nAS '$libdir/vector', $function$halfvec$function$\n",
+        "kind": "f",
+        "leakproof": false,
+        "parallel": "s",
+        "returns_set": false,
+        "rows": 0,
+        "security_definer": false,
+        "signature": "@.halfvec(@.halfvec,integer,boolean)",
+        "strict": true,
+        "support": "-",
+        "volatility": "i"
+      },
+      "member": true
+    },
+    {
+      "class": "pg_proc",
+      "identity": "@.halfvec_accum(double precision[],@.halfvec)",
+      "definition": {
+        "aggregate": null,
+        "config": null,
+        "cost": 1,
+        "definition": "CREATE OR REPLACE FUNCTION @.halfvec_accum(double precision[], @.halfvec)\n RETURNS double precision[]\n LANGUAGE c\n IMMUTABLE PARALLEL SAFE STRICT\nAS '$libdir/vector', $function$halfvec_accum$function$\n",
+        "kind": "f",
+        "leakproof": false,
+        "parallel": "s",
+        "returns_set": false,
+        "rows": 0,
+        "security_definer": false,
+        "signature": "@.halfvec_accum(double precision[],@.halfvec)",
+        "strict": true,
+        "support": "-",
+        "volatility": "i"
+      },
+      "member": true
+    },
+    {
+      "class": "pg_proc",
+      "identity": "@.halfvec_add(@.halfvec,@.halfvec)",
+      "definition": {
+        "aggregate": null,
+        "config": null,
+        "cost": 1,
+        "definition": "CREATE OR REPLACE FUNCTION @.halfvec_add(@.halfvec, @.halfvec)\n RETURNS @.halfvec\n LANGUAGE c\n IMMUTABLE PARALLEL SAFE STRICT\nAS '$libdir/vector', $function$halfvec_add$function$\n",
+        "kind": "f",
+        "leakproof": false,
+        "parallel": "s",
+        "returns_set": false,
+        "rows": 0,
+        "security_definer": false,
+        "signature": "@.halfvec_add(@.halfvec,@.halfvec)",
+        "strict": true,
+        "support": "-",
+        "volatility": "i"
+      },
+      "member": true
+    },
+    {
+      "class": "pg_proc",
+      "identity": "@.halfvec_avg(double precision[])",
+      "definition": {
+        "aggregate": null,
+        "config": null,
+        "cost": 1,
+        "definition": "CREATE OR REPLACE FUNCTION @.halfvec_avg(double precision[])\n RETURNS @.halfvec\n LANGUAGE c\n IMMUTABLE PARALLEL SAFE STRICT\nAS '$libdir/vector', $function$halfvec_avg$function$\n",
+        "kind": "f",
+        "leakproof": false,
+        "parallel": "s",
+        "returns_set": false,
+        "rows": 0,
+        "security_definer": false,
+        "signature": "@.halfvec_avg(double precision[])",
+        "strict": true,
+        "support": "-",
+        "volatility": "i"
+      },
+      "member": true
+    },
+    {
+      "class": "pg_proc",
+      "identity": "@.halfvec_cmp(@.halfvec,@.halfvec)",
+      "definition": {
+        "aggregate": null,
+        "config": null,
+        "cost": 1,
+        "definition": "CREATE OR REPLACE FUNCTION @.halfvec_cmp(@.halfvec, @.halfvec)\n RETURNS integer\n LANGUAGE c\n IMMUTABLE PARALLEL SAFE STRICT\nAS '$libdir/vector', $function$halfvec_cmp$function$\n",
+        "kind": "f",
+        "leakproof": false,
+        "parallel": "s",
+        "returns_set": false,
+        "rows": 0,
+        "security_definer": false,
+        "signature": "@.halfvec_cmp(@.halfvec,@.halfvec)",
+        "strict": true,
+        "support": "-",
+        "volatility": "i"
+      },
+      "member": true
+    },
+    {
+      "class": "pg_proc",
+      "identity": "@.halfvec_combine(double precision[],double precision[])",
+      "definition": {
+        "aggregate": null,
+        "config": null,
+        "cost": 1,
+        "definition": "CREATE OR REPLACE FUNCTION @.halfvec_combine(double precision[], double precision[])\n RETURNS double precision[]\n LANGUAGE c\n IMMUTABLE PARALLEL SAFE STRICT\nAS '$libdir/vector', $function$vector_combine$function$\n",
+        "kind": "f",
+        "leakproof": false,
+        "parallel": "s",
+        "returns_set": false,
+        "rows": 0,
+        "security_definer": false,
+        "signature": "@.halfvec_combine(double precision[],double precision[])",
+        "strict": true,
+        "support": "-",
+        "volatility": "i"
+      },
+      "member": true
+    },
+    {
+      "class": "pg_proc",
+      "identity": "@.halfvec_concat(@.halfvec,@.halfvec)",
+      "definition": {
+        "aggregate": null,
+        "config": null,
+        "cost": 1,
+        "definition": "CREATE OR REPLACE FUNCTION @.halfvec_concat(@.halfvec, @.halfvec)\n RETURNS @.halfvec\n LANGUAGE c\n IMMUTABLE PARALLEL SAFE STRICT\nAS '$libdir/vector', $function$halfvec_concat$function$\n",
+        "kind": "f",
+        "leakproof": false,
+        "parallel": "s",
+        "returns_set": false,
+        "rows": 0,
+        "security_definer": false,
+        "signature": "@.halfvec_concat(@.halfvec,@.halfvec)",
+        "strict": true,
+        "support": "-",
+        "volatility": "i"
+      },
+      "member": true
+    },
+    {
+      "class": "pg_proc",
+      "identity": "@.halfvec_eq(@.halfvec,@.halfvec)",
+      "definition": {
+        "aggregate": null,
+        "config": null,
+        "cost": 1,
+        "definition": "CREATE OR REPLACE FUNCTION @.halfvec_eq(@.halfvec, @.halfvec)\n RETURNS boolean\n LANGUAGE c\n IMMUTABLE PARALLEL SAFE STRICT\nAS '$libdir/vector', $function$halfvec_eq$function$\n",
+        "kind": "f",
+        "leakproof": false,
+        "parallel": "s",
+        "returns_set": false,
+        "rows": 0,
+        "security_definer": false,
+        "signature": "@.halfvec_eq(@.halfvec,@.halfvec)",
+        "strict": true,
+        "support": "-",
+        "volatility": "i"
+      },
+      "member": true
+    },
+    {
+      "class": "pg_proc",
+      "identity": "@.halfvec_ge(@.halfvec,@.halfvec)",
+      "definition": {
+        "aggregate": null,
+        "config": null,
+        "cost": 1,
+        "definition": "CREATE OR REPLACE FUNCTION @.halfvec_ge(@.halfvec, @.halfvec)\n RETURNS boolean\n LANGUAGE c\n IMMUTABLE PARALLEL SAFE STRICT\nAS '$libdir/vector', $function$halfvec_ge$function$\n",
+        "kind": "f",
+        "leakproof": false,
+        "parallel": "s",
+        "returns_set": false,
+        "rows": 0,
+        "security_definer": false,
+        "signature": "@.halfvec_ge(@.halfvec,@.halfvec)",
+        "strict": true,
+        "support": "-",
+        "volatility": "i"
+      },
+      "member": true
+    },
+    {
+      "class": "pg_proc",
+      "identity": "@.halfvec_gt(@.halfvec,@.halfvec)",
+      "definition": {
+        "aggregate": null,
+        "config": null,
+        "cost": 1,
+        "definition": "CREATE OR REPLACE FUNCTION @.halfvec_gt(@.halfvec, @.halfvec)\n RETURNS boolean\n LANGUAGE c\n IMMUTABLE PARALLEL SAFE STRICT\nAS '$libdir/vector', $function$halfvec_gt$function$\n",
+        "kind": "f",
+        "leakproof": false,
+        "parallel": "s",
+        "returns_set": false,
+        "rows": 0,
+        "security_definer": false,
+        "signature": "@.halfvec_gt(@.halfvec,@.halfvec)",
+        "strict": true,
+        "support": "-",
+        "volatility": "i"
+      },
+      "member": true
+    },
+    {
+      "class": "pg_proc",
+      "identity": "@.halfvec_in(pg_catalog.cstring,pg_catalog.oid,integer)",
+      "definition": {
+        "aggregate": null,
+        "config": null,
+        "cost": 1,
+        "definition": "CREATE OR REPLACE FUNCTION @.halfvec_in(cstring, oid, integer)\n RETURNS @.halfvec\n LANGUAGE c\n IMMUTABLE PARALLEL SAFE STRICT\nAS '$libdir/vector', $function$halfvec_in$function$\n",
+        "kind": "f",
+        "leakproof": false,
+        "parallel": "s",
+        "returns_set": false,
+        "rows": 0,
+        "security_definer": false,
+        "signature": "@.halfvec_in(cstring,oid,integer)",
+        "strict": true,
+        "support": "-",
+        "volatility": "i"
+      },
+      "member": true
+    },
+    {
+      "class": "pg_proc",
+      "identity": "@.halfvec_l2_squared_distance(@.halfvec,@.halfvec)",
+      "definition": {
+        "aggregate": null,
+        "config": null,
+        "cost": 1,
+        "definition": "CREATE OR REPLACE FUNCTION @.halfvec_l2_squared_distance(@.halfvec, @.halfvec)\n RETURNS double precision\n LANGUAGE c\n IMMUTABLE PARALLEL SAFE STRICT\nAS '$libdir/vector', $function$halfvec_l2_squared_distance$function$\n",
+        "kind": "f",
+        "leakproof": false,
+        "parallel": "s",
+        "returns_set": false,
+        "rows": 0,
+        "security_definer": false,
+        "signature": "@.halfvec_l2_squared_distance(@.halfvec,@.halfvec)",
+        "strict": true,
+        "support": "-",
+        "volatility": "i"
+      },
+      "member": true
+    },
+    {
+      "class": "pg_proc",
+      "identity": "@.halfvec_le(@.halfvec,@.halfvec)",
+      "definition": {
+        "aggregate": null,
+        "config": null,
+        "cost": 1,
+        "definition": "CREATE OR REPLACE FUNCTION @.halfvec_le(@.halfvec, @.halfvec)\n RETURNS boolean\n LANGUAGE c\n IMMUTABLE PARALLEL SAFE STRICT\nAS '$libdir/vector', $function$halfvec_le$function$\n",
+        "kind": "f",
+        "leakproof": false,
+        "parallel": "s",
+        "returns_set": false,
+        "rows": 0,
+        "security_definer": false,
+        "signature": "@.halfvec_le(@.halfvec,@.halfvec)",
+        "strict": true,
+        "support": "-",
+        "volatility": "i"
+      },
+      "member": true
+    },
+    {
+      "class": "pg_proc",
+      "identity": "@.halfvec_lt(@.halfvec,@.halfvec)",
+      "definition": {
+        "aggregate": null,
+        "config": null,
+        "cost": 1,
+        "definition": "CREATE OR REPLACE FUNCTION @.halfvec_lt(@.halfvec, @.halfvec)\n RETURNS boolean\n LANGUAGE c\n IMMUTABLE PARALLEL SAFE STRICT\nAS '$libdir/vector', $function$halfvec_lt$function$\n",
+        "kind": "f",
+        "leakproof": false,
+        "parallel": "s",
+        "returns_set": false,
+        "rows": 0,
+        "security_definer": false,
+        "signature": "@.halfvec_lt(@.halfvec,@.halfvec)",
+        "strict": true,
+        "support": "-",
+        "volatility": "i"
+      },
+      "member": true
+    },
+    {
+      "class": "pg_proc",
+      "identity": "@.halfvec_mul(@.halfvec,@.halfvec)",
+      "definition": {
+        "aggregate": null,
+        "config": null,
+        "cost": 1,
+        "definition": "CREATE OR REPLACE FUNCTION @.halfvec_mul(@.halfvec, @.halfvec)\n RETURNS @.halfvec\n LANGUAGE c\n IMMUTABLE PARALLEL SAFE STRICT\nAS '$libdir/vector', $function$halfvec_mul$function$\n",
+        "kind": "f",
+        "leakproof": false,
+        "parallel": "s",
+        "returns_set": false,
+        "rows": 0,
+        "security_definer": false,
+        "signature": "@.halfvec_mul(@.halfvec,@.halfvec)",
+        "strict": true,
+        "support": "-",
+        "volatility": "i"
+      },
+      "member": true
+    },
+    {
+      "class": "pg_proc",
+      "identity": "@.halfvec_ne(@.halfvec,@.halfvec)",
+      "definition": {
+        "aggregate": null,
+        "config": null,
+        "cost": 1,
+        "definition": "CREATE OR REPLACE FUNCTION @.halfvec_ne(@.halfvec, @.halfvec)\n RETURNS boolean\n LANGUAGE c\n IMMUTABLE PARALLEL SAFE STRICT\nAS '$libdir/vector', $function$halfvec_ne$function$\n",
+        "kind": "f",
+        "leakproof": false,
+        "parallel": "s",
+        "returns_set": false,
+        "rows": 0,
+        "security_definer": false,
+        "signature": "@.halfvec_ne(@.halfvec,@.halfvec)",
+        "strict": true,
+        "support": "-",
+        "volatility": "i"
+      },
+      "member": true
+    },
+    {
+      "class": "pg_proc",
+      "identity": "@.halfvec_negative_inner_product(@.halfvec,@.halfvec)",
+      "definition": {
+        "aggregate": null,
+        "config": null,
+        "cost": 1,
+        "definition": "CREATE OR REPLACE FUNCTION @.halfvec_negative_inner_product(@.halfvec, @.halfvec)\n RETURNS double precision\n LANGUAGE c\n IMMUTABLE PARALLEL SAFE STRICT\nAS '$libdir/vector', $function$halfvec_negative_inner_product$function$\n",
+        "kind": "f",
+        "leakproof": false,
+        "parallel": "s",
+        "returns_set": false,
+        "rows": 0,
+        "security_definer": false,
+        "signature": "@.halfvec_negative_inner_product(@.halfvec,@.halfvec)",
+        "strict": true,
+        "support": "-",
+        "volatility": "i"
+      },
+      "member": true
+    },
+    {
+      "class": "pg_proc",
+      "identity": "@.halfvec_out(@.halfvec)",
+      "definition": {
+        "aggregate": null,
+        "config": null,
+        "cost": 1,
+        "definition": "CREATE OR REPLACE FUNCTION @.halfvec_out(@.halfvec)\n RETURNS cstring\n LANGUAGE c\n IMMUTABLE PARALLEL SAFE STRICT\nAS '$libdir/vector', $function$halfvec_out$function$\n",
+        "kind": "f",
+        "leakproof": false,
+        "parallel": "s",
+        "returns_set": false,
+        "rows": 0,
+        "security_definer": false,
+        "signature": "@.halfvec_out(@.halfvec)",
+        "strict": true,
+        "support": "-",
+        "volatility": "i"
+      },
+      "member": true
+    },
+    {
+      "class": "pg_proc",
+      "identity": "@.halfvec_recv(pg_catalog.internal,pg_catalog.oid,integer)",
+      "definition": {
+        "aggregate": null,
+        "config": null,
+        "cost": 1,
+        "definition": "CREATE OR REPLACE FUNCTION @.halfvec_recv(internal, oid, integer)\n RETURNS @.halfvec\n LANGUAGE c\n IMMUTABLE PARALLEL SAFE STRICT\nAS '$libdir/vector', $function$halfvec_recv$function$\n",
+        "kind": "f",
+        "leakproof": false,
+        "parallel": "s",
+        "returns_set": false,
+        "rows": 0,
+        "security_definer": false,
+        "signature": "@.halfvec_recv(internal,oid,integer)",
+        "strict": true,
+        "support": "-",
+        "volatility": "i"
+      },
+      "member": true
+    },
+    {
+      "class": "pg_proc",
+      "identity": "@.halfvec_send(@.halfvec)",
+      "definition": {
+        "aggregate": null,
+        "config": null,
+        "cost": 1,
+        "definition": "CREATE OR REPLACE FUNCTION @.halfvec_send(@.halfvec)\n RETURNS bytea\n LANGUAGE c\n IMMUTABLE PARALLEL SAFE STRICT\nAS '$libdir/vector', $function$halfvec_send$function$\n",
+        "kind": "f",
+        "leakproof": false,
+        "parallel": "s",
+        "returns_set": false,
+        "rows": 0,
+        "security_definer": false,
+        "signature": "@.halfvec_send(@.halfvec)",
+        "strict": true,
+        "support": "-",
+        "volatility": "i"
+      },
+      "member": true
+    },
+    {
+      "class": "pg_proc",
+      "identity": "@.halfvec_spherical_distance(@.halfvec,@.halfvec)",
+      "definition": {
+        "aggregate": null,
+        "config": null,
+        "cost": 1,
+        "definition": "CREATE OR REPLACE FUNCTION @.halfvec_spherical_distance(@.halfvec, @.halfvec)\n RETURNS double precision\n LANGUAGE c\n IMMUTABLE PARALLEL SAFE STRICT\nAS '$libdir/vector', $function$halfvec_spherical_distance$function$\n",
+        "kind": "f",
+        "leakproof": false,
+        "parallel": "s",
+        "returns_set": false,
+        "rows": 0,
+        "security_definer": false,
+        "signature": "@.halfvec_spherical_distance(@.halfvec,@.halfvec)",
+        "strict": true,
+        "support": "-",
+        "volatility": "i"
+      },
+      "member": true
+    },
+    {
+      "class": "pg_proc",
+      "identity": "@.halfvec_sub(@.halfvec,@.halfvec)",
+      "definition": {
+        "aggregate": null,
+        "config": null,
+        "cost": 1,
+        "definition": "CREATE OR REPLACE FUNCTION @.halfvec_sub(@.halfvec, @.halfvec)\n RETURNS @.halfvec\n LANGUAGE c\n IMMUTABLE PARALLEL SAFE STRICT\nAS '$libdir/vector', $function$halfvec_sub$function$\n",
+        "kind": "f",
+        "leakproof": false,
+        "parallel": "s",
+        "returns_set": false,
+        "rows": 0,
+        "security_definer": false,
+        "signature": "@.halfvec_sub(@.halfvec,@.halfvec)",
+        "strict": true,
+        "support": "-",
+        "volatility": "i"
+      },
+      "member": true
+    },
+    {
+      "class": "pg_proc",
+      "identity": "@.halfvec_to_float4(@.halfvec,integer,boolean)",
+      "definition": {
+        "aggregate": null,
+        "config": null,
+        "cost": 1,
+        "definition": "CREATE OR REPLACE FUNCTION @.halfvec_to_float4(@.halfvec, integer, boolean)\n RETURNS real[]\n LANGUAGE c\n IMMUTABLE PARALLEL SAFE STRICT\nAS '$libdir/vector', $function$halfvec_to_float4$function$\n",
+        "kind": "f",
+        "leakproof": false,
+        "parallel": "s",
+        "returns_set": false,
+        "rows": 0,
+        "security_definer": false,
+        "signature": "@.halfvec_to_float4(@.halfvec,integer,boolean)",
+        "strict": true,
+        "support": "-",
+        "volatility": "i"
+      },
+      "member": true
+    },
+    {
+      "class": "pg_proc",
+      "identity": "@.halfvec_to_sparsevec(@.halfvec,integer,boolean)",
+      "definition": {
+        "aggregate": null,
+        "config": null,
+        "cost": 1,
+        "definition": "CREATE OR REPLACE FUNCTION @.halfvec_to_sparsevec(@.halfvec, integer, boolean)\n RETURNS @.sparsevec\n LANGUAGE c\n IMMUTABLE PARALLEL SAFE STRICT\nAS '$libdir/vector', $function$halfvec_to_sparsevec$function$\n",
+        "kind": "f",
+        "leakproof": false,
+        "parallel": "s",
+        "returns_set": false,
+        "rows": 0,
+        "security_definer": false,
+        "signature": "@.halfvec_to_sparsevec(@.halfvec,integer,boolean)",
+        "strict": true,
+        "support": "-",
+        "volatility": "i"
+      },
+      "member": true
+    },
+    {
+      "class": "pg_proc",
+      "identity": "@.halfvec_to_vector(@.halfvec,integer,boolean)",
+      "definition": {
+        "aggregate": null,
+        "config": null,
+        "cost": 1,
+        "definition": "CREATE OR REPLACE FUNCTION @.halfvec_to_vector(@.halfvec, integer, boolean)\n RETURNS @.vector\n LANGUAGE c\n IMMUTABLE PARALLEL SAFE STRICT\nAS '$libdir/vector', $function$halfvec_to_vector$function$\n",
+        "kind": "f",
+        "leakproof": false,
+        "parallel": "s",
+        "returns_set": false,
+        "rows": 0,
+        "security_definer": false,
+        "signature": "@.halfvec_to_vector(@.halfvec,integer,boolean)",
+        "strict": true,
+        "support": "-",
+        "volatility": "i"
+      },
+      "member": true
+    },
+    {
+      "class": "pg_proc",
+      "identity": "@.halfvec_typmod_in(pg_catalog.cstring[])",
+      "definition": {
+        "aggregate": null,
+        "config": null,
+        "cost": 1,
+        "definition": "CREATE OR REPLACE FUNCTION @.halfvec_typmod_in(cstring[])\n RETURNS integer\n LANGUAGE c\n IMMUTABLE PARALLEL SAFE STRICT\nAS '$libdir/vector', $function$halfvec_typmod_in$function$\n",
+        "kind": "f",
+        "leakproof": false,
+        "parallel": "s",
+        "returns_set": false,
+        "rows": 0,
+        "security_definer": false,
+        "signature": "@.halfvec_typmod_in(cstring[])",
+        "strict": true,
+        "support": "-",
+        "volatility": "i"
+      },
+      "member": true
+    },
+    {
+      "class": "pg_proc",
+      "identity": "@.hamming_distance(bit,bit)",
+      "definition": {
+        "aggregate": null,
+        "config": null,
+        "cost": 1,
+        "definition": "CREATE OR REPLACE FUNCTION @.hamming_distance(bit, bit)\n RETURNS double precision\n LANGUAGE c\n IMMUTABLE PARALLEL SAFE STRICT\nAS '$libdir/vector', $function$hamming_distance$function$\n",
+        "kind": "f",
+        "leakproof": false,
+        "parallel": "s",
+        "returns_set": false,
+        "rows": 0,
+        "security_definer": false,
+        "signature": "@.hamming_distance(bit,bit)",
+        "strict": true,
+        "support": "-",
+        "volatility": "i"
+      },
+      "member": true
+    },
+    {
+      "class": "pg_proc",
+      "identity": "@.hnsw_bit_support(pg_catalog.internal)",
+      "definition": {
+        "aggregate": null,
+        "config": null,
+        "cost": 1,
+        "definition": "CREATE OR REPLACE FUNCTION @.hnsw_bit_support(internal)\n RETURNS internal\n LANGUAGE c\nAS '$libdir/vector', $function$hnsw_bit_support$function$\n",
+        "kind": "f",
+        "leakproof": false,
+        "parallel": "u",
+        "returns_set": false,
+        "rows": 0,
+        "security_definer": false,
+        "signature": "@.hnsw_bit_support(internal)",
+        "strict": false,
+        "support": "-",
+        "volatility": "v"
+      },
+      "member": true
+    },
+    {
+      "class": "pg_proc",
+      "identity": "@.hnsw_halfvec_support(pg_catalog.internal)",
+      "definition": {
+        "aggregate": null,
+        "config": null,
+        "cost": 1,
+        "definition": "CREATE OR REPLACE FUNCTION @.hnsw_halfvec_support(internal)\n RETURNS internal\n LANGUAGE c\nAS '$libdir/vector', $function$hnsw_halfvec_support$function$\n",
+        "kind": "f",
+        "leakproof": false,
+        "parallel": "u",
+        "returns_set": false,
+        "rows": 0,
+        "security_definer": false,
+        "signature": "@.hnsw_halfvec_support(internal)",
+        "strict": false,
+        "support": "-",
+        "volatility": "v"
+      },
+      "member": true
+    },
+    {
+      "class": "pg_proc",
+      "identity": "@.hnsw_sparsevec_support(pg_catalog.internal)",
+      "definition": {
+        "aggregate": null,
+        "config": null,
+        "cost": 1,
+        "definition": "CREATE OR REPLACE FUNCTION @.hnsw_sparsevec_support(internal)\n RETURNS internal\n LANGUAGE c\nAS '$libdir/vector', $function$hnsw_sparsevec_support$function$\n",
+        "kind": "f",
+        "leakproof": false,
+        "parallel": "u",
+        "returns_set": false,
+        "rows": 0,
+        "security_definer": false,
+        "signature": "@.hnsw_sparsevec_support(internal)",
+        "strict": false,
+        "support": "-",
+        "volatility": "v"
+      },
+      "member": true
+    },
+    {
+      "class": "pg_proc",
+      "identity": "@.hnswhandler(pg_catalog.internal)",
+      "definition": {
+        "aggregate": null,
+        "config": null,
+        "cost": 1,
+        "definition": "CREATE OR REPLACE FUNCTION @.hnswhandler(internal)\n RETURNS index_am_handler\n LANGUAGE c\nAS '$libdir/vector', $function$hnswhandler$function$\n",
+        "kind": "f",
+        "leakproof": false,
+        "parallel": "u",
+        "returns_set": false,
+        "rows": 0,
+        "security_definer": false,
+        "signature": "@.hnswhandler(internal)",
+        "strict": false,
+        "support": "-",
+        "volatility": "v"
+      },
+      "member": true
+    },
+    {
+      "class": "pg_proc",
+      "identity": "@.inner_product(@.halfvec,@.halfvec)",
+      "definition": {
+        "aggregate": null,
+        "config": null,
+        "cost": 1,
+        "definition": "CREATE OR REPLACE FUNCTION @.inner_product(@.halfvec, @.halfvec)\n RETURNS double precision\n LANGUAGE c\n IMMUTABLE PARALLEL SAFE STRICT\nAS '$libdir/vector', $function$halfvec_inner_product$function$\n",
+        "kind": "f",
+        "leakproof": false,
+        "parallel": "s",
+        "returns_set": false,
+        "rows": 0,
+        "security_definer": false,
+        "signature": "@.inner_product(@.halfvec,@.halfvec)",
+        "strict": true,
+        "support": "-",
+        "volatility": "i"
+      },
+      "member": true
+    },
+    {
+      "class": "pg_proc",
+      "identity": "@.inner_product(@.sparsevec,@.sparsevec)",
+      "definition": {
+        "aggregate": null,
+        "config": null,
+        "cost": 1,
+        "definition": "CREATE OR REPLACE FUNCTION @.inner_product(@.sparsevec, @.sparsevec)\n RETURNS double precision\n LANGUAGE c\n IMMUTABLE PARALLEL SAFE STRICT\nAS '$libdir/vector', $function$sparsevec_inner_product$function$\n",
+        "kind": "f",
+        "leakproof": false,
+        "parallel": "s",
+        "returns_set": false,
+        "rows": 0,
+        "security_definer": false,
+        "signature": "@.inner_product(@.sparsevec,@.sparsevec)",
+        "strict": true,
+        "support": "-",
+        "volatility": "i"
+      },
+      "member": true
+    },
+    {
+      "class": "pg_proc",
+      "identity": "@.inner_product(@.vector,@.vector)",
+      "definition": {
+        "aggregate": null,
+        "config": null,
+        "cost": 1,
+        "definition": "CREATE OR REPLACE FUNCTION @.inner_product(@.vector, @.vector)\n RETURNS double precision\n LANGUAGE c\n IMMUTABLE PARALLEL SAFE STRICT\nAS '$libdir/vector', $function$inner_product$function$\n",
+        "kind": "f",
+        "leakproof": false,
+        "parallel": "s",
+        "returns_set": false,
+        "rows": 0,
+        "security_definer": false,
+        "signature": "@.inner_product(@.vector,@.vector)",
+        "strict": true,
+        "support": "-",
+        "volatility": "i"
+      },
+      "member": true
+    },
+    {
+      "class": "pg_proc",
+      "identity": "@.ivfflat_bit_support(pg_catalog.internal)",
+      "definition": {
+        "aggregate": null,
+        "config": null,
+        "cost": 1,
+        "definition": "CREATE OR REPLACE FUNCTION @.ivfflat_bit_support(internal)\n RETURNS internal\n LANGUAGE c\nAS '$libdir/vector', $function$ivfflat_bit_support$function$\n",
+        "kind": "f",
+        "leakproof": false,
+        "parallel": "u",
+        "returns_set": false,
+        "rows": 0,
+        "security_definer": false,
+        "signature": "@.ivfflat_bit_support(internal)",
+        "strict": false,
+        "support": "-",
+        "volatility": "v"
+      },
+      "member": true
+    },
+    {
+      "class": "pg_proc",
+      "identity": "@.ivfflat_halfvec_support(pg_catalog.internal)",
+      "definition": {
+        "aggregate": null,
+        "config": null,
+        "cost": 1,
+        "definition": "CREATE OR REPLACE FUNCTION @.ivfflat_halfvec_support(internal)\n RETURNS internal\n LANGUAGE c\nAS '$libdir/vector', $function$ivfflat_halfvec_support$function$\n",
+        "kind": "f",
+        "leakproof": false,
+        "parallel": "u",
+        "returns_set": false,
+        "rows": 0,
+        "security_definer": false,
+        "signature": "@.ivfflat_halfvec_support(internal)",
+        "strict": false,
+        "support": "-",
+        "volatility": "v"
+      },
+      "member": true
+    },
+    {
+      "class": "pg_proc",
+      "identity": "@.ivfflathandler(pg_catalog.internal)",
+      "definition": {
+        "aggregate": null,
+        "config": null,
+        "cost": 1,
+        "definition": "CREATE OR REPLACE FUNCTION @.ivfflathandler(internal)\n RETURNS index_am_handler\n LANGUAGE c\nAS '$libdir/vector', $function$ivfflathandler$function$\n",
+        "kind": "f",
+        "leakproof": false,
+        "parallel": "u",
+        "returns_set": false,
+        "rows": 0,
+        "security_definer": false,
+        "signature": "@.ivfflathandler(internal)",
+        "strict": false,
+        "support": "-",
+        "volatility": "v"
+      },
+      "member": true
+    },
+    {
+      "class": "pg_proc",
+      "identity": "@.jaccard_distance(bit,bit)",
+      "definition": {
+        "aggregate": null,
+        "config": null,
+        "cost": 1,
+        "definition": "CREATE OR REPLACE FUNCTION @.jaccard_distance(bit, bit)\n RETURNS double precision\n LANGUAGE c\n IMMUTABLE PARALLEL SAFE STRICT\nAS '$libdir/vector', $function$jaccard_distance$function$\n",
+        "kind": "f",
+        "leakproof": false,
+        "parallel": "s",
+        "returns_set": false,
+        "rows": 0,
+        "security_definer": false,
+        "signature": "@.jaccard_distance(bit,bit)",
+        "strict": true,
+        "support": "-",
+        "volatility": "i"
+      },
+      "member": true
+    },
+    {
+      "class": "pg_proc",
+      "identity": "@.l1_distance(@.halfvec,@.halfvec)",
+      "definition": {
+        "aggregate": null,
+        "config": null,
+        "cost": 1,
+        "definition": "CREATE OR REPLACE FUNCTION @.l1_distance(@.halfvec, @.halfvec)\n RETURNS double precision\n LANGUAGE c\n IMMUTABLE PARALLEL SAFE STRICT\nAS '$libdir/vector', $function$halfvec_l1_distance$function$\n",
+        "kind": "f",
+        "leakproof": false,
+        "parallel": "s",
+        "returns_set": false,
+        "rows": 0,
+        "security_definer": false,
+        "signature": "@.l1_distance(@.halfvec,@.halfvec)",
+        "strict": true,
+        "support": "-",
+        "volatility": "i"
+      },
+      "member": true
+    },
+    {
+      "class": "pg_proc",
+      "identity": "@.l1_distance(@.sparsevec,@.sparsevec)",
+      "definition": {
+        "aggregate": null,
+        "config": null,
+        "cost": 1,
+        "definition": "CREATE OR REPLACE FUNCTION @.l1_distance(@.sparsevec, @.sparsevec)\n RETURNS double precision\n LANGUAGE c\n IMMUTABLE PARALLEL SAFE STRICT\nAS '$libdir/vector', $function$sparsevec_l1_distance$function$\n",
+        "kind": "f",
+        "leakproof": false,
+        "parallel": "s",
+        "returns_set": false,
+        "rows": 0,
+        "security_definer": false,
+        "signature": "@.l1_distance(@.sparsevec,@.sparsevec)",
+        "strict": true,
+        "support": "-",
+        "volatility": "i"
+      },
+      "member": true
+    },
+    {
+      "class": "pg_proc",
+      "identity": "@.l1_distance(@.vector,@.vector)",
+      "definition": {
+        "aggregate": null,
+        "config": null,
+        "cost": 1,
+        "definition": "CREATE OR REPLACE FUNCTION @.l1_distance(@.vector, @.vector)\n RETURNS double precision\n LANGUAGE c\n IMMUTABLE PARALLEL SAFE STRICT\nAS '$libdir/vector', $function$l1_distance$function$\n",
+        "kind": "f",
+        "leakproof": false,
+        "parallel": "s",
+        "returns_set": false,
+        "rows": 0,
+        "security_definer": false,
+        "signature": "@.l1_distance(@.vector,@.vector)",
+        "strict": true,
+        "support": "-",
+        "volatility": "i"
+      },
+      "member": true
+    },
+    {
+      "class": "pg_proc",
+      "identity": "@.l2_distance(@.halfvec,@.halfvec)",
+      "definition": {
+        "aggregate": null,
+        "config": null,
+        "cost": 1,
+        "definition": "CREATE OR REPLACE FUNCTION @.l2_distance(@.halfvec, @.halfvec)\n RETURNS double precision\n LANGUAGE c\n IMMUTABLE PARALLEL SAFE STRICT\nAS '$libdir/vector', $function$halfvec_l2_distance$function$\n",
+        "kind": "f",
+        "leakproof": false,
+        "parallel": "s",
+        "returns_set": false,
+        "rows": 0,
+        "security_definer": false,
+        "signature": "@.l2_distance(@.halfvec,@.halfvec)",
+        "strict": true,
+        "support": "-",
+        "volatility": "i"
+      },
+      "member": true
+    },
+    {
+      "class": "pg_proc",
+      "identity": "@.l2_distance(@.sparsevec,@.sparsevec)",
+      "definition": {
+        "aggregate": null,
+        "config": null,
+        "cost": 1,
+        "definition": "CREATE OR REPLACE FUNCTION @.l2_distance(@.sparsevec, @.sparsevec)\n RETURNS double precision\n LANGUAGE c\n IMMUTABLE PARALLEL SAFE STRICT\nAS '$libdir/vector', $function$sparsevec_l2_distance$function$\n",
+        "kind": "f",
+        "leakproof": false,
+        "parallel": "s",
+        "returns_set": false,
+        "rows": 0,
+        "security_definer": false,
+        "signature": "@.l2_distance(@.sparsevec,@.sparsevec)",
+        "strict": true,
+        "support": "-",
+        "volatility": "i"
+      },
+      "member": true
+    },
+    {
+      "class": "pg_proc",
+      "identity": "@.l2_distance(@.vector,@.vector)",
+      "definition": {
+        "aggregate": null,
+        "config": null,
+        "cost": 1,
+        "definition": "CREATE OR REPLACE FUNCTION @.l2_distance(@.vector, @.vector)\n RETURNS double precision\n LANGUAGE c\n IMMUTABLE PARALLEL SAFE STRICT\nAS '$libdir/vector', $function$l2_distance$function$\n",
+        "kind": "f",
+        "leakproof": false,
+        "parallel": "s",
+        "returns_set": false,
+        "rows": 0,
+        "security_definer": false,
+        "signature": "@.l2_distance(@.vector,@.vector)",
+        "strict": true,
+        "support": "-",
+        "volatility": "i"
+      },
+      "member": true
+    },
+    {
+      "class": "pg_proc",
+      "identity": "@.l2_norm(@.halfvec)",
+      "definition": {
+        "aggregate": null,
+        "config": null,
+        "cost": 1,
+        "definition": "CREATE OR REPLACE FUNCTION @.l2_norm(@.halfvec)\n RETURNS double precision\n LANGUAGE c\n IMMUTABLE PARALLEL SAFE STRICT\nAS '$libdir/vector', $function$halfvec_l2_norm$function$\n",
+        "kind": "f",
+        "leakproof": false,
+        "parallel": "s",
+        "returns_set": false,
+        "rows": 0,
+        "security_definer": false,
+        "signature": "@.l2_norm(@.halfvec)",
+        "strict": true,
+        "support": "-",
+        "volatility": "i"
+      },
+      "member": true
+    },
+    {
+      "class": "pg_proc",
+      "identity": "@.l2_norm(@.sparsevec)",
+      "definition": {
+        "aggregate": null,
+        "config": null,
+        "cost": 1,
+        "definition": "CREATE OR REPLACE FUNCTION @.l2_norm(@.sparsevec)\n RETURNS double precision\n LANGUAGE c\n IMMUTABLE PARALLEL SAFE STRICT\nAS '$libdir/vector', $function$sparsevec_l2_norm$function$\n",
+        "kind": "f",
+        "leakproof": false,
+        "parallel": "s",
+        "returns_set": false,
+        "rows": 0,
+        "security_definer": false,
+        "signature": "@.l2_norm(@.sparsevec)",
+        "strict": true,
+        "support": "-",
+        "volatility": "i"
+      },
+      "member": true
+    },
+    {
+      "class": "pg_proc",
+      "identity": "@.l2_normalize(@.halfvec)",
+      "definition": {
+        "aggregate": null,
+        "config": null,
+        "cost": 1,
+        "definition": "CREATE OR REPLACE FUNCTION @.l2_normalize(@.halfvec)\n RETURNS @.halfvec\n LANGUAGE c\n IMMUTABLE PARALLEL SAFE STRICT\nAS '$libdir/vector', $function$halfvec_l2_normalize$function$\n",
+        "kind": "f",
+        "leakproof": false,
+        "parallel": "s",
+        "returns_set": false,
+        "rows": 0,
+        "security_definer": false,
+        "signature": "@.l2_normalize(@.halfvec)",
+        "strict": true,
+        "support": "-",
+        "volatility": "i"
+      },
+      "member": true
+    },
+    {
+      "class": "pg_proc",
+      "identity": "@.l2_normalize(@.sparsevec)",
+      "definition": {
+        "aggregate": null,
+        "config": null,
+        "cost": 1,
+        "definition": "CREATE OR REPLACE FUNCTION @.l2_normalize(@.sparsevec)\n RETURNS @.sparsevec\n LANGUAGE c\n IMMUTABLE PARALLEL SAFE STRICT\nAS '$libdir/vector', $function$sparsevec_l2_normalize$function$\n",
+        "kind": "f",
+        "leakproof": false,
+        "parallel": "s",
+        "returns_set": false,
+        "rows": 0,
+        "security_definer": false,
+        "signature": "@.l2_normalize(@.sparsevec)",
+        "strict": true,
+        "support": "-",
+        "volatility": "i"
+      },
+      "member": true
+    },
+    {
+      "class": "pg_proc",
+      "identity": "@.l2_normalize(@.vector)",
+      "definition": {
+        "aggregate": null,
+        "config": null,
+        "cost": 1,
+        "definition": "CREATE OR REPLACE FUNCTION @.l2_normalize(@.vector)\n RETURNS @.vector\n LANGUAGE c\n IMMUTABLE PARALLEL SAFE STRICT\nAS '$libdir/vector', $function$l2_normalize$function$\n",
+        "kind": "f",
+        "leakproof": false,
+        "parallel": "s",
+        "returns_set": false,
+        "rows": 0,
+        "security_definer": false,
+        "signature": "@.l2_normalize(@.vector)",
+        "strict": true,
+        "support": "-",
+        "volatility": "i"
+      },
+      "member": true
+    },
+    {
+      "class": "pg_proc",
+      "identity": "@.sparsevec(@.sparsevec,integer,boolean)",
+      "definition": {
+        "aggregate": null,
+        "config": null,
+        "cost": 1,
+        "definition": "CREATE OR REPLACE FUNCTION @.sparsevec(@.sparsevec, integer, boolean)\n RETURNS @.sparsevec\n LANGUAGE c\n IMMUTABLE PARALLEL SAFE STRICT\nAS '$libdir/vector', $function$sparsevec$function$\n",
+        "kind": "f",
+        "leakproof": false,
+        "parallel": "s",
+        "returns_set": false,
+        "rows": 0,
+        "security_definer": false,
+        "signature": "@.sparsevec(@.sparsevec,integer,boolean)",
+        "strict": true,
+        "support": "-",
+        "volatility": "i"
+      },
+      "member": true
+    },
+    {
+      "class": "pg_proc",
+      "identity": "@.sparsevec_cmp(@.sparsevec,@.sparsevec)",
+      "definition": {
+        "aggregate": null,
+        "config": null,
+        "cost": 1,
+        "definition": "CREATE OR REPLACE FUNCTION @.sparsevec_cmp(@.sparsevec, @.sparsevec)\n RETURNS integer\n LANGUAGE c\n IMMUTABLE PARALLEL SAFE STRICT\nAS '$libdir/vector', $function$sparsevec_cmp$function$\n",
+        "kind": "f",
+        "leakproof": false,
+        "parallel": "s",
+        "returns_set": false,
+        "rows": 0,
+        "security_definer": false,
+        "signature": "@.sparsevec_cmp(@.sparsevec,@.sparsevec)",
+        "strict": true,
+        "support": "-",
+        "volatility": "i"
+      },
+      "member": true
+    },
+    {
+      "class": "pg_proc",
+      "identity": "@.sparsevec_eq(@.sparsevec,@.sparsevec)",
+      "definition": {
+        "aggregate": null,
+        "config": null,
+        "cost": 1,
+        "definition": "CREATE OR REPLACE FUNCTION @.sparsevec_eq(@.sparsevec, @.sparsevec)\n RETURNS boolean\n LANGUAGE c\n IMMUTABLE PARALLEL SAFE STRICT\nAS '$libdir/vector', $function$sparsevec_eq$function$\n",
+        "kind": "f",
+        "leakproof": false,
+        "parallel": "s",
+        "returns_set": false,
+        "rows": 0,
+        "security_definer": false,
+        "signature": "@.sparsevec_eq(@.sparsevec,@.sparsevec)",
+        "strict": true,
+        "support": "-",
+        "volatility": "i"
+      },
+      "member": true
+    },
+    {
+      "class": "pg_proc",
+      "identity": "@.sparsevec_ge(@.sparsevec,@.sparsevec)",
+      "definition": {
+        "aggregate": null,
+        "config": null,
+        "cost": 1,
+        "definition": "CREATE OR REPLACE FUNCTION @.sparsevec_ge(@.sparsevec, @.sparsevec)\n RETURNS boolean\n LANGUAGE c\n IMMUTABLE PARALLEL SAFE STRICT\nAS '$libdir/vector', $function$sparsevec_ge$function$\n",
+        "kind": "f",
+        "leakproof": false,
+        "parallel": "s",
+        "returns_set": false,
+        "rows": 0,
+        "security_definer": false,
+        "signature": "@.sparsevec_ge(@.sparsevec,@.sparsevec)",
+        "strict": true,
+        "support": "-",
+        "volatility": "i"
+      },
+      "member": true
+    },
+    {
+      "class": "pg_proc",
+      "identity": "@.sparsevec_gt(@.sparsevec,@.sparsevec)",
+      "definition": {
+        "aggregate": null,
+        "config": null,
+        "cost": 1,
+        "definition": "CREATE OR REPLACE FUNCTION @.sparsevec_gt(@.sparsevec, @.sparsevec)\n RETURNS boolean\n LANGUAGE c\n IMMUTABLE PARALLEL SAFE STRICT\nAS '$libdir/vector', $function$sparsevec_gt$function$\n",
+        "kind": "f",
+        "leakproof": false,
+        "parallel": "s",
+        "returns_set": false,
+        "rows": 0,
+        "security_definer": false,
+        "signature": "@.sparsevec_gt(@.sparsevec,@.sparsevec)",
+        "strict": true,
+        "support": "-",
+        "volatility": "i"
+      },
+      "member": true
+    },
+    {
+      "class": "pg_proc",
+      "identity": "@.sparsevec_in(pg_catalog.cstring,pg_catalog.oid,integer)",
+      "definition": {
+        "aggregate": null,
+        "config": null,
+        "cost": 1,
+        "definition": "CREATE OR REPLACE FUNCTION @.sparsevec_in(cstring, oid, integer)\n RETURNS @.sparsevec\n LANGUAGE c\n IMMUTABLE PARALLEL SAFE STRICT\nAS '$libdir/vector', $function$sparsevec_in$function$\n",
+        "kind": "f",
+        "leakproof": false,
+        "parallel": "s",
+        "returns_set": false,
+        "rows": 0,
+        "security_definer": false,
+        "signature": "@.sparsevec_in(cstring,oid,integer)",
+        "strict": true,
+        "support": "-",
+        "volatility": "i"
+      },
+      "member": true
+    },
+    {
+      "class": "pg_proc",
+      "identity": "@.sparsevec_l2_squared_distance(@.sparsevec,@.sparsevec)",
+      "definition": {
+        "aggregate": null,
+        "config": null,
+        "cost": 1,
+        "definition": "CREATE OR REPLACE FUNCTION @.sparsevec_l2_squared_distance(@.sparsevec, @.sparsevec)\n RETURNS double precision\n LANGUAGE c\n IMMUTABLE PARALLEL SAFE STRICT\nAS '$libdir/vector', $function$sparsevec_l2_squared_distance$function$\n",
+        "kind": "f",
+        "leakproof": false,
+        "parallel": "s",
+        "returns_set": false,
+        "rows": 0,
+        "security_definer": false,
+        "signature": "@.sparsevec_l2_squared_distance(@.sparsevec,@.sparsevec)",
+        "strict": true,
+        "support": "-",
+        "volatility": "i"
+      },
+      "member": true
+    },
+    {
+      "class": "pg_proc",
+      "identity": "@.sparsevec_le(@.sparsevec,@.sparsevec)",
+      "definition": {
+        "aggregate": null,
+        "config": null,
+        "cost": 1,
+        "definition": "CREATE OR REPLACE FUNCTION @.sparsevec_le(@.sparsevec, @.sparsevec)\n RETURNS boolean\n LANGUAGE c\n IMMUTABLE PARALLEL SAFE STRICT\nAS '$libdir/vector', $function$sparsevec_le$function$\n",
+        "kind": "f",
+        "leakproof": false,
+        "parallel": "s",
+        "returns_set": false,
+        "rows": 0,
+        "security_definer": false,
+        "signature": "@.sparsevec_le(@.sparsevec,@.sparsevec)",
+        "strict": true,
+        "support": "-",
+        "volatility": "i"
+      },
+      "member": true
+    },
+    {
+      "class": "pg_proc",
+      "identity": "@.sparsevec_lt(@.sparsevec,@.sparsevec)",
+      "definition": {
+        "aggregate": null,
+        "config": null,
+        "cost": 1,
+        "definition": "CREATE OR REPLACE FUNCTION @.sparsevec_lt(@.sparsevec, @.sparsevec)\n RETURNS boolean\n LANGUAGE c\n IMMUTABLE PARALLEL SAFE STRICT\nAS '$libdir/vector', $function$sparsevec_lt$function$\n",
+        "kind": "f",
+        "leakproof": false,
+        "parallel": "s",
+        "returns_set": false,
+        "rows": 0,
+        "security_definer": false,
+        "signature": "@.sparsevec_lt(@.sparsevec,@.sparsevec)",
+        "strict": true,
+        "support": "-",
+        "volatility": "i"
+      },
+      "member": true
+    },
+    {
+      "class": "pg_proc",
+      "identity": "@.sparsevec_ne(@.sparsevec,@.sparsevec)",
+      "definition": {
+        "aggregate": null,
+        "config": null,
+        "cost": 1,
+        "definition": "CREATE OR REPLACE FUNCTION @.sparsevec_ne(@.sparsevec, @.sparsevec)\n RETURNS boolean\n LANGUAGE c\n IMMUTABLE PARALLEL SAFE STRICT\nAS '$libdir/vector', $function$sparsevec_ne$function$\n",
+        "kind": "f",
+        "leakproof": false,
+        "parallel": "s",
+        "returns_set": false,
+        "rows": 0,
+        "security_definer": false,
+        "signature": "@.sparsevec_ne(@.sparsevec,@.sparsevec)",
+        "strict": true,
+        "support": "-",
+        "volatility": "i"
+      },
+      "member": true
+    },
+    {
+      "class": "pg_proc",
+      "identity": "@.sparsevec_negative_inner_product(@.sparsevec,@.sparsevec)",
+      "definition": {
+        "aggregate": null,
+        "config": null,
+        "cost": 1,
+        "definition": "CREATE OR REPLACE FUNCTION @.sparsevec_negative_inner_product(@.sparsevec, @.sparsevec)\n RETURNS double precision\n LANGUAGE c\n IMMUTABLE PARALLEL SAFE STRICT\nAS '$libdir/vector', $function$sparsevec_negative_inner_product$function$\n",
+        "kind": "f",
+        "leakproof": false,
+        "parallel": "s",
+        "returns_set": false,
+        "rows": 0,
+        "security_definer": false,
+        "signature": "@.sparsevec_negative_inner_product(@.sparsevec,@.sparsevec)",
+        "strict": true,
+        "support": "-",
+        "volatility": "i"
+      },
+      "member": true
+    },
+    {
+      "class": "pg_proc",
+      "identity": "@.sparsevec_out(@.sparsevec)",
+      "definition": {
+        "aggregate": null,
+        "config": null,
+        "cost": 1,
+        "definition": "CREATE OR REPLACE FUNCTION @.sparsevec_out(@.sparsevec)\n RETURNS cstring\n LANGUAGE c\n IMMUTABLE PARALLEL SAFE STRICT\nAS '$libdir/vector', $function$sparsevec_out$function$\n",
+        "kind": "f",
+        "leakproof": false,
+        "parallel": "s",
+        "returns_set": false,
+        "rows": 0,
+        "security_definer": false,
+        "signature": "@.sparsevec_out(@.sparsevec)",
+        "strict": true,
+        "support": "-",
+        "volatility": "i"
+      },
+      "member": true
+    },
+    {
+      "class": "pg_proc",
+      "identity": "@.sparsevec_recv(pg_catalog.internal,pg_catalog.oid,integer)",
+      "definition": {
+        "aggregate": null,
+        "config": null,
+        "cost": 1,
+        "definition": "CREATE OR REPLACE FUNCTION @.sparsevec_recv(internal, oid, integer)\n RETURNS @.sparsevec\n LANGUAGE c\n IMMUTABLE PARALLEL SAFE STRICT\nAS '$libdir/vector', $function$sparsevec_recv$function$\n",
+        "kind": "f",
+        "leakproof": false,
+        "parallel": "s",
+        "returns_set": false,
+        "rows": 0,
+        "security_definer": false,
+        "signature": "@.sparsevec_recv(internal,oid,integer)",
+        "strict": true,
+        "support": "-",
+        "volatility": "i"
+      },
+      "member": true
+    },
+    {
+      "class": "pg_proc",
+      "identity": "@.sparsevec_send(@.sparsevec)",
+      "definition": {
+        "aggregate": null,
+        "config": null,
+        "cost": 1,
+        "definition": "CREATE OR REPLACE FUNCTION @.sparsevec_send(@.sparsevec)\n RETURNS bytea\n LANGUAGE c\n IMMUTABLE PARALLEL SAFE STRICT\nAS '$libdir/vector', $function$sparsevec_send$function$\n",
+        "kind": "f",
+        "leakproof": false,
+        "parallel": "s",
+        "returns_set": false,
+        "rows": 0,
+        "security_definer": false,
+        "signature": "@.sparsevec_send(@.sparsevec)",
+        "strict": true,
+        "support": "-",
+        "volatility": "i"
+      },
+      "member": true
+    },
+    {
+      "class": "pg_proc",
+      "identity": "@.sparsevec_to_halfvec(@.sparsevec,integer,boolean)",
+      "definition": {
+        "aggregate": null,
+        "config": null,
+        "cost": 1,
+        "definition": "CREATE OR REPLACE FUNCTION @.sparsevec_to_halfvec(@.sparsevec, integer, boolean)\n RETURNS @.halfvec\n LANGUAGE c\n IMMUTABLE PARALLEL SAFE STRICT\nAS '$libdir/vector', $function$sparsevec_to_halfvec$function$\n",
+        "kind": "f",
+        "leakproof": false,
+        "parallel": "s",
+        "returns_set": false,
+        "rows": 0,
+        "security_definer": false,
+        "signature": "@.sparsevec_to_halfvec(@.sparsevec,integer,boolean)",
+        "strict": true,
+        "support": "-",
+        "volatility": "i"
+      },
+      "member": true
+    },
+    {
+      "class": "pg_proc",
+      "identity": "@.sparsevec_to_vector(@.sparsevec,integer,boolean)",
+      "definition": {
+        "aggregate": null,
+        "config": null,
+        "cost": 1,
+        "definition": "CREATE OR REPLACE FUNCTION @.sparsevec_to_vector(@.sparsevec, integer, boolean)\n RETURNS @.vector\n LANGUAGE c\n IMMUTABLE PARALLEL SAFE STRICT\nAS '$libdir/vector', $function$sparsevec_to_vector$function$\n",
+        "kind": "f",
+        "leakproof": false,
+        "parallel": "s",
+        "returns_set": false,
+        "rows": 0,
+        "security_definer": false,
+        "signature": "@.sparsevec_to_vector(@.sparsevec,integer,boolean)",
+        "strict": true,
+        "support": "-",
+        "volatility": "i"
+      },
+      "member": true
+    },
+    {
+      "class": "pg_proc",
+      "identity": "@.sparsevec_typmod_in(pg_catalog.cstring[])",
+      "definition": {
+        "aggregate": null,
+        "config": null,
+        "cost": 1,
+        "definition": "CREATE OR REPLACE FUNCTION @.sparsevec_typmod_in(cstring[])\n RETURNS integer\n LANGUAGE c\n IMMUTABLE PARALLEL SAFE STRICT\nAS '$libdir/vector', $function$sparsevec_typmod_in$function$\n",
+        "kind": "f",
+        "leakproof": false,
+        "parallel": "s",
+        "returns_set": false,
+        "rows": 0,
+        "security_definer": false,
+        "signature": "@.sparsevec_typmod_in(cstring[])",
+        "strict": true,
+        "support": "-",
+        "volatility": "i"
+      },
+      "member": true
+    },
+    {
+      "class": "pg_proc",
+      "identity": "@.subvector(@.halfvec,integer,integer)",
+      "definition": {
+        "aggregate": null,
+        "config": null,
+        "cost": 1,
+        "definition": "CREATE OR REPLACE FUNCTION @.subvector(@.halfvec, integer, integer)\n RETURNS @.halfvec\n LANGUAGE c\n IMMUTABLE PARALLEL SAFE STRICT\nAS '$libdir/vector', $function$halfvec_subvector$function$\n",
+        "kind": "f",
+        "leakproof": false,
+        "parallel": "s",
+        "returns_set": false,
+        "rows": 0,
+        "security_definer": false,
+        "signature": "@.subvector(@.halfvec,integer,integer)",
+        "strict": true,
+        "support": "-",
+        "volatility": "i"
+      },
+      "member": true
+    },
+    {
+      "class": "pg_proc",
+      "identity": "@.subvector(@.vector,integer,integer)",
+      "definition": {
+        "aggregate": null,
+        "config": null,
+        "cost": 1,
+        "definition": "CREATE OR REPLACE FUNCTION @.subvector(@.vector, integer, integer)\n RETURNS @.vector\n LANGUAGE c\n IMMUTABLE PARALLEL SAFE STRICT\nAS '$libdir/vector', $function$subvector$function$\n",
+        "kind": "f",
+        "leakproof": false,
+        "parallel": "s",
+        "returns_set": false,
+        "rows": 0,
+        "security_definer": false,
+        "signature": "@.subvector(@.vector,integer,integer)",
+        "strict": true,
+        "support": "-",
+        "volatility": "i"
+      },
+      "member": true
+    },
+    {
+      "class": "pg_proc",
+      "identity": "@.sum(@.halfvec)",
+      "definition": {
+        "aggregate": {
+          "aggcombinefn": "@.halfvec_add(@.halfvec,@.halfvec)",
+          "aggdeserialfn": "-",
+          "aggfinalextra": false,
+          "aggfinalfn": "-",
+          "aggfinalmodify": "r",
+          "agginitval": null,
+          "aggkind": "n",
+          "aggmfinalextra": false,
+          "aggmfinalfn": "-",
+          "aggmfinalmodify": "r",
+          "aggminitval": null,
+          "aggminvtransfn": "-",
+          "aggmtransfn": "-",
+          "aggmtransspace": 0,
+          "aggmtranstype": "-",
+          "aggnumdirectargs": 0,
+          "aggserialfn": "-",
+          "aggsortop": "0",
+          "aggtransfn": "@.halfvec_add(@.halfvec,@.halfvec)",
+          "aggtransspace": 0,
+          "aggtranstype": "@.halfvec"
+        },
+        "config": null,
+        "cost": 1,
+        "definition": null,
+        "kind": "a",
+        "leakproof": false,
+        "parallel": "s",
+        "returns_set": false,
+        "rows": 0,
+        "security_definer": false,
+        "signature": "@.sum(@.halfvec)",
+        "strict": false,
+        "support": "-",
+        "volatility": "i"
+      },
+      "member": true
+    },
+    {
+      "class": "pg_proc",
+      "identity": "@.sum(@.vector)",
+      "definition": {
+        "aggregate": {
+          "aggcombinefn": "@.vector_add(@.vector,@.vector)",
+          "aggdeserialfn": "-",
+          "aggfinalextra": false,
+          "aggfinalfn": "-",
+          "aggfinalmodify": "r",
+          "agginitval": null,
+          "aggkind": "n",
+          "aggmfinalextra": false,
+          "aggmfinalfn": "-",
+          "aggmfinalmodify": "r",
+          "aggminitval": null,
+          "aggminvtransfn": "-",
+          "aggmtransfn": "-",
+          "aggmtransspace": 0,
+          "aggmtranstype": "-",
+          "aggnumdirectargs": 0,
+          "aggserialfn": "-",
+          "aggsortop": "0",
+          "aggtransfn": "@.vector_add(@.vector,@.vector)",
+          "aggtransspace": 0,
+          "aggtranstype": "@.vector"
+        },
+        "config": null,
+        "cost": 1,
+        "definition": null,
+        "kind": "a",
+        "leakproof": false,
+        "parallel": "s",
+        "returns_set": false,
+        "rows": 0,
+        "security_definer": false,
+        "signature": "@.sum(@.vector)",
+        "strict": false,
+        "support": "-",
+        "volatility": "i"
+      },
+      "member": true
+    },
+    {
+      "class": "pg_proc",
+      "identity": "@.vector(@.vector,integer,boolean)",
+      "definition": {
+        "aggregate": null,
+        "config": null,
+        "cost": 1,
+        "definition": "CREATE OR REPLACE FUNCTION @.vector(@.vector, integer, boolean)\n RETURNS @.vector\n LANGUAGE c\n IMMUTABLE PARALLEL SAFE STRICT\nAS '$libdir/vector', $function$vector$function$\n",
+        "kind": "f",
+        "leakproof": false,
+        "parallel": "s",
+        "returns_set": false,
+        "rows": 0,
+        "security_definer": false,
+        "signature": "@.vector(@.vector,integer,boolean)",
+        "strict": true,
+        "support": "-",
+        "volatility": "i"
+      },
+      "member": true
+    },
+    {
+      "class": "pg_proc",
+      "identity": "@.vector_accum(double precision[],@.vector)",
+      "definition": {
+        "aggregate": null,
+        "config": null,
+        "cost": 1,
+        "definition": "CREATE OR REPLACE FUNCTION @.vector_accum(double precision[], @.vector)\n RETURNS double precision[]\n LANGUAGE c\n IMMUTABLE PARALLEL SAFE STRICT\nAS '$libdir/vector', $function$vector_accum$function$\n",
+        "kind": "f",
+        "leakproof": false,
+        "parallel": "s",
+        "returns_set": false,
+        "rows": 0,
+        "security_definer": false,
+        "signature": "@.vector_accum(double precision[],@.vector)",
+        "strict": true,
+        "support": "-",
+        "volatility": "i"
+      },
+      "member": true
+    },
+    {
+      "class": "pg_proc",
+      "identity": "@.vector_add(@.vector,@.vector)",
+      "definition": {
+        "aggregate": null,
+        "config": null,
+        "cost": 1,
+        "definition": "CREATE OR REPLACE FUNCTION @.vector_add(@.vector, @.vector)\n RETURNS @.vector\n LANGUAGE c\n IMMUTABLE PARALLEL SAFE STRICT\nAS '$libdir/vector', $function$vector_add$function$\n",
+        "kind": "f",
+        "leakproof": false,
+        "parallel": "s",
+        "returns_set": false,
+        "rows": 0,
+        "security_definer": false,
+        "signature": "@.vector_add(@.vector,@.vector)",
+        "strict": true,
+        "support": "-",
+        "volatility": "i"
+      },
+      "member": true
+    },
+    {
+      "class": "pg_proc",
+      "identity": "@.vector_avg(double precision[])",
+      "definition": {
+        "aggregate": null,
+        "config": null,
+        "cost": 1,
+        "definition": "CREATE OR REPLACE FUNCTION @.vector_avg(double precision[])\n RETURNS @.vector\n LANGUAGE c\n IMMUTABLE PARALLEL SAFE STRICT\nAS '$libdir/vector', $function$vector_avg$function$\n",
+        "kind": "f",
+        "leakproof": false,
+        "parallel": "s",
+        "returns_set": false,
+        "rows": 0,
+        "security_definer": false,
+        "signature": "@.vector_avg(double precision[])",
+        "strict": true,
+        "support": "-",
+        "volatility": "i"
+      },
+      "member": true
+    },
+    {
+      "class": "pg_proc",
+      "identity": "@.vector_cmp(@.vector,@.vector)",
+      "definition": {
+        "aggregate": null,
+        "config": null,
+        "cost": 1,
+        "definition": "CREATE OR REPLACE FUNCTION @.vector_cmp(@.vector, @.vector)\n RETURNS integer\n LANGUAGE c\n IMMUTABLE PARALLEL SAFE STRICT\nAS '$libdir/vector', $function$vector_cmp$function$\n",
+        "kind": "f",
+        "leakproof": false,
+        "parallel": "s",
+        "returns_set": false,
+        "rows": 0,
+        "security_definer": false,
+        "signature": "@.vector_cmp(@.vector,@.vector)",
+        "strict": true,
+        "support": "-",
+        "volatility": "i"
+      },
+      "member": true
+    },
+    {
+      "class": "pg_proc",
+      "identity": "@.vector_combine(double precision[],double precision[])",
+      "definition": {
+        "aggregate": null,
+        "config": null,
+        "cost": 1,
+        "definition": "CREATE OR REPLACE FUNCTION @.vector_combine(double precision[], double precision[])\n RETURNS double precision[]\n LANGUAGE c\n IMMUTABLE PARALLEL SAFE STRICT\nAS '$libdir/vector', $function$vector_combine$function$\n",
+        "kind": "f",
+        "leakproof": false,
+        "parallel": "s",
+        "returns_set": false,
+        "rows": 0,
+        "security_definer": false,
+        "signature": "@.vector_combine(double precision[],double precision[])",
+        "strict": true,
+        "support": "-",
+        "volatility": "i"
+      },
+      "member": true
+    },
+    {
+      "class": "pg_proc",
+      "identity": "@.vector_concat(@.vector,@.vector)",
+      "definition": {
+        "aggregate": null,
+        "config": null,
+        "cost": 1,
+        "definition": "CREATE OR REPLACE FUNCTION @.vector_concat(@.vector, @.vector)\n RETURNS @.vector\n LANGUAGE c\n IMMUTABLE PARALLEL SAFE STRICT\nAS '$libdir/vector', $function$vector_concat$function$\n",
+        "kind": "f",
+        "leakproof": false,
+        "parallel": "s",
+        "returns_set": false,
+        "rows": 0,
+        "security_definer": false,
+        "signature": "@.vector_concat(@.vector,@.vector)",
+        "strict": true,
+        "support": "-",
+        "volatility": "i"
+      },
+      "member": true
+    },
+    {
+      "class": "pg_proc",
+      "identity": "@.vector_dims(@.halfvec)",
+      "definition": {
+        "aggregate": null,
+        "config": null,
+        "cost": 1,
+        "definition": "CREATE OR REPLACE FUNCTION @.vector_dims(@.halfvec)\n RETURNS integer\n LANGUAGE c\n IMMUTABLE PARALLEL SAFE STRICT\nAS '$libdir/vector', $function$halfvec_vector_dims$function$\n",
+        "kind": "f",
+        "leakproof": false,
+        "parallel": "s",
+        "returns_set": false,
+        "rows": 0,
+        "security_definer": false,
+        "signature": "@.vector_dims(@.halfvec)",
+        "strict": true,
+        "support": "-",
+        "volatility": "i"
+      },
+      "member": true
+    },
+    {
+      "class": "pg_proc",
+      "identity": "@.vector_dims(@.vector)",
+      "definition": {
+        "aggregate": null,
+        "config": null,
+        "cost": 1,
+        "definition": "CREATE OR REPLACE FUNCTION @.vector_dims(@.vector)\n RETURNS integer\n LANGUAGE c\n IMMUTABLE PARALLEL SAFE STRICT\nAS '$libdir/vector', $function$vector_dims$function$\n",
+        "kind": "f",
+        "leakproof": false,
+        "parallel": "s",
+        "returns_set": false,
+        "rows": 0,
+        "security_definer": false,
+        "signature": "@.vector_dims(@.vector)",
+        "strict": true,
+        "support": "-",
+        "volatility": "i"
+      },
+      "member": true
+    },
+    {
+      "class": "pg_proc",
+      "identity": "@.vector_eq(@.vector,@.vector)",
+      "definition": {
+        "aggregate": null,
+        "config": null,
+        "cost": 1,
+        "definition": "CREATE OR REPLACE FUNCTION @.vector_eq(@.vector, @.vector)\n RETURNS boolean\n LANGUAGE c\n IMMUTABLE PARALLEL SAFE STRICT\nAS '$libdir/vector', $function$vector_eq$function$\n",
+        "kind": "f",
+        "leakproof": false,
+        "parallel": "s",
+        "returns_set": false,
+        "rows": 0,
+        "security_definer": false,
+        "signature": "@.vector_eq(@.vector,@.vector)",
+        "strict": true,
+        "support": "-",
+        "volatility": "i"
+      },
+      "member": true
+    },
+    {
+      "class": "pg_proc",
+      "identity": "@.vector_ge(@.vector,@.vector)",
+      "definition": {
+        "aggregate": null,
+        "config": null,
+        "cost": 1,
+        "definition": "CREATE OR REPLACE FUNCTION @.vector_ge(@.vector, @.vector)\n RETURNS boolean\n LANGUAGE c\n IMMUTABLE PARALLEL SAFE STRICT\nAS '$libdir/vector', $function$vector_ge$function$\n",
+        "kind": "f",
+        "leakproof": false,
+        "parallel": "s",
+        "returns_set": false,
+        "rows": 0,
+        "security_definer": false,
+        "signature": "@.vector_ge(@.vector,@.vector)",
+        "strict": true,
+        "support": "-",
+        "volatility": "i"
+      },
+      "member": true
+    },
+    {
+      "class": "pg_proc",
+      "identity": "@.vector_gt(@.vector,@.vector)",
+      "definition": {
+        "aggregate": null,
+        "config": null,
+        "cost": 1,
+        "definition": "CREATE OR REPLACE FUNCTION @.vector_gt(@.vector, @.vector)\n RETURNS boolean\n LANGUAGE c\n IMMUTABLE PARALLEL SAFE STRICT\nAS '$libdir/vector', $function$vector_gt$function$\n",
+        "kind": "f",
+        "leakproof": false,
+        "parallel": "s",
+        "returns_set": false,
+        "rows": 0,
+        "security_definer": false,
+        "signature": "@.vector_gt(@.vector,@.vector)",
+        "strict": true,
+        "support": "-",
+        "volatility": "i"
+      },
+      "member": true
+    },
+    {
+      "class": "pg_proc",
+      "identity": "@.vector_in(pg_catalog.cstring,pg_catalog.oid,integer)",
+      "definition": {
+        "aggregate": null,
+        "config": null,
+        "cost": 1,
+        "definition": "CREATE OR REPLACE FUNCTION @.vector_in(cstring, oid, integer)\n RETURNS @.vector\n LANGUAGE c\n IMMUTABLE PARALLEL SAFE STRICT\nAS '$libdir/vector', $function$vector_in$function$\n",
+        "kind": "f",
+        "leakproof": false,
+        "parallel": "s",
+        "returns_set": false,
+        "rows": 0,
+        "security_definer": false,
+        "signature": "@.vector_in(cstring,oid,integer)",
+        "strict": true,
+        "support": "-",
+        "volatility": "i"
+      },
+      "member": true
+    },
+    {
+      "class": "pg_proc",
+      "identity": "@.vector_l2_squared_distance(@.vector,@.vector)",
+      "definition": {
+        "aggregate": null,
+        "config": null,
+        "cost": 1,
+        "definition": "CREATE OR REPLACE FUNCTION @.vector_l2_squared_distance(@.vector, @.vector)\n RETURNS double precision\n LANGUAGE c\n IMMUTABLE PARALLEL SAFE STRICT\nAS '$libdir/vector', $function$vector_l2_squared_distance$function$\n",
+        "kind": "f",
+        "leakproof": false,
+        "parallel": "s",
+        "returns_set": false,
+        "rows": 0,
+        "security_definer": false,
+        "signature": "@.vector_l2_squared_distance(@.vector,@.vector)",
+        "strict": true,
+        "support": "-",
+        "volatility": "i"
+      },
+      "member": true
+    },
+    {
+      "class": "pg_proc",
+      "identity": "@.vector_le(@.vector,@.vector)",
+      "definition": {
+        "aggregate": null,
+        "config": null,
+        "cost": 1,
+        "definition": "CREATE OR REPLACE FUNCTION @.vector_le(@.vector, @.vector)\n RETURNS boolean\n LANGUAGE c\n IMMUTABLE PARALLEL SAFE STRICT\nAS '$libdir/vector', $function$vector_le$function$\n",
+        "kind": "f",
+        "leakproof": false,
+        "parallel": "s",
+        "returns_set": false,
+        "rows": 0,
+        "security_definer": false,
+        "signature": "@.vector_le(@.vector,@.vector)",
+        "strict": true,
+        "support": "-",
+        "volatility": "i"
+      },
+      "member": true
+    },
+    {
+      "class": "pg_proc",
+      "identity": "@.vector_lt(@.vector,@.vector)",
+      "definition": {
+        "aggregate": null,
+        "config": null,
+        "cost": 1,
+        "definition": "CREATE OR REPLACE FUNCTION @.vector_lt(@.vector, @.vector)\n RETURNS boolean\n LANGUAGE c\n IMMUTABLE PARALLEL SAFE STRICT\nAS '$libdir/vector', $function$vector_lt$function$\n",
+        "kind": "f",
+        "leakproof": false,
+        "parallel": "s",
+        "returns_set": false,
+        "rows": 0,
+        "security_definer": false,
+        "signature": "@.vector_lt(@.vector,@.vector)",
+        "strict": true,
+        "support": "-",
+        "volatility": "i"
+      },
+      "member": true
+    },
+    {
+      "class": "pg_proc",
+      "identity": "@.vector_mul(@.vector,@.vector)",
+      "definition": {
+        "aggregate": null,
+        "config": null,
+        "cost": 1,
+        "definition": "CREATE OR REPLACE FUNCTION @.vector_mul(@.vector, @.vector)\n RETURNS @.vector\n LANGUAGE c\n IMMUTABLE PARALLEL SAFE STRICT\nAS '$libdir/vector', $function$vector_mul$function$\n",
+        "kind": "f",
+        "leakproof": false,
+        "parallel": "s",
+        "returns_set": false,
+        "rows": 0,
+        "security_definer": false,
+        "signature": "@.vector_mul(@.vector,@.vector)",
+        "strict": true,
+        "support": "-",
+        "volatility": "i"
+      },
+      "member": true
+    },
+    {
+      "class": "pg_proc",
+      "identity": "@.vector_ne(@.vector,@.vector)",
+      "definition": {
+        "aggregate": null,
+        "config": null,
+        "cost": 1,
+        "definition": "CREATE OR REPLACE FUNCTION @.vector_ne(@.vector, @.vector)\n RETURNS boolean\n LANGUAGE c\n IMMUTABLE PARALLEL SAFE STRICT\nAS '$libdir/vector', $function$vector_ne$function$\n",
+        "kind": "f",
+        "leakproof": false,
+        "parallel": "s",
+        "returns_set": false,
+        "rows": 0,
+        "security_definer": false,
+        "signature": "@.vector_ne(@.vector,@.vector)",
+        "strict": true,
+        "support": "-",
+        "volatility": "i"
+      },
+      "member": true
+    },
+    {
+      "class": "pg_proc",
+      "identity": "@.vector_negative_inner_product(@.vector,@.vector)",
+      "definition": {
+        "aggregate": null,
+        "config": null,
+        "cost": 1,
+        "definition": "CREATE OR REPLACE FUNCTION @.vector_negative_inner_product(@.vector, @.vector)\n RETURNS double precision\n LANGUAGE c\n IMMUTABLE PARALLEL SAFE STRICT\nAS '$libdir/vector', $function$vector_negative_inner_product$function$\n",
+        "kind": "f",
+        "leakproof": false,
+        "parallel": "s",
+        "returns_set": false,
+        "rows": 0,
+        "security_definer": false,
+        "signature": "@.vector_negative_inner_product(@.vector,@.vector)",
+        "strict": true,
+        "support": "-",
+        "volatility": "i"
+      },
+      "member": true
+    },
+    {
+      "class": "pg_proc",
+      "identity": "@.vector_norm(@.vector)",
+      "definition": {
+        "aggregate": null,
+        "config": null,
+        "cost": 1,
+        "definition": "CREATE OR REPLACE FUNCTION @.vector_norm(@.vector)\n RETURNS double precision\n LANGUAGE c\n IMMUTABLE PARALLEL SAFE STRICT\nAS '$libdir/vector', $function$vector_norm$function$\n",
+        "kind": "f",
+        "leakproof": false,
+        "parallel": "s",
+        "returns_set": false,
+        "rows": 0,
+        "security_definer": false,
+        "signature": "@.vector_norm(@.vector)",
+        "strict": true,
+        "support": "-",
+        "volatility": "i"
+      },
+      "member": true
+    },
+    {
+      "class": "pg_proc",
+      "identity": "@.vector_out(@.vector)",
+      "definition": {
+        "aggregate": null,
+        "config": null,
+        "cost": 1,
+        "definition": "CREATE OR REPLACE FUNCTION @.vector_out(@.vector)\n RETURNS cstring\n LANGUAGE c\n IMMUTABLE PARALLEL SAFE STRICT\nAS '$libdir/vector', $function$vector_out$function$\n",
+        "kind": "f",
+        "leakproof": false,
+        "parallel": "s",
+        "returns_set": false,
+        "rows": 0,
+        "security_definer": false,
+        "signature": "@.vector_out(@.vector)",
+        "strict": true,
+        "support": "-",
+        "volatility": "i"
+      },
+      "member": true
+    },
+    {
+      "class": "pg_proc",
+      "identity": "@.vector_recv(pg_catalog.internal,pg_catalog.oid,integer)",
+      "definition": {
+        "aggregate": null,
+        "config": null,
+        "cost": 1,
+        "definition": "CREATE OR REPLACE FUNCTION @.vector_recv(internal, oid, integer)\n RETURNS @.vector\n LANGUAGE c\n IMMUTABLE PARALLEL SAFE STRICT\nAS '$libdir/vector', $function$vector_recv$function$\n",
+        "kind": "f",
+        "leakproof": false,
+        "parallel": "s",
+        "returns_set": false,
+        "rows": 0,
+        "security_definer": false,
+        "signature": "@.vector_recv(internal,oid,integer)",
+        "strict": true,
+        "support": "-",
+        "volatility": "i"
+      },
+      "member": true
+    },
+    {
+      "class": "pg_proc",
+      "identity": "@.vector_send(@.vector)",
+      "definition": {
+        "aggregate": null,
+        "config": null,
+        "cost": 1,
+        "definition": "CREATE OR REPLACE FUNCTION @.vector_send(@.vector)\n RETURNS bytea\n LANGUAGE c\n IMMUTABLE PARALLEL SAFE STRICT\nAS '$libdir/vector', $function$vector_send$function$\n",
+        "kind": "f",
+        "leakproof": false,
+        "parallel": "s",
+        "returns_set": false,
+        "rows": 0,
+        "security_definer": false,
+        "signature": "@.vector_send(@.vector)",
+        "strict": true,
+        "support": "-",
+        "volatility": "i"
+      },
+      "member": true
+    },
+    {
+      "class": "pg_proc",
+      "identity": "@.vector_spherical_distance(@.vector,@.vector)",
+      "definition": {
+        "aggregate": null,
+        "config": null,
+        "cost": 1,
+        "definition": "CREATE OR REPLACE FUNCTION @.vector_spherical_distance(@.vector, @.vector)\n RETURNS double precision\n LANGUAGE c\n IMMUTABLE PARALLEL SAFE STRICT\nAS '$libdir/vector', $function$vector_spherical_distance$function$\n",
+        "kind": "f",
+        "leakproof": false,
+        "parallel": "s",
+        "returns_set": false,
+        "rows": 0,
+        "security_definer": false,
+        "signature": "@.vector_spherical_distance(@.vector,@.vector)",
+        "strict": true,
+        "support": "-",
+        "volatility": "i"
+      },
+      "member": true
+    },
+    {
+      "class": "pg_proc",
+      "identity": "@.vector_sub(@.vector,@.vector)",
+      "definition": {
+        "aggregate": null,
+        "config": null,
+        "cost": 1,
+        "definition": "CREATE OR REPLACE FUNCTION @.vector_sub(@.vector, @.vector)\n RETURNS @.vector\n LANGUAGE c\n IMMUTABLE PARALLEL SAFE STRICT\nAS '$libdir/vector', $function$vector_sub$function$\n",
+        "kind": "f",
+        "leakproof": false,
+        "parallel": "s",
+        "returns_set": false,
+        "rows": 0,
+        "security_definer": false,
+        "signature": "@.vector_sub(@.vector,@.vector)",
+        "strict": true,
+        "support": "-",
+        "volatility": "i"
+      },
+      "member": true
+    },
+    {
+      "class": "pg_proc",
+      "identity": "@.vector_to_float4(@.vector,integer,boolean)",
+      "definition": {
+        "aggregate": null,
+        "config": null,
+        "cost": 1,
+        "definition": "CREATE OR REPLACE FUNCTION @.vector_to_float4(@.vector, integer, boolean)\n RETURNS real[]\n LANGUAGE c\n IMMUTABLE PARALLEL SAFE STRICT\nAS '$libdir/vector', $function$vector_to_float4$function$\n",
+        "kind": "f",
+        "leakproof": false,
+        "parallel": "s",
+        "returns_set": false,
+        "rows": 0,
+        "security_definer": false,
+        "signature": "@.vector_to_float4(@.vector,integer,boolean)",
+        "strict": true,
+        "support": "-",
+        "volatility": "i"
+      },
+      "member": true
+    },
+    {
+      "class": "pg_proc",
+      "identity": "@.vector_to_halfvec(@.vector,integer,boolean)",
+      "definition": {
+        "aggregate": null,
+        "config": null,
+        "cost": 1,
+        "definition": "CREATE OR REPLACE FUNCTION @.vector_to_halfvec(@.vector, integer, boolean)\n RETURNS @.halfvec\n LANGUAGE c\n IMMUTABLE PARALLEL SAFE STRICT\nAS '$libdir/vector', $function$vector_to_halfvec$function$\n",
+        "kind": "f",
+        "leakproof": false,
+        "parallel": "s",
+        "returns_set": false,
+        "rows": 0,
+        "security_definer": false,
+        "signature": "@.vector_to_halfvec(@.vector,integer,boolean)",
+        "strict": true,
+        "support": "-",
+        "volatility": "i"
+      },
+      "member": true
+    },
+    {
+      "class": "pg_proc",
+      "identity": "@.vector_to_sparsevec(@.vector,integer,boolean)",
+      "definition": {
+        "aggregate": null,
+        "config": null,
+        "cost": 1,
+        "definition": "CREATE OR REPLACE FUNCTION @.vector_to_sparsevec(@.vector, integer, boolean)\n RETURNS @.sparsevec\n LANGUAGE c\n IMMUTABLE PARALLEL SAFE STRICT\nAS '$libdir/vector', $function$vector_to_sparsevec$function$\n",
+        "kind": "f",
+        "leakproof": false,
+        "parallel": "s",
+        "returns_set": false,
+        "rows": 0,
+        "security_definer": false,
+        "signature": "@.vector_to_sparsevec(@.vector,integer,boolean)",
+        "strict": true,
+        "support": "-",
+        "volatility": "i"
+      },
+      "member": true
+    },
+    {
+      "class": "pg_proc",
+      "identity": "@.vector_typmod_in(pg_catalog.cstring[])",
+      "definition": {
+        "aggregate": null,
+        "config": null,
+        "cost": 1,
+        "definition": "CREATE OR REPLACE FUNCTION @.vector_typmod_in(cstring[])\n RETURNS integer\n LANGUAGE c\n IMMUTABLE PARALLEL SAFE STRICT\nAS '$libdir/vector', $function$vector_typmod_in$function$\n",
+        "kind": "f",
+        "leakproof": false,
+        "parallel": "s",
+        "returns_set": false,
+        "rows": 0,
+        "security_definer": false,
+        "signature": "@.vector_typmod_in(cstring[])",
+        "strict": true,
+        "support": "-",
+        "volatility": "i"
+      },
+      "member": true
+    },
+    {
+      "class": "pg_type",
+      "identity": "@.halfvec",
+      "definition": {
+        "typalign": "i",
+        "typanalyze": "-",
+        "typarray": "@.halfvec[]",
+        "typbasetype": "-",
+        "typbyval": false,
+        "typcategory": "U",
+        "typcollation": "-",
+        "typdefault": null,
+        "typdefaultbin": null,
+        "typdelim": ",",
+        "typelem": "-",
+        "typinput": "@.halfvec_in(cstring,oid,integer)",
+        "typisdefined": true,
+        "typispreferred": false,
+        "typlen": -1,
+        "typmodin": "@.halfvec_typmod_in(cstring[])",
+        "typmodout": "-",
+        "typname": "halfvec",
+        "typndims": 0,
+        "typnotnull": false,
+        "typoutput": "@.halfvec_out(@.halfvec)",
+        "typreceive": "@.halfvec_recv(internal,oid,integer)",
+        "typrelid": "-",
+        "typsend": "@.halfvec_send(@.halfvec)",
+        "typstorage": "e",
+        "typsubscript": "-",
+        "typtype": "b",
+        "typtypmod": -1
+      },
+      "member": true
+    },
+    {
+      "class": "pg_type",
+      "identity": "@.halfvec[]",
+      "definition": {
+        "typalign": "i",
+        "typanalyze": "array_typanalyze(internal)",
+        "typarray": "-",
+        "typbasetype": "-",
+        "typbyval": false,
+        "typcategory": "A",
+        "typcollation": "-",
+        "typdefault": null,
+        "typdefaultbin": null,
+        "typdelim": ",",
+        "typelem": "@.halfvec",
+        "typinput": "array_in(cstring,oid,integer)",
+        "typisdefined": true,
+        "typispreferred": false,
+        "typlen": -1,
+        "typmodin": "@.halfvec_typmod_in(cstring[])",
+        "typmodout": "-",
+        "typname": "_halfvec",
+        "typndims": 0,
+        "typnotnull": false,
+        "typoutput": "array_out(anyarray)",
+        "typreceive": "array_recv(internal,oid,integer)",
+        "typrelid": "-",
+        "typsend": "array_send(anyarray)",
+        "typstorage": "x",
+        "typsubscript": "array_subscript_handler(internal)",
+        "typtype": "b",
+        "typtypmod": -1
+      },
+      "member": false
+    },
+    {
+      "class": "pg_type",
+      "identity": "@.sparsevec",
+      "definition": {
+        "typalign": "i",
+        "typanalyze": "-",
+        "typarray": "@.sparsevec[]",
+        "typbasetype": "-",
+        "typbyval": false,
+        "typcategory": "U",
+        "typcollation": "-",
+        "typdefault": null,
+        "typdefaultbin": null,
+        "typdelim": ",",
+        "typelem": "-",
+        "typinput": "@.sparsevec_in(cstring,oid,integer)",
+        "typisdefined": true,
+        "typispreferred": false,
+        "typlen": -1,
+        "typmodin": "@.sparsevec_typmod_in(cstring[])",
+        "typmodout": "-",
+        "typname": "sparsevec",
+        "typndims": 0,
+        "typnotnull": false,
+        "typoutput": "@.sparsevec_out(@.sparsevec)",
+        "typreceive": "@.sparsevec_recv(internal,oid,integer)",
+        "typrelid": "-",
+        "typsend": "@.sparsevec_send(@.sparsevec)",
+        "typstorage": "e",
+        "typsubscript": "-",
+        "typtype": "b",
+        "typtypmod": -1
+      },
+      "member": true
+    },
+    {
+      "class": "pg_type",
+      "identity": "@.sparsevec[]",
+      "definition": {
+        "typalign": "i",
+        "typanalyze": "array_typanalyze(internal)",
+        "typarray": "-",
+        "typbasetype": "-",
+        "typbyval": false,
+        "typcategory": "A",
+        "typcollation": "-",
+        "typdefault": null,
+        "typdefaultbin": null,
+        "typdelim": ",",
+        "typelem": "@.sparsevec",
+        "typinput": "array_in(cstring,oid,integer)",
+        "typisdefined": true,
+        "typispreferred": false,
+        "typlen": -1,
+        "typmodin": "@.sparsevec_typmod_in(cstring[])",
+        "typmodout": "-",
+        "typname": "_sparsevec",
+        "typndims": 0,
+        "typnotnull": false,
+        "typoutput": "array_out(anyarray)",
+        "typreceive": "array_recv(internal,oid,integer)",
+        "typrelid": "-",
+        "typsend": "array_send(anyarray)",
+        "typstorage": "x",
+        "typsubscript": "array_subscript_handler(internal)",
+        "typtype": "b",
+        "typtypmod": -1
+      },
+      "member": false
+    },
+    {
+      "class": "pg_type",
+      "identity": "@.vector",
+      "definition": {
+        "typalign": "i",
+        "typanalyze": "-",
+        "typarray": "@.vector[]",
+        "typbasetype": "-",
+        "typbyval": false,
+        "typcategory": "U",
+        "typcollation": "-",
+        "typdefault": null,
+        "typdefaultbin": null,
+        "typdelim": ",",
+        "typelem": "-",
+        "typinput": "@.vector_in(cstring,oid,integer)",
+        "typisdefined": true,
+        "typispreferred": false,
+        "typlen": -1,
+        "typmodin": "@.vector_typmod_in(cstring[])",
+        "typmodout": "-",
+        "typname": "vector",
+        "typndims": 0,
+        "typnotnull": false,
+        "typoutput": "@.vector_out(@.vector)",
+        "typreceive": "@.vector_recv(internal,oid,integer)",
+        "typrelid": "-",
+        "typsend": "@.vector_send(@.vector)",
+        "typstorage": "e",
+        "typsubscript": "-",
+        "typtype": "b",
+        "typtypmod": -1
+      },
+      "member": true
+    },
+    {
+      "class": "pg_type",
+      "identity": "@.vector[]",
+      "definition": {
+        "typalign": "i",
+        "typanalyze": "array_typanalyze(internal)",
+        "typarray": "-",
+        "typbasetype": "-",
+        "typbyval": false,
+        "typcategory": "A",
+        "typcollation": "-",
+        "typdefault": null,
+        "typdefaultbin": null,
+        "typdelim": ",",
+        "typelem": "@.vector",
+        "typinput": "array_in(cstring,oid,integer)",
+        "typisdefined": true,
+        "typispreferred": false,
+        "typlen": -1,
+        "typmodin": "@.vector_typmod_in(cstring[])",
+        "typmodout": "-",
+        "typname": "_vector",
+        "typndims": 0,
+        "typnotnull": false,
+        "typoutput": "array_out(anyarray)",
+        "typreceive": "array_recv(internal,oid,integer)",
+        "typrelid": "-",
+        "typsend": "array_send(anyarray)",
+        "typstorage": "x",
+        "typsubscript": "array_subscript_handler(internal)",
+        "typtype": "b",
+        "typtypmod": -1
+      },
+      "member": false
+    }
+  ]
+}

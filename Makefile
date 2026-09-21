@@ -39,3 +39,12 @@ test-redis-vectors:
 	test -n "$(READONLY_DB_MCP_REDIS_SEARCH_MODULE)"
 	test -n "$(READONLY_DB_MCP_REDIS_JSON_MODULE)"
 	go test -race ./internal/mcpserver -run TestLocalRedisDenseVectorsThroughMCP -count=1 -v
+
+.PHONY: build-pgvector-proof test-pgvector-proof
+build-pgvector-proof:
+	PG_CONFIG="$(PG_CONFIG)" sh tools/pgvector-proof/build.sh
+
+test-pgvector-proof:
+	test -n "$(READONLY_DB_MCP_PG_BIN)"
+	test -n "$(READONLY_DB_MCP_PGVECTOR_PROOF)"
+	go test -race ./internal/dialects/postgresql/vectorproof -count=1 -v

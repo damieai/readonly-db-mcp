@@ -83,8 +83,10 @@ these results do not promote their pending acceptance gates.
 
 ## Remaining RFC-0007 work
 
-P1/P2: PostgreSQL extension identity, exact expression binding, approved function
-privileges, codecs and transaction-local tuning remain unimplemented. P3: qualify
+P1/P2: PostgreSQL now has an internal
+[catalog/native binding foundation](2026-09-21-postgresql-vector-proof.md).
+Complete admission, runtime function exceptions, codecs and transaction-local
+tuning remain pending. P3: qualify
 production builds/TLS/topologies, larger ANN corpora and recall thresholds,
 mid-execution native timeout/cancellation, fairness and backend/RSS ceilings.
 Redis 8 integrated modules and newer vector algorithms/types require their own
