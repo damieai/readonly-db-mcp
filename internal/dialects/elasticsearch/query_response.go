@@ -116,6 +116,8 @@ func validateQueryResponse(raw []byte, q *preparedQuery) error {
 		return nil
 	}
 	switch q.request.Operation {
+	case "eql.search":
+		return validateEQLResponse(m, q)
 	case "search", "search_template":
 		if _, ok := m["_shards"]; !ok {
 			return failure("invalid_response", "native shard outcome is missing")

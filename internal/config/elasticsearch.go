@@ -31,6 +31,10 @@ type ElasticsearchConfig struct {
 	ContextKeepAlive      time.Duration `yaml:"context_keep_alive"`
 	MaxContextLifetime    time.Duration `yaml:"max_context_lifetime"`
 	MaxContextIDBytes     int           `yaml:"max_context_id_bytes"`
+	MaxLanguageBytes      int           `yaml:"max_language_bytes"`
+	MaxLanguageTokens     int           `yaml:"max_language_tokens"`
+	MaxLanguageDepth      int           `yaml:"max_language_depth"`
+	MaxEQLFetchSize       int           `yaml:"max_eql_fetch_size"`
 }
 
 func defaultElasticsearch(t *TargetConfig) {
@@ -67,6 +71,18 @@ func defaultElasticsearch(t *TargetConfig) {
 	}
 	if e.MaxContextIDBytes == 0 {
 		e.MaxContextIDBytes = 64 << 10
+	}
+	if e.MaxLanguageBytes == 0 {
+		e.MaxLanguageBytes = 256 << 10
+	}
+	if e.MaxLanguageTokens == 0 {
+		e.MaxLanguageTokens = 10000
+	}
+	if e.MaxLanguageDepth == 0 {
+		e.MaxLanguageDepth = 128
+	}
+	if e.MaxEQLFetchSize == 0 {
+		e.MaxEQLFetchSize = 10000
 	}
 }
 
@@ -175,6 +191,8 @@ func validateElasticsearch(t *TargetConfig, limits Limits) []string {
 		{"max_json_nodes", e.MaxJSONNodes, 128, 1000000}, {"max_resolved_indices", e.MaxResolvedIndices, 1, 10000},
 		{"max_aggregation_buckets", e.MaxAggregationBuckets, 1, 65536},
 		{"max_open_contexts", e.MaxOpenContexts, 1, 128}, {"max_context_id_bytes", e.MaxContextIDBytes, 1024, 1 << 20},
+		{"max_language_bytes", e.MaxLanguageBytes, 1024, 1 << 20}, {"max_language_tokens", e.MaxLanguageTokens, 128, 100000},
+		{"max_language_depth", e.MaxLanguageDepth, 8, 512}, {"max_eql_fetch_size", e.MaxEQLFetchSize, 1000, 100000},
 	} {
 		if v.value < v.min || v.value > v.max {
 			add(fmt.Sprintf("elasticsearch.%s is outside its resource ceiling", v.name))

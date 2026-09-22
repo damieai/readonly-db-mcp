@@ -1,6 +1,6 @@
 # RFC-0006: Elasticsearch Read-Only Query Support
 
-- Status: Metadata, native query/batch and owned PIT/scroll foundation implemented; remaining advanced profiles and live qualification pending
+- Status: Metadata, native query/batch, owned PIT/scroll and synchronous EQL implemented; remaining advanced profiles and live qualification pending
 - Authors: readonly-db-mcp maintainers
 - Created: 2026-09-12
 - Depends on: RFC-0001 resource governance and the common architecture contract
@@ -37,6 +37,17 @@ profile fixes process limits at 128 contexts / 64 MiB retained state and recover
 at 5 seconds; the broader configurable ceilings below remain proposals. SQL
 cursors and live-server lifecycle/cancellation qualification remain pending.
 See [owned-context evidence](qualification/2026-09-22-elasticsearch-owned-contexts.md).
+
+Implementation update (2026-09-22, EQL): `es_query.operation=eql.search` and
+independent EQL batch members now use a Go parser generated from the complete,
+identical EQL grammars at both pinned commits. Original language text, advanced
+expressions and native sequence/sample result structures are preserved. The
+adapter separately proves index scope, filter references and runtime lookups,
+enforces synchronous execution/completeness, and budgets parser state without
+global per-query DFA retention. Java is generation-only. Native semantic
+availability remains an ES decision; this does not enable SQL, ES|QL, SQL cursors
+or persisted async language results. Live-engine certification remains pending.
+See [EQL qualification and parser packaging](qualification/2026-09-22-elasticsearch-eql.md).
 
 ## Summary
 

@@ -35,6 +35,9 @@ func TestElasticsearchDefaultsAndForecast(t *testing.T) {
 	if v.Elasticsearch.MaxOpenContexts != 32 || v.Elasticsearch.ContextKeepAlive != 5*time.Minute || v.Elasticsearch.MaxContextLifetime != 30*time.Minute || v.Elasticsearch.MaxContextIDBytes != 64<<10 {
 		t.Fatal("context defaults differ from resource contract")
 	}
+	if v.Elasticsearch.MaxLanguageBytes != 256<<10 || v.Elasticsearch.MaxLanguageTokens != 10000 || v.Elasticsearch.MaxLanguageDepth != 128 || v.Elasticsearch.MaxEQLFetchSize != 10000 {
+		t.Fatal("language defaults differ from resource contract")
+	}
 	resolveRelativePaths(v, "/srv/config")
 	if v.TLS.CAFile != filepath.Join("/srv/config", "ca.pem") {
 		t.Fatal("CA path not resolved")
@@ -77,6 +80,11 @@ func TestElasticsearchRejectsConflictingOrUnboundedConfiguration(t *testing.T) {
 		{"idle lifetime", func(t *TargetConfig) { t.Elasticsearch.ContextKeepAlive = 16 * time.Minute }},
 		{"absolute lifetime", func(t *TargetConfig) { t.Elasticsearch.MaxContextLifetime = 3 * time.Hour }},
 		{"absolute shorter than idle", func(t *TargetConfig) { t.Elasticsearch.MaxContextLifetime = time.Second }},
+		{"language byte ceiling", func(t *TargetConfig) { t.Elasticsearch.MaxLanguageBytes = (1 << 20) + 1 }},
+		{"language token ceiling", func(t *TargetConfig) { t.Elasticsearch.MaxLanguageTokens = 100001 }},
+		{"language depth ceiling", func(t *TargetConfig) { t.Elasticsearch.MaxLanguageDepth = 513 }},
+		{"EQL fetch ceiling", func(t *TargetConfig) { t.Elasticsearch.MaxEQLFetchSize = 100001 }},
+		{"EQL native default fetch", func(t *TargetConfig) { t.Elasticsearch.MaxEQLFetchSize = 999 }},
 		{"bucket ceiling", func(t *TargetConfig) { t.Elasticsearch.MaxAggregationBuckets = 65537 }},
 	} {
 		t.Run(test.name, func(t *testing.T) {

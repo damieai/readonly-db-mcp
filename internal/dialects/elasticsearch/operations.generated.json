@@ -185,6 +185,33 @@
       "sha256": "c261e6478f43073d5f587038dedf89bbf1f0e1251d6b222b5713cd640f9e5099",
       "source": "https://raw.githubusercontent.com/elastic/elasticsearch/4fe44c255c3d0da06779b921e132cdc555ed9aff/rest-api-spec/src/main/resources/rest-api-spec/api/delete_by_query.json"
     },
+    "eql.search": {
+      "api": "eql.search",
+      "effect": "read",
+      "implemented": true,
+      "parameters": [
+        "allow_no_indices",
+        "allow_partial_search_results",
+        "allow_partial_sequence_results",
+        "ccs_minimize_roundtrips",
+        "expand_wildcards",
+        "ignore_unavailable",
+        "keep_alive",
+        "keep_on_completion",
+        "wait_for_completion_timeout"
+      ],
+      "routes": [
+        {
+          "methods": [
+            "GET",
+            "POST"
+          ],
+          "path": "/{index}/_eql/search"
+        }
+      ],
+      "sha256": "29b974c284aee0557f4e97670d0ba17fc0bacdd90d4b0e1de92bf294587b5a2b",
+      "source": "https://raw.githubusercontent.com/elastic/elasticsearch/4fe44c255c3d0da06779b921e132cdc555ed9aff/rest-api-spec/src/main/resources/rest-api-spec/api/eql.search.json"
+    },
     "explain": {
       "api": "explain",
       "effect": "read",
@@ -1186,6 +1213,33 @@
       ],
       "sha256": "9937e36089d29bd77baf9b2409c6aaa834fc691092f942d1a9b85b2f86af2ac5",
       "source": "https://raw.githubusercontent.com/elastic/elasticsearch/f2e019bd8110088070638ca779ec1543188c0f43/rest-api-spec/src/main/resources/rest-api-spec/api/delete_by_query.json"
+    },
+    "eql.search": {
+      "api": "eql.search",
+      "effect": "read",
+      "implemented": true,
+      "parameters": [
+        "allow_no_indices",
+        "allow_partial_search_results",
+        "allow_partial_sequence_results",
+        "ccs_minimize_roundtrips",
+        "expand_wildcards",
+        "ignore_unavailable",
+        "keep_alive",
+        "keep_on_completion",
+        "wait_for_completion_timeout"
+      ],
+      "routes": [
+        {
+          "methods": [
+            "GET",
+            "POST"
+          ],
+          "path": "/{index}/_eql/search"
+        }
+      ],
+      "sha256": "6610411d33e0e209bc56133a2cfd6b0cc15bfecb487d7e6283bbbb18bc969025",
+      "source": "https://raw.githubusercontent.com/elastic/elasticsearch/f2e019bd8110088070638ca779ec1543188c0f43/rest-api-spec/src/main/resources/rest-api-spec/api/eql.search.json"
     },
     "explain": {
       "api": "explain",

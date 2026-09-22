@@ -54,7 +54,7 @@ func queryOperation(version, name string) error {
 	return nil
 }
 func capabilities(version string) map[string]string {
-	result := map[string]string{"query_dsl": "implemented_native_visitors", "scripts_runtime_fields": "implemented_painless_expression_lookup", "aggregations": "implemented_native_visitors", "vector_hybrid": "implemented_supplied_vectors_local_fusion", "es_batch": "implemented_independent_and_pit", "inference": "awaiting_authority_profile", "plugins": "stock_distribution_only", "suggest_collate": "awaiting_template_source_proof", "sql": "awaiting_implementation", "esql": "awaiting_implementation", "eql": "awaiting_implementation", "api_key_auth": "awaiting_authority_profile", "cross_cluster": "awaiting_authority_profile", "qualification": "fixture_tested_not_server_certified"}
+	result := map[string]string{"query_dsl": "implemented_native_visitors", "scripts_runtime_fields": "implemented_painless_expression_lookup", "aggregations": "implemented_native_visitors", "vector_hybrid": "implemented_supplied_vectors_local_fusion", "es_batch": "implemented_independent_and_pit", "inference": "awaiting_authority_profile", "plugins": "stock_distribution_only", "suggest_collate": "awaiting_template_source_proof", "sql": "awaiting_implementation", "esql": "awaiting_implementation", "eql": "implemented_synchronous_upstream_grammar", "api_key_auth": "awaiting_authority_profile", "cross_cluster": "awaiting_authority_profile", "qualification": "fixture_tested_not_server_certified"}
 	for name, op := range catalog[version] {
 		if op.Effect == "mutation" {
 			continue

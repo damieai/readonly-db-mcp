@@ -209,3 +209,34 @@ renewals cannot be assumed to shorten ES reader retention. Local idle and
 absolute deadlines still bound handle usability. The horizon for an ambiguous
 request includes the maximum request interval. Actual task cancellation and
 native context lifetime measurements remain live-server qualification gates.
+
+
+Synchronous Elasticsearch EQL is an `es_query` operation (`eql.search`) and an
+independent batch member. It uses a generated Go ANTLR parser from identical
+upstream grammars at both pinned commits. `singleStatement` must reach EOF; the
+structured analysis identifies event/sequence/sample/join syntax and the
+`request_indices` source contract. EQL text is sent unchanged to the fixed
+scoped `/{indices}/_eql/search` route. Mapping/runtime and native filter proofs
+reuse contextual DSL visitors. Native semantic validation determines supported
+functions/pipes/joins; the adapter does not substitute another query language.
+
+Parser state has a distinct process-wide 128 MiB semaphore included in forecasts.
+Each call reserves `2 MiB + 64 * language_bytes`, then 4 KiB before each token.
+Per-invocation DFA/prediction caches prevent unbounded cross-request retention.
+Character/token operations and rule entry check cancellation/work budgets;
+tokenized prefix/delimiter depth and rule depth bound recursion. Language text,
+tokens and depth have explicit operator limits. Errors never print lexer input.
+Java and ANTLR's JAR are only maintainer generation tools; runtime is Go-only.
+Upstream and generated grammar files retain their own license notices and hashes.
+
+The pinned EQL native transport selects async execution when its wait timeout
+is present and non-negative. The adapter admits omission or the exact `-1`
+sentinel, rejects result retention and requires complete results. It does not
+map the MCP deadline into this async control: HTTP cancellation uses the native
+cancellable REST channel. EQL responses retain event/sequence grouping, join
+keys and empty missing-event placeholders. Placeholder markers cannot exempt
+real data from index validation. Aggregate event and sequence counts share
+`max_rows`, with whole-result failure on overflow. An unexpected async result ID
+or running response invalidates the target profile instead of being exposed.
+Real-server task cancellation, temporary context cleanup and allocation/RSS
+saturation still require deployment qualification.

@@ -17,7 +17,7 @@ repository.
 > requires validation against your provisioned accounts and server builds.
 > Elasticsearch implements pinned target/permission attestation, native metadata,
 > and scoped `es_query` / `es_batch` / `es_cursor` tools with advanced DSL, aggregations, scripts,
-> supplied-vector retrieval, templates and owned PIT/scroll pagination. Language tools remain scheduled by
+> supplied-vector retrieval, templates, owned PIT/scroll pagination and synchronous EQL. SQL and ES|QL remain scheduled by
 > [RFC-0006](docs/RFC-0006-elasticsearch-readonly-support.md); ES is not yet
 > advertised as a complete or live-server-certified query adapter.
 
@@ -211,10 +211,10 @@ external-plugin inventory; custom plugin profiles remain pending.
 `es_metadata` supports `resolve` and `mappings`. `es_query` supports `search`,
 `count`, `get`, `mget`, `termvectors`, `mtermvectors`, `explain`, `field_caps`,
 `search_shards`, `indices.validate_query`, `search_template` and
-`render_search_template`. IDs use the structured `id` field. Native JSON and
+`render_search_template` and `eql.search`. IDs use the structured `id` field. Native JSON and
 large integer values remain intact. Wildcards use ES `*` / `?` semantics, with containment
 checked for future index names; aliases and data streams are resolved for each
-call. Date math, custom plugins, cross-cluster and query-language profiles still
+call. Date math, custom plugins, cross-cluster and SQL/ES|QL profiles still
 need their respective proof implementations. Missing capabilities are reported
 by `inspect_target`, separately from mutation denial. See the
 [native query qualification record](docs/qualification/2026-09-22-elasticsearch-native-queries.md)
@@ -264,6 +264,39 @@ its reservation until cleanup or a conservative native lease horizon; queries
 never silently restart a snapshot. See the
 [cursor qualification record](docs/qualification/2026-09-22-elasticsearch-owned-contexts.md)
 for fixture evidence and remaining live-server gates.
+
+Use `es_query` with `operation: "eql.search"` for native synchronous EQL:
+
+```json
+{"target":"search-reporting","operation":"eql.search","indices":["reports-*"],"body":{"query":"sequence by host.id with maxspan=5m [process where process.name : \"cmd*\"] [network where destination.port in (80,443)]","size":10,"fetch_size":1000}}
+```
+
+The complete pinned upstream grammar supports event, sequence, sample and join
+syntax, expressions, functions, comments and pipes. The native ES server decides
+which semantic operations its version supports. The original query is preserved;
+`filter`, `runtime_mappings`, field formats, time/category fields, ordering,
+`fetch_size` and `max_samples_per_key` retain their native meaning. EQL event
+categories and literals are data; index scope comes from `indices` and any
+embedded filter/runtime lookups. Responses preserve events, sequence groups,
+join keys, missing-event placeholders and exact JSON numbers.
+
+`max_rows` bounds the total returned events, including missing placeholders,
+and sequence count. An oversized sequence result fails as a whole. Native
+`size` still means the number of events or sequence/sample groups; it is never
+silently reduced. EQL can participate in independent batches, but not shared-PIT
+batches or PIT/scroll cursors. HTTP cancellation shares the MCP deadline.
+`wait_for_completion_timeout` must be omitted or `"-1"`; non-negative values
+select stored asynchronous work and need a separate lifecycle profile.
+`keep_on_completion: true` and partial results are not enabled.
+
+Parser defaults: 256 KiB language text, 10,000 tokens, depth 128 and EQL fetch
+size ceiling 10,000. Operator ceilings are 1 MiB, 100,000 tokens, depth 512 and
+fetch size 100,000. A separate 128 MiB process parser pool is included in the
+configuration forecast. Java is unnecessary at runtime; generated Go files are
+checked in. The upstream EQL grammar and derived generated files retain Elastic
+License 2.0, separately from the repository's MIT license. See
+[parser packaging and regeneration](tools/es-language-parser/README.md) and the
+[EQL qualification record](docs/qualification/2026-09-22-elasticsearch-eql.md).
 
 ### 3. Build and verify
 
@@ -317,7 +350,7 @@ Use target inventory-test. Inspect the schema and verify whether transaction
 | `query_batch` | Runs several SELECTs in one read-only transaction snapshot. |
 | `query_explain` | Returns an engine-native non-executing plan for a validated SELECT. |
 | `es_metadata` | Resolves scoped Elasticsearch indices, aliases and data streams, or reads their mappings. |
-| `es_query` | Executes scoped native Elasticsearch reads, advanced DSL, scripts, aggregations, supplied vectors and templates. |
+| `es_query` | Executes scoped native Elasticsearch reads, advanced DSL, scripts, aggregations, supplied vectors, templates and synchronous EQL. |
 | `es_batch` | Executes preflighted independent reads or compatible searches in one owned PIT, with a shared deadline and output budget. |
 | `es_cursor` | Opens, advances and closes session-owned PIT/scroll handles with bounded lifetimes and cleanup. |
 | `redis_command` | Runs one attested advanced read-only Redis command vector. |

@@ -1,5 +1,5 @@
-# Native metadata/query/batch/PIT/scroll profile. Replace endpoint, UUID and secret/CA locations.
-# Query languages, API keys and attestors remain later stages.
+# Native metadata/query/batch/PIT/scroll/synchronous-EQL profile. Replace endpoint, UUID and secret/CA locations.
+# SQL, ES|QL, API keys and attestors remain later stages.
 server:
   transport: stdio
   strict_startup: true
@@ -34,6 +34,10 @@ targets:
       context_keep_alive: 5m
       max_context_lifetime: 30m
       max_context_id_bytes: 65536
+      max_language_bytes: 262144
+      max_language_tokens: 10000
+      max_language_depth: 128
+      max_eql_fetch_size: 10000
     tls:
       mode: verify-full
       ca_file: /run/secrets/es-ca.pem

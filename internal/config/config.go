@@ -645,6 +645,8 @@ func (cfg *Config) ResourceForecastBytes() int64 {
 	if esNodes > 0 {
 		// Owned contexts have a separate process-wide retained-memory budget.
 		total += 64 << 20
+		// Generated language parsers use separate process-wide transient admission.
+		total += 128 << 20
 		// Include native JSON validation, typed proof data and final MCP encoding.
 		active := min(cfg.Limits.GlobalConcurrency, esTargets*cfg.Limits.PerTargetConcurrency)
 		extraRequest := max(0, 7*esRequest-cfg.Limits.MaxParameterBytes)

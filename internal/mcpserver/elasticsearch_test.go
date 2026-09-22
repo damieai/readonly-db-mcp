@@ -49,6 +49,8 @@ func TestElasticsearchThroughRegistryAndMCP(t *testing.T) {
 			fmt.Fprint(w, `{"reports-2026":{"mappings":{"_meta":{"number":9007199254740993}}}}`)
 		case "/reports-*/_search":
 			fmt.Fprint(w, `{"timed_out":false,"_shards":{"total":1,"failed":0,"successful":1},"hits":{"hits":[{"_index":"reports-2026","_id":"a","_source":{"number":9007199254740993}}]}}`)
+		case "/reports-*/_eql/search":
+			fmt.Fprint(w, `{"took":1,"timed_out":false,"is_partial":false,"is_running":false,"hits":{"events":[{"_index":"reports-2026","_id":"a","_source":{"number":9007199254740993}}]}}`)
 		case "/reports-*/_pit":
 			fmt.Fprint(w, `{"id":"native-private-pit","_shards":{"total":1,"successful":1,"failed":0}}`)
 		case "/_search":
@@ -163,6 +165,8 @@ targets:
 	}{
 		{"es_query", json.RawMessage(`{"target":"es_test","operation":"search","body":{"query":{"script_score":{"query":{"match_all":{}},"script":{"source":"params.x","params":{"x":9007199254740993}}}}}}`)},
 		{"es_batch", json.RawMessage(`{"target":"es_test","requests":[{"operation":"search","body":{"query":{"match_all":{}}}}]}`)},
+		{"es_query", json.RawMessage(`{"target":"es_test","operation":"eql.search","body":{"query":"any where value == 9007199254740993"}}`)},
+		{"es_batch", json.RawMessage(`{"target":"es_test","requests":[{"operation":"eql.search","body":{"query":"any where true"}},{"operation":"search","body":{"query":{"match_all":{}}}}]}`)},
 	} {
 		r, err := cs.CallTool(ctx, &mcp.CallToolParams{Name: call.name, Arguments: call.args})
 		if err != nil || r.IsError {
@@ -178,6 +182,9 @@ targets:
 		args json.RawMessage
 	}{
 		{"es_query", json.RawMessage(`{"target":"es_test","operation":"search","body":{"size":1,"size":2}}`)},
+		{"es_query", json.RawMessage(`{"target":"es_test","operation":"eql.search","body":{"query":"any where true","wait_for_completion_timeout":"1s"}}`)},
+		{"es_query", json.RawMessage(`{"target":"es_test","operation":"eql.search","body":{"query":"any where true","query":"any where false"}}`)},
+		{"es_query", json.RawMessage(`{"target":"es_test","operation":"eql.search","body":{"query":"any where true; any where false"}}`)},
 		{"es_query", json.RawMessage(`{"target":"es_test","operation":"search","headers":{"Authorization":"x"}}`)},
 		{"es_query", json.RawMessage(`{"target":"es_test","operation":"search","body":null}`)},
 		{"es_batch", json.RawMessage(`{"target":"es_test","requests":[{"operation":"search","target":"different"}]}`)},

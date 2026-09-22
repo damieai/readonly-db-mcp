@@ -93,10 +93,21 @@ Untrusted:
     connection or execution permit. Disconnect, expiry and shutdown close owned
     contexts; `es_cursor` is read-only but deliberately not marked idempotent.
 
+14. Synchronous EQL uses the complete version-pinned upstream grammar, compiled
+    into Go. It consumes one statement through EOF and preserves the original
+    query text. Event categories, field names and literals cannot choose indices;
+    REST scope and native filter/runtime lookups are proved independently. The
+    parser has per-request DFA caches, byte/token/depth/work/cancellation checks
+    and separate process memory admission. Parser errors omit query excerpts.
+    Non-negative async wait controls and retained results are unavailable. Native
+    shard/timeout/partial failures return no data; oversized sequences are never
+    cut apart. Unexpected async IDs/running responses invalidate the target's
+    profile proof. Native function and pipe semantic checks stay with ES.
+
 ## Known limitations
 
 - Elasticsearch native queries have TLS fixture coverage, not live engine certification.
-  API-key, custom plugin/inference, language, dynamic suggestion
+  API-key, custom plugin/inference, SQL/ES|QL, async EQL, dynamic suggestion
   collate and cross-cluster profiles are not yet implemented. Pinned version/hash metadata is an operator trust
   check, not cryptographic remote binary attestation.
 - ES query preflight is not an atomic lock on administrator changes to mappings,

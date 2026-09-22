@@ -29,6 +29,7 @@ type preparedQuery struct {
 	physical     map[string]bool
 	rows         int
 	buckets      int
+	eqlKind      string
 }
 
 // One request owns admission, the shared deadline, and memory throughout source
@@ -409,6 +410,11 @@ func (p *queryProof) prepare(request core.ElasticsearchQueryRequest) (*preparedQ
 	q := &preparedQuery{request: request, options: options, method: http.MethodPost, rows: rows, buckets: p.t.cfg.Elasticsearch.MaxAggregationBuckets}
 	q.request.Indices = append([]string(nil), indices...)
 	switch request.Operation {
+	case "eql.search":
+		if err := p.prepareEQL(q, body); err != nil {
+			return nil, err
+		}
+		q.path = base + "/_eql/search"
 	case "search", "search_template", "render_search_template":
 		if request.Operation != "search" {
 			body, err = p.render(body)
