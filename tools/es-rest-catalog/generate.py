@@ -26,6 +26,7 @@ OPERATIONS = {
     )},
     "msearch_template": ("msearch_template", "read", False),
     "eql.search": ("eql.search", "read", True),
+    "esql.query": ("esql.query", "read", True),
     "sql.query": ("sql.query", "read", True),
     "sql.translate": ("sql.translate", "read", True),
     "sql.clear_cursor": ("sql.clear_cursor", "owned_context", True),

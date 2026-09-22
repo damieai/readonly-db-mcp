@@ -1,0 +1,103 @@
+{
+  "antlr_sha256": "bc13a9c57a8dd7d5196888211e5ede657cb64a3ce968608697e4f668251a8487",
+  "antlr_version": "4.13.1",
+  "generated_sha256": {
+    "v8/config.go": "f4bc8775dd36c2c3f2c41792474b146fd16e1016be4fd06929cd2e59988138c7",
+    "v8/esqlbase_lexer.go": "754ba96c389750a8276fc99d7b968fae968b6487cc0a2cb3bcbe8700525fddbe",
+    "v8/esqlbase_parser.go": "6d98a8f24e2554b1c8a598d5038eacf16b20ec123eec4bda50465d6c84763bb9",
+    "v8/esqlbaseparser_base_listener.go": "cf61a76f75c5d71fe8eb77a35f1540aa89720916815de07d1688c5237ece0fe6",
+    "v8/esqlbaseparser_listener.go": "82d09961052672040a6779ad4b3068c16478539b39fdfd3d981396008a2567f5",
+    "v9/config.go": "f7dfd44b93531a2b9a61851fe05e8c552a344c7a20020b70c7ed83f77b77bfe0",
+    "v9/esqlbase_lexer.go": "3b3b0306eff3654b4174dbd07b0f3bb3660d7c7ab296e8014fceae5eca229ed1",
+    "v9/esqlbase_parser.go": "909b4b5a57f6462118127a8eb74109c5c0aae2a5856a2be4bb57b066879f0ef0",
+    "v9/esqlbaseparser_base_listener.go": "9caf58167c543c949e05ed1114ba794e3109ed2312f4f23979d6deb51f745589",
+    "v9/esqlbaseparser_listener.go": "013e3e057ab6d6bde3a5a00d6b13f3e3d6b17ff689c7cd38f6d9898d39169d21"
+  },
+  "license_sha256": "48255018b41fc0e965b1115af7e6779bc218bb8a6747d561da800d5022622aa2",
+  "profiles": {
+    "8.19.21": {
+      "EsqlBaseLexer.g4": {
+        "sha256": "472db4728772a36361f9213e40d97ad3d83b43ad8654c8db397326aee234d777",
+        "source": "https://raw.githubusercontent.com/elastic/elasticsearch/4fe44c255c3d0da06779b921e132cdc555ed9aff/x-pack/plugin/esql/src/main/antlr/EsqlBaseLexer.g4"
+      },
+      "EsqlBaseParser.g4": {
+        "sha256": "4175438aede4aa86ff96a13581ecac827a3f3f5c3fb23af0f01941a42c3aa9fd",
+        "source": "https://raw.githubusercontent.com/elastic/elasticsearch/4fe44c255c3d0da06779b921e132cdc555ed9aff/x-pack/plugin/esql/src/main/antlr/EsqlBaseParser.g4"
+      }
+    },
+    "9.1.10": {
+      "EsqlBaseLexer.g4": {
+        "sha256": "e93533d7ed0864d159aa6258305a1734f4272a7ee62d5bc8f7ebec361d8e7f93",
+        "source": "https://raw.githubusercontent.com/elastic/elasticsearch/f2e019bd8110088070638ca779ec1543188c0f43/x-pack/plugin/esql/src/main/antlr/EsqlBaseLexer.g4"
+      },
+      "EsqlBaseParser.g4": {
+        "sha256": "c9fad6c283a37bde3cdc56e3d53dc69265a59f3633900c6f9fec84f1e4b6f347",
+        "source": "https://raw.githubusercontent.com/elastic/elasticsearch/f2e019bd8110088070638ca779ec1543188c0f43/x-pack/plugin/esql/src/main/antlr/EsqlBaseParser.g4"
+      },
+      "lexer/ChangePoint.g4": {
+        "sha256": "a5305794e81772f2ed2ec02f5a61acd19526699e4f4028bc581354143a7b1a38",
+        "source": "https://raw.githubusercontent.com/elastic/elasticsearch/f2e019bd8110088070638ca779ec1543188c0f43/x-pack/plugin/esql/src/main/antlr/lexer/ChangePoint.g4"
+      },
+      "lexer/Enrich.g4": {
+        "sha256": "d59dd63e6b9083839fe559f553dffebebf8bb82d267c2cf9e65f431616dfa2fa",
+        "source": "https://raw.githubusercontent.com/elastic/elasticsearch/f2e019bd8110088070638ca779ec1543188c0f43/x-pack/plugin/esql/src/main/antlr/lexer/Enrich.g4"
+      },
+      "lexer/Explain.g4": {
+        "sha256": "84487d391612c528194aa52d0ac212ac2053aa568366c306dfd980e6c3fc96e2",
+        "source": "https://raw.githubusercontent.com/elastic/elasticsearch/f2e019bd8110088070638ca779ec1543188c0f43/x-pack/plugin/esql/src/main/antlr/lexer/Explain.g4"
+      },
+      "lexer/Expression.g4": {
+        "sha256": "021f7ef3f4a93bdf667d222426d0fae31c50ffc13de286ff054835352c913573",
+        "source": "https://raw.githubusercontent.com/elastic/elasticsearch/f2e019bd8110088070638ca779ec1543188c0f43/x-pack/plugin/esql/src/main/antlr/lexer/Expression.g4"
+      },
+      "lexer/Fork.g4": {
+        "sha256": "49fa2770e51b260c23da5c0ca901dd936ef69d8554f164d67919c518d50188c6",
+        "source": "https://raw.githubusercontent.com/elastic/elasticsearch/f2e019bd8110088070638ca779ec1543188c0f43/x-pack/plugin/esql/src/main/antlr/lexer/Fork.g4"
+      },
+      "lexer/From.g4": {
+        "sha256": "c9dbca68eaa74ddb8528318a1e9c60149a73e66d6e74363c4e47ca6b159da1a8",
+        "source": "https://raw.githubusercontent.com/elastic/elasticsearch/f2e019bd8110088070638ca779ec1543188c0f43/x-pack/plugin/esql/src/main/antlr/lexer/From.g4"
+      },
+      "lexer/Join.g4": {
+        "sha256": "6eeb99bd278e3dc7f852a81f8f690ac4481e94832497722a0913ae7dc565234c",
+        "source": "https://raw.githubusercontent.com/elastic/elasticsearch/f2e019bd8110088070638ca779ec1543188c0f43/x-pack/plugin/esql/src/main/antlr/lexer/Join.g4"
+      },
+      "lexer/Lookup.g4": {
+        "sha256": "a7ab6888e2f55cdfae793d0fed53f1a3abd88b0e368013fdeeeed1f2919ed349",
+        "source": "https://raw.githubusercontent.com/elastic/elasticsearch/f2e019bd8110088070638ca779ec1543188c0f43/x-pack/plugin/esql/src/main/antlr/lexer/Lookup.g4"
+      },
+      "lexer/MvExpand.g4": {
+        "sha256": "63b74764c1c13443d8e60fa0d3ed95b2936c34ef00927a232473792318968a71",
+        "source": "https://raw.githubusercontent.com/elastic/elasticsearch/f2e019bd8110088070638ca779ec1543188c0f43/x-pack/plugin/esql/src/main/antlr/lexer/MvExpand.g4"
+      },
+      "lexer/Project.g4": {
+        "sha256": "fc4967798c4e86d42cc13f2cc137f777decfcc164cdfda98c650dfd43f2b904b",
+        "source": "https://raw.githubusercontent.com/elastic/elasticsearch/f2e019bd8110088070638ca779ec1543188c0f43/x-pack/plugin/esql/src/main/antlr/lexer/Project.g4"
+      },
+      "lexer/Rename.g4": {
+        "sha256": "f698b314cccf8bc2ea603069985efdbff175f9d894436c5a5784876f9b070a32",
+        "source": "https://raw.githubusercontent.com/elastic/elasticsearch/f2e019bd8110088070638ca779ec1543188c0f43/x-pack/plugin/esql/src/main/antlr/lexer/Rename.g4"
+      },
+      "lexer/Rrf.g4": {
+        "sha256": "ba7d04236da36a4d1f626d84a7b90741377394e310a405d607cbfa4783d4bfbb",
+        "source": "https://raw.githubusercontent.com/elastic/elasticsearch/f2e019bd8110088070638ca779ec1543188c0f43/x-pack/plugin/esql/src/main/antlr/lexer/Rrf.g4"
+      },
+      "lexer/Show.g4": {
+        "sha256": "233f27fb58e12c347944b16d27abed120d26e39689793674200a09282bab47aa",
+        "source": "https://raw.githubusercontent.com/elastic/elasticsearch/f2e019bd8110088070638ca779ec1543188c0f43/x-pack/plugin/esql/src/main/antlr/lexer/Show.g4"
+      },
+      "lexer/UnknownCommand.g4": {
+        "sha256": "ecdb8c9d202569644d2d343cd5463749cfb4c027fecded70812d812eecf08f77",
+        "source": "https://raw.githubusercontent.com/elastic/elasticsearch/f2e019bd8110088070638ca779ec1543188c0f43/x-pack/plugin/esql/src/main/antlr/lexer/UnknownCommand.g4"
+      },
+      "parser/Expression.g4": {
+        "sha256": "f8e17a9541a780368fb8055141eb4a010464be43a59cba9f0ae71253c92f92af",
+        "source": "https://raw.githubusercontent.com/elastic/elasticsearch/f2e019bd8110088070638ca779ec1543188c0f43/x-pack/plugin/esql/src/main/antlr/parser/Expression.g4"
+      },
+      "parser/Join.g4": {
+        "sha256": "c421bbff177a9260ce19c44d65ec6eabf7dadc8aa3e5b0495c2323d75dcd49a8",
+        "source": "https://raw.githubusercontent.com/elastic/elasticsearch/f2e019bd8110088070638ca779ec1543188c0f43/x-pack/plugin/esql/src/main/antlr/parser/Join.g4"
+      }
+    }
+  }
+}

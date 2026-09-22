@@ -116,6 +116,8 @@ func validateQueryResponse(raw []byte, q *preparedQuery) error {
 		return nil
 	}
 	switch q.request.Operation {
+	case "esql.query":
+		return validateESQLResponse(m, q)
 	case "sql.translate":
 		for _, key := range []string{"cursor", "id", "is_running", "is_partial"} {
 			if _, exists := m[key]; exists {

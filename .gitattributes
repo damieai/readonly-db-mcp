@@ -7,3 +7,7 @@ internal/dialects/elasticsearch/eqlparser/generated/*.go text eol=lf
 tools/es-language-parser/upstream/sql*/*.g4 text eol=lf whitespace=-blank-at-eol
 tools/es-language-parser/sql-manifest.json text eol=lf
 internal/dialects/elasticsearch/sqlparser/generated/*/*.go text eol=lf
+# Preserve complete ES|QL grammars/imports byte-for-byte for regeneration.
+tools/es-language-parser/upstream/esql*/**/*.g4 text eol=lf whitespace=-blank-at-eol,-blank-at-eof
+tools/es-language-parser/esql-manifest.json text eol=lf
+internal/dialects/elasticsearch/esqlparser/generated/*/*.go text eol=lf

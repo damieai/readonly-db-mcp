@@ -31,6 +31,7 @@ type preparedQuery struct {
 	buckets      int
 	eqlKind      string
 	sql          *sqlProfile
+	esql         *esqlProfile
 }
 
 // One request owns admission, the shared deadline, and memory throughout source
@@ -414,6 +415,12 @@ func (p *queryProof) prepare(request core.ElasticsearchQueryRequest) (*preparedQ
 	q := &preparedQuery{request: request, options: options, method: http.MethodPost, rows: rows, buckets: p.t.cfg.Elasticsearch.MaxAggregationBuckets}
 	q.request.Indices = append([]string(nil), indices...)
 	switch request.Operation {
+	case "esql.query":
+		if err := p.prepareESQL(q, body); err != nil {
+			return nil, err
+		}
+		indices = q.request.Indices
+		q.path = "/_query"
 	case "sql.query", "sql.translate":
 		if err := p.prepareSQL(q, body); err != nil {
 			return nil, err
@@ -541,7 +548,7 @@ func (p *queryProof) prepare(request core.ElasticsearchQueryRequest) (*preparedQ
 	} else if request.ID != "" {
 		return nil, failure("invalid_request", "id is not valid for this operation")
 	}
-	if q.sql != nil && len(indices) == 0 {
+	if (q.sql != nil || q.esql != nil) && len(indices) == 0 {
 		q.physical = map[string]bool{}
 	} else if p.snapshot != nil && scopeKey(indices) == scopeKey(p.snapshot.query.Indices) {
 		q.physical = p.snapshot.physical

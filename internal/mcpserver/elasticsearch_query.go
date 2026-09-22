@@ -101,7 +101,7 @@ func (v *ElasticsearchBatchInput) UnmarshalJSON(data []byte) error {
 func (s *Server) registerElasticsearchQueryTools() {
 	properties := func() map[string]any {
 		return map[string]any{
-			"operation": map[string]any{"type": "string", "minLength": 1, "maxLength": 64, "description": "search, count, get, mget, termvectors, mtermvectors, explain, field_caps, search_shards, indices.validate_query, search_template, render_search_template eql.search, sql.query or sql.translate"},
+			"operation": map[string]any{"type": "string", "minLength": 1, "maxLength": 64, "description": "search, count, get, mget, termvectors, mtermvectors, explain, field_caps, search_shards, indices.validate_query, search_template, render_search_template, eql.search, sql.query, sql.translate or esql.query"},
 			"indices":   map[string]any{"type": "array", "maxItems": 10000, "items": map[string]any{"type": "string", "maxLength": 255}},
 			"id":        map[string]any{"type": "string", "maxLength": 1024},
 			"body":      map[string]any{"type": "object", "additionalProperties": true, "description": "Native Elasticsearch JSON; advanced DSL, aggregations, scripts and supplied vectors and native language queries/parameters are preserved"},

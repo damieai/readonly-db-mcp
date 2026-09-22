@@ -116,10 +116,26 @@ Untrusted:
     PIT/scroll. Native tokens, async IDs, partial data and truncated rows are not
     returned. Row/columnar orientation and dimensions are checked on every page.
 
+16. Synchronous ES|QL uses the complete grammar and imports at each fixed commit.
+    Release-only lexer/parser predicates, native parameter binding and EOF are
+    preserved. Structured visitors cover FROM, JOIN, nested EXPLAIN/FORK and
+    quoted comma-separated sources. Exclusions retain their original semantics
+    while proof conservatively covers every positive source. Filters/runtime
+    lookups use the existing DSL visitors. Full-text checks follow field aliases,
+    assignments and renames, including parameterized function/field identifiers;
+    ambiguous pattern lineage requires mapping-wide inference proof.
+    The fixed `/_query` route cannot select async execution. Partial responses,
+    unexpected async/cursor state, shape mismatches and resource overflows fail
+    whole. HTTP cancellation shares the request deadline; native parameters and
+    exact JSON numbers remain intact. ES|QL shares parser memory admission with
+    SQL/EQL, with an 8 MiB baseline for its larger grammar. ENRICH snapshots require
+    a separate isolation proof; ordinary source-index privileges do not supply it.
+
 ## Known limitations
 
 - Elasticsearch native queries have TLS fixture coverage, not live engine certification.
-  API-key, custom plugin/inference, ES|QL, persisted async SQL/EQL, dynamic suggestion
+  API-key, custom plugin/inference, ENRICH isolation, experimental ES|QL pragmas,
+  persisted async language results, dynamic suggestion
   collate and cross-cluster profiles are not yet implemented. Pinned version/hash metadata is an operator trust
   check, not cryptographic remote binary attestation.
 - ES query preflight is not an atomic lock on administrator changes to mappings,

@@ -25,9 +25,11 @@ definition-proof route, not a public query operation. PIT/scroll creation, conti
 operations. `eql.search` uses the pinned upstream grammar and synchronous effect handler.
 SQL query/translate are implemented with native SQL grammar/source proofs;
 SQL clear is available only through the owned `es_cursor` lifecycle. Stateless
-SQL queries drain pages with internal owned tokens. ES|QL and persisted async
-SQL/EQL still require their own grammar/lifecycle
-profiles. Their pending status is not a mutation classification.
+SQL queries drain pages with internal owned tokens. `esql.query` uses complete
+version-specific grammar/source visitors and the synchronous `POST /_query`
+route. ENRICH isolation, experimental ES|QL pragmas and persisted async language
+results still require their own authority/resource/lifecycle profiles. Their
+pending status is not a mutation classification.
 
 The selected build hashes are compatibility pins, **not** live-server release
 certification. See the phase qualification record before deployment.

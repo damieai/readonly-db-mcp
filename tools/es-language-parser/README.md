@@ -122,3 +122,49 @@ go test -race ./internal/dialects/elasticsearch/sqlparser
 go test ./internal/dialects/elasticsearch/sqlparser -run '^$' -fuzz FuzzSQLParser -fuzztime=8s -parallel=2
 go test ./internal/dialects/elasticsearch/sqlparser -run '^$' -bench BenchmarkSQLParser -benchmem
 ```
+
+## Native ES|QL profiles
+
+`generate_esql.py` preserves each pinned release's full lexer/parser and imports
+under `upstream/esql8/` and `upstream/esql9/`. The 9.1 grammar imports separate
+lexer and parser files with overlapping names; generation uses distinct ANTLR
+library directories. `esql-manifest.json` records all twenty grammar hashes,
+immutable URLs, generator/license hashes and generated Go outputs.
+
+```sh
+python3 tools/es-language-parser/generate_esql.py --check
+python3 tools/es-language-parser/generate_esql.py --antlr-jar /path/to/antlr-4.13.1-complete.jar
+python3 tools/es-language-parser/generate_esql.py --antlr-jar /path/to/antlr-4.13.1-complete.jar --check
+python3 tools/es-language-parser/generate_esql.py --check --verify-upstream
+```
+
+`--java` selects a maintainer runtime as above. Vendored grammars are unchanged.
+Besides the shared unreachable-marker cleanup, generated Go changes the spelling
+of the Java `this.isDevVersion()` predicate to `p.IsDevVersion()`. Small generated
+Go `LexerConfig`/`ParserConfig` bases return false, matching `EsqlConfig` on the
+attested non-snapshot release builds. No development predicate is removed or
+forced true. The grammar itself implements case-insensitivity; the character
+stream preserves source case. Grammar and generated code retain Elastic License
+2.0, independently of the handwritten adapter and SQL's Apache notices.
+
+`esqlparser.Analyze` consumes a full statement, follows every `indexPattern` node
+and groups source selectors by their native relation. Quoted index strings may
+contain multiple selectors. ENRICH policy references and inference commands are
+classified separately from index sources. Native anonymous, positional and named
+parameters bind by token identity, including typed identifier/pattern parameters
+and double-marker identifiers; they are never interpolated into source text.
+Function/field bindings and assignment/rename lineage drive full-text inference
+checks. Native release predicates distinguish 8.19 EXPLAIN from 9.1 FORK; parsing
+is not a claim that every native function or plan is available in every license.
+
+ES|QL uses the same cancellation, token, depth, work and per-call DFA guards and
+shares the 128 MiB `languagebudget.Memory` pool. Its more expensive mode-based
+lexer/grammar reserves **8 MiB** plus 64 times UTF-8 input bytes, then 4 KiB per
+token. The SQL/EQL baselines remain 2 MiB. This is bounded admission accounting,
+not a measured RSS guarantee. Resource forecasting still reserves the pool once.
+
+```sh
+go test -race ./internal/dialects/elasticsearch/esqlparser
+go test ./internal/dialects/elasticsearch/esqlparser -run '^$' -fuzz FuzzESQLParser -fuzztime=10s -parallel=2
+go test ./internal/dialects/elasticsearch/esqlparser -run '^$' -bench BenchmarkESQLParser -benchmem
+```

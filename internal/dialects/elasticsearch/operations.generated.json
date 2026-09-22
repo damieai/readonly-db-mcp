@@ -212,6 +212,27 @@
       "sha256": "29b974c284aee0557f4e97670d0ba17fc0bacdd90d4b0e1de92bf294587b5a2b",
       "source": "https://raw.githubusercontent.com/elastic/elasticsearch/4fe44c255c3d0da06779b921e132cdc555ed9aff/rest-api-spec/src/main/resources/rest-api-spec/api/eql.search.json"
     },
+    "esql.query": {
+      "api": "esql.query",
+      "effect": "read",
+      "implemented": true,
+      "parameters": [
+        "allow_partial_results",
+        "delimiter",
+        "drop_null_columns",
+        "format"
+      ],
+      "routes": [
+        {
+          "methods": [
+            "POST"
+          ],
+          "path": "/_query"
+        }
+      ],
+      "sha256": "7085110a27c70ed902d3099441d32d5f1ba65ce205b572b9fdb62f45499d8afc",
+      "source": "https://raw.githubusercontent.com/elastic/elasticsearch/4fe44c255c3d0da06779b921e132cdc555ed9aff/rest-api-spec/src/main/resources/rest-api-spec/api/esql.query.json"
+    },
     "explain": {
       "api": "explain",
       "effect": "read",
@@ -1292,6 +1313,27 @@
       ],
       "sha256": "6610411d33e0e209bc56133a2cfd6b0cc15bfecb487d7e6283bbbb18bc969025",
       "source": "https://raw.githubusercontent.com/elastic/elasticsearch/f2e019bd8110088070638ca779ec1543188c0f43/rest-api-spec/src/main/resources/rest-api-spec/api/eql.search.json"
+    },
+    "esql.query": {
+      "api": "esql.query",
+      "effect": "read",
+      "implemented": true,
+      "parameters": [
+        "allow_partial_results",
+        "delimiter",
+        "drop_null_columns",
+        "format"
+      ],
+      "routes": [
+        {
+          "methods": [
+            "POST"
+          ],
+          "path": "/_query"
+        }
+      ],
+      "sha256": "f127f18ffdc80b36f489742dce675352fca4b86b8fd1fb6a26516310419fd384",
+      "source": "https://raw.githubusercontent.com/elastic/elasticsearch/f2e019bd8110088070638ca779ec1543188c0f43/rest-api-spec/src/main/resources/rest-api-spec/api/esql.query.json"
     },
     "explain": {
       "api": "explain",

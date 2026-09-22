@@ -1,6 +1,6 @@
 # RFC-0006: Elasticsearch Read-Only Query Support
 
-- Status: Metadata, native query/batch, owned PIT/scroll/SQL and synchronous EQL/SQL implemented; remaining advanced profiles and live qualification pending
+- Status: Metadata, native query/batch, owned PIT/scroll/SQL and synchronous EQL/SQL/ES|QL implemented; ENRICH isolation, other advanced profiles and live qualification pending
 - Authors: readonly-db-mcp maintainers
 - Created: 2026-09-12
 - Depends on: RFC-0001 resource governance and the common architecture contract
@@ -58,6 +58,20 @@ retain row/columnar output and use owned fetch/clear lifecycle, including termin
 nonempty pages, session cleanup and uncertain-outcome reservations. SQL/EQL share
 one parser memory pool. ES|QL and persisted async profiles remain pending.
 See [SQL evidence and remaining live gates](qualification/2026-09-22-elasticsearch-sql.md).
+
+Implementation update (2026-09-22, ES|QL): `esql.query` and independent batch
+members now execute original native pipelines using complete separately generated
+grammars/imports for both pins. Structured visitors cover FROM, LOOKUP JOIN,
+quoted source lists, 8.19 EXPLAIN and 9.1 FORK, native parameters and full-text
+field lineage. JSON row/columnar results, profiling and number precision are
+preserved; incomplete, oversized and unexpected asynchronous results fail whole.
+All three languages share the existing parser pool. ES|QL reserves an 8 MiB
+baseline, informed by its larger parser's allocation samples. ENRICH is parsed
+but remains unavailable until historical enrichment data and future policy
+changes have an explicit isolation/authority proof; source-index DLS/FLS alone
+cannot provide that proof. Inference, experimental pragmas, persisted async and
+live certification remain separate gates. See
+[ES|QL evidence and remaining gates](qualification/2026-09-22-elasticsearch-esql.md).
 
 ## Summary
 

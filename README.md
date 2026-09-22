@@ -17,7 +17,8 @@ repository.
 > requires validation against your provisioned accounts and server builds.
 > Elasticsearch implements pinned target/permission attestation, native metadata,
 > and scoped `es_query` / `es_batch` / `es_cursor` tools with advanced DSL, aggregations, scripts,
-> supplied-vector retrieval, templates, owned PIT/scroll/SQL pagination and synchronous EQL/SQL. ES|QL remains scheduled by
+> supplied-vector retrieval, templates, owned PIT/scroll/SQL pagination and synchronous EQL/SQL/ES|QL.
+> ENRICH isolation, inference and other advanced profiles remain tracked by
 > [RFC-0006](docs/RFC-0006-elasticsearch-readonly-support.md); ES is not yet
 > advertised as a complete or live-server-certified query adapter.
 
@@ -211,10 +212,10 @@ external-plugin inventory; custom plugin profiles remain pending.
 `es_metadata` supports `resolve` and `mappings`. `es_query` supports `search`,
 `count`, `get`, `mget`, `termvectors`, `mtermvectors`, `explain`, `field_caps`,
 `search_shards`, `indices.validate_query`, `search_template` and
-`render_search_template`, `eql.search`, `sql.query` and `sql.translate`. IDs use the structured `id` field. Native JSON and
+`render_search_template`, `eql.search`, `sql.query`, `sql.translate` and `esql.query`. IDs use the structured `id` field. Native JSON and
 large integer values remain intact. Wildcards use ES `*` / `?` semantics, with containment
 checked for future index names; aliases and data streams are resolved for each
-call. Date math, custom plugins, cross-cluster and ES|QL profiles still
+call. Date math, custom plugins, cross-cluster and ENRICH isolation profiles still
 need their respective proof implementations. Missing capabilities are reported
 by `inspect_target`, separately from mutation denial. See the
 [native query qualification record](docs/qualification/2026-09-22-elasticsearch-native-queries.md)
@@ -337,6 +338,38 @@ SQL grammars/generated files retain their upstream Apache 2.0 notices, separate
 from the EQL grammar's Elastic License 2.0. No Java runtime is required.
 See [SQL qualification and live-test setup](docs/qualification/2026-09-22-elasticsearch-sql.md).
 
+Native synchronous ES|QL uses `es_query.operation=esql.query` or an independent
+`es_batch` member. Complete version-specific upstream grammars cover pipelines,
+expressions, aggregations, parameters, LOOKUP JOIN and the pinned release's
+commands, including 9.1 FORK branches and 8.19 EXPLAIN. Native semantic/function
+availability stays with ES; queries are never translated into a smaller dialect.
+Every source, including JOINs and nested branches, must fit both the target and
+any explicit request index scope. Original aliases, query text and native
+anonymous/positional/named parameters are preserved.
+
+```json
+{"target":"search-reporting","operation":"esql.query","body":{"query":"FROM reports-* | LOOKUP JOIN reports-customers ON customer_id | WHERE amount > ?minimum | STATS total = SUM(amount) BY category | SORT total DESC | LIMIT 10","params":[{"minimum":100}],"columnar":false},"max_rows":100}
+```
+
+Results preserve native columns, rows/columnar values, profiling and exact JSON
+numbers. `format=json` and `allow_partial_results=false` are fixed. `max_rows`
+bounds the whole returned result: oversized responses fail without truncation;
+use native `LIMIT` or aggregation to select the desired result. The adapter does
+not append a limit or change the engine's native implicit limit. HTTP cancellation
+uses the synchronous cancellable REST channel; ES|QL has no cursor in this profile.
+`drop_null_columns` is supported, except when columnar output drops every column
+and makes row cardinality unprovable; retain null columns or use row output then.
+
+ENRICH is parsed but needs a separate enrichment-data isolation profile: existing
+snapshots do not inherit ordinary source-index DLS/FLS. COMPLETION, semantic-text
+matching and other inference require endpoint/egress/cost proof. Experimental
+pragmas and persisted async results also need separate resource/lifecycle profiles.
+These are reported as unavailable capabilities, not classified as writes merely
+because a query is advanced. EQL, SQL and ES|QL share the 128 MiB parser pool;
+ES|QL reserves an 8 MiB baseline per parse plus byte/token charges. Its vendored
+grammar/generated code retains Elastic License 2.0; runtime remains Go-only.
+See [ES|QL qualification and remaining gates](docs/qualification/2026-09-22-elasticsearch-esql.md).
+
 ### 3. Build and verify
 
 The module currently requires Go 1.26.6 or newer because of the maintained
@@ -389,7 +422,7 @@ Use target inventory-test. Inspect the schema and verify whether transaction
 | `query_batch` | Runs several SELECTs in one read-only transaction snapshot. |
 | `query_explain` | Returns an engine-native non-executing plan for a validated SELECT. |
 | `es_metadata` | Resolves scoped Elasticsearch indices, aliases and data streams, or reads their mappings. |
-| `es_query` | Executes scoped native Elasticsearch reads, advanced DSL, scripts, aggregations, supplied vectors, templates and synchronous EQL/SQL, including SQL translation. |
+| `es_query` | Executes scoped native Elasticsearch reads, advanced DSL, scripts, aggregations, supplied vectors, templates and synchronous EQL/SQL/ES|QL, including SQL translation. |
 | `es_batch` | Executes preflighted independent reads or compatible searches in one owned PIT, with a shared deadline and output budget. |
 | `es_cursor` | Opens, advances and closes session-owned PIT/scroll/SQL handles with bounded lifetimes and cleanup. |
 | `redis_command` | Runs one attested advanced read-only Redis command vector. |

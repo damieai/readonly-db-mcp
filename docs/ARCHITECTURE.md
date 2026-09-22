@@ -269,3 +269,42 @@ are validated, values retain exact JSON numbers, and oversized results fail whol
 Cleanup, uncertainty, authority changes and session disconnection reuse the shared
 owned-context machinery. SQL and EQL have fresh per-call parser DFA caches and
 share one 128 MiB reservation pool already included in resource forecasting.
+
+Synchronous Elasticsearch ES|QL is `esql.query`, available in individual queries
+and independent batches. Each pinned version has its complete upstream lexer,
+parser and grammar imports compiled to Go. Generation preserves native release
+predicates with small Go base classes; development-only commands stay unavailable
+on the attested release builds. Structured source visits cover every relation,
+including JOIN targets and nested EXPLAIN/FORK branches. Quoted source lists are
+split according to native source semantics. Exclusions are preserved in the
+query while proof covers the positive superset. The default `::data` selector
+uses the existing data inventory; remote/failure-store authority remains separate.
+
+Parameter binding mirrors native anonymous, positional, named and identifier
+forms. It never expands query text. Full-text function/field parameters and
+assignment/rename lineage are inspected for implicit semantic inference. Mapping
+runtime references and request filters reuse existing DSL source/effect visitors.
+The native engine receives the original query and parameters and still validates
+function/type/plan availability. Source-free ROW/SHOW queries need no index proof.
+ENRICH policy names are collected but need a dedicated enrichment-data authority
+profile: current policy/source metadata cannot prove historical snapshot content
+or protect against future policy changes outside ordinary index DLS/FLS.
+
+ES|QL routes only to synchronous `POST /_query`, with JSON format and complete
+results. Locale, profiling, columnar output and null-column dropping remain native
+controls. Async retention controls, caller transport options and experimental
+resource pragmas are not part of this profile. Returned rows/columnar heights
+and widths are validated without flattening multivalue cells. `max_rows` bounds
+the whole result and fails on overflow; queries are never rewritten with an
+implicit adapter LIMIT. Fully dropped columnar output cannot prove row count
+and fails with an instruction to retain columns or use row output. Unexpected
+async/cursor or cross-cluster state invalidates the profile. Source inventories
+are rechecked before data is released. Cancellation closes the native cancellable
+REST channel; no ES|QL pagination state is retained locally.
+
+ES|QL shares the 128 MiB parser admission pool with SQL/EQL, reserving an 8 MiB
+baseline plus the same input-byte and per-token charges. The larger baseline is
+based on allocation samples of the richer mode-based grammar; actual peak RSS
+and native task termination remain live qualification gates. All grammars retain
+per-invocation prediction caches, request cancellation and explicit syntax/work
+limits. Runtime remains Go-only; Java is solely a maintainer generation tool.

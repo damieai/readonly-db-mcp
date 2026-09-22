@@ -63,6 +63,8 @@ func TestElasticsearchThroughRegistryAndMCP(t *testing.T) {
 			}
 		case "/_sql/translate":
 			fmt.Fprint(w, `{"query":{"term":{"n":9007199254740993}}}`)
+		case "/_query":
+			fmt.Fprint(w, `{"took":1,"is_partial":false,"columns":[{"name":"n","type":"long"}],"values":[[9007199254740993]]}`)
 		case "/_sql/close":
 			sqlCleared.Add(1)
 			fmt.Fprint(w, `{"succeeded":true}`)
@@ -185,6 +187,8 @@ targets:
 		{"es_query", json.RawMessage(`{"target":"es_test","operation":"eql.search","body":{"query":"any where value == 9007199254740993"}}`)},
 		{"es_query", json.RawMessage(`{"target":"es_test","operation":"sql.query","body":{"query":"SELECT ? FROM \"reports-*\"","params":[9007199254740993]}}`)},
 		{"es_query", json.RawMessage(`{"target":"es_test","operation":"sql.translate","body":{"query":"SELECT ? FROM \"reports-*\"","params":[9007199254740993]}}`)},
+		{"es_query", json.RawMessage(`{"target":"es_test","operation":"esql.query","body":{"query":"FROM reports-* | EVAL n=? | LIMIT 1","params":[9007199254740993]}}`)},
+		{"es_batch", json.RawMessage(`{"target":"es_test","requests":[{"operation":"esql.query","body":{"query":"FROM reports-* | STATS n=COUNT(*)"}},{"operation":"sql.query","body":{"query":"SELECT 1"}}]}`)},
 		{"es_batch", json.RawMessage(`{"target":"es_test","requests":[{"operation":"sql.query","body":{"query":"SELECT 1 FROM \"reports-*\""}},{"operation":"eql.search","body":{"query":"any where true"}}]}`)},
 
 		{"es_batch", json.RawMessage(`{"target":"es_test","requests":[{"operation":"eql.search","body":{"query":"any where true"}},{"operation":"search","body":{"query":{"match_all":{}}}}]}`)},
@@ -206,6 +210,8 @@ targets:
 		{"es_query", json.RawMessage(`{"target":"es_test","operation":"eql.search","body":{"query":"any where true","wait_for_completion_timeout":"1s"}}`)},
 		{"es_query", json.RawMessage(`{"target":"es_test","operation":"eql.search","body":{"query":"any where true","query":"any where false"}}`)},
 		{"es_query", json.RawMessage(`{"target":"es_test","operation":"eql.search","body":{"query":"any where true; any where false"}}`)},
+		{"es_query", json.RawMessage(`{"target":"es_test","operation":"esql.query","body":{"query":"FROM reports-* | LOOKUP JOIN private ON id"}}`)},
+		{"es_query", json.RawMessage(`{"target":"es_test","operation":"esql.query","body":{"query":"ROW x=1","keep_on_completion":true}}`)},
 		{"es_query", json.RawMessage(`{"target":"es_test","operation":"search","headers":{"Authorization":"x"}}`)},
 		{"es_query", json.RawMessage(`{"target":"es_test","operation":"search","body":null}`)},
 		{"es_batch", json.RawMessage(`{"target":"es_test","requests":[{"operation":"search","target":"different"}]}`)},
