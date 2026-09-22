@@ -71,10 +71,10 @@ func (p *queryProof) prepareEQL(q *preparedQuery, body map[string]any) error {
 	if err := pageSize(body, q.rows, 10); err != nil {
 		return err
 	}
-	if err := eqlInteger(body, "fetch_size", 1000, 2, settings.MaxEQLFetchSize); err != nil {
+	if err := languageInteger(body, "fetch_size", 1000, 2, settings.MaxEQLFetchSize); err != nil {
 		return err
 	}
-	if err := eqlInteger(body, "max_samples_per_key", 1, 1, q.rows); err != nil {
+	if err := languageInteger(body, "max_samples_per_key", 1, 1, q.rows); err != nil {
 		return err
 	}
 	if _, err := p.sourceMappings(q.request.Indices); err != nil {
@@ -113,21 +113,21 @@ func eqlControl(name string, value any) error {
 	return failure("capability_unavailable", "partial EQL results are not enabled")
 }
 
-func eqlInteger(body map[string]any, key string, fallback, minimum, maximum int) error {
+func languageInteger(body map[string]any, key string, fallback, minimum, maximum int) error {
 	value := int64(fallback)
 	if raw, ok := body[key]; ok {
 		n, ok := raw.(json.Number)
 		if !ok {
-			return failure("invalid_request", "EQL size settings must be integers")
+			return failure("invalid_request", "native size settings must be integers")
 		}
 		var err error
 		value, err = n.Int64()
 		if err != nil {
-			return failure("invalid_request", "invalid EQL size setting")
+			return failure("invalid_request", "invalid native size setting")
 		}
 	}
 	if value < int64(minimum) || value > int64(maximum) {
-		return failure("resource_limit", "EQL size setting exceeds its configured resource limit")
+		return failure("resource_limit", "native size setting exceeds its configured resource limit")
 	}
 	return nil
 }

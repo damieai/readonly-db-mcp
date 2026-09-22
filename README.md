@@ -17,7 +17,7 @@ repository.
 > requires validation against your provisioned accounts and server builds.
 > Elasticsearch implements pinned target/permission attestation, native metadata,
 > and scoped `es_query` / `es_batch` / `es_cursor` tools with advanced DSL, aggregations, scripts,
-> supplied-vector retrieval, templates, owned PIT/scroll pagination and synchronous EQL. SQL and ES|QL remain scheduled by
+> supplied-vector retrieval, templates, owned PIT/scroll/SQL pagination and synchronous EQL/SQL. ES|QL remains scheduled by
 > [RFC-0006](docs/RFC-0006-elasticsearch-readonly-support.md); ES is not yet
 > advertised as a complete or live-server-certified query adapter.
 
@@ -211,10 +211,10 @@ external-plugin inventory; custom plugin profiles remain pending.
 `es_metadata` supports `resolve` and `mappings`. `es_query` supports `search`,
 `count`, `get`, `mget`, `termvectors`, `mtermvectors`, `explain`, `field_caps`,
 `search_shards`, `indices.validate_query`, `search_template` and
-`render_search_template` and `eql.search`. IDs use the structured `id` field. Native JSON and
+`render_search_template`, `eql.search`, `sql.query` and `sql.translate`. IDs use the structured `id` field. Native JSON and
 large integer values remain intact. Wildcards use ES `*` / `?` semantics, with containment
 checked for future index names; aliases and data streams are resolved for each
-call. Date math, custom plugins, cross-cluster and SQL/ES|QL profiles still
+call. Date math, custom plugins, cross-cluster and ES|QL profiles still
 need their respective proof implementations. Missing capabilities are reported
 by `inspect_target`, separately from mutation denial. See the
 [native query qualification record](docs/qualification/2026-09-22-elasticsearch-native-queries.md)
@@ -235,9 +235,9 @@ do not share a snapshot. Oversized pages, buckets or
 documents fail explicitly; aggregations are never silently truncated. Configure
 `max_rows`, `max_result_bytes`, and ES `max_aggregation_buckets` for those limits.
 
-`es_cursor` supports PIT and scroll with `action: "open" | "next" | "close"`.
+`es_cursor` supports PIT, scroll and native SQL cursors with `action: "open" | "next" | "close"`.
 Open returns the first page and an opaque handle bound to this MCP session and
-configured target. Native PIT/scroll IDs cannot be supplied and are removed from
+configured target. Native PIT/scroll/SQL IDs cannot be supplied and are removed from
 responses. For example:
 
 ```json
@@ -298,6 +298,45 @@ License 2.0, separately from the repository's MIT license. See
 [parser packaging and regeneration](tools/es-language-parser/README.md) and the
 [EQL qualification record](docs/qualification/2026-09-22-elasticsearch-eql.md).
 
+Use `es_query` with `sql.query` for complete bounded SQL results, or
+`sql.translate` for the native SQL-to-DSL plan. The two pinned SQL grammars are
+compiled separately into Go; SQL text and native scalar/typed parameters remain
+unchanged. Expression, aggregation, PIVOT, subquery, CTE, JOIN, EXPLAIN/DEBUG and
+SHOW/SYS syntax is parsed completely; the native ES version decides semantic
+availability. Every relation and metadata index pattern passes scope proof,
+including nested branches and CTE definitions/references. Quoted aliases remain
+in the original query. Local catalogs are checked against the cluster identity;
+remote catalogs need the cross-cluster profile.
+
+```json
+{"target":"search-reporting","operation":"sql.query","body":{"query":"SELECT category, SUM(amount) FROM \"reports-*\" WHERE amount > ? GROUP BY category ORDER BY SUM(amount) DESC LIMIT 10","params":[100],"fetch_size":5},"max_rows":100}
+{"target":"search-reporting","operation":"sql.translate","body":{"query":"SELECT * FROM \"reports-*\" WHERE amount > ?","params":[100]}}
+{"target":"search-reporting","action":"open","kind":"sql","body":{"query":"SELECT * FROM \"reports-*\" ORDER BY amount DESC","fetch_size":100,"columnar":true},"keep_alive_ms":60000}
+```
+
+`sql.query` drains native pages within one deadline and total `max_rows` / result
+byte budget. Exceeding a budget fails the whole query and cleans owned state;
+use `es_cursor` for larger results. SQL cursor `next` uses only the returned local
+handle (plus optional timeout/lease), preserving the initial parameters, page
+size, mode and row/column orientation. Absence of a native cursor closes the
+handle even when the final page contains rows. `close`, disconnect, expiry,
+authority drift and shutdown use `/_sql/close` only for owned tokens.
+
+JSON rows/columnar values and large integers are preserved; transport format is
+JSON (`binary_format: false`). Explicit `fetch_size` must fit `max_rows`; when
+omitted it defaults to `min(1000, max_rows)`. `page_timeout` or `keep_alive_ms`
+selects the bounded cursor lease; specifying both is an error. Native
+`request_timeout` is bounded by the remaining MCP deadline. Partial results are
+disabled. Async waits must be omitted or `-1`, and retained async results remain
+outside this profile. SQL can join independent batches; shared-PIT batches
+remain native search operations. `SHOW TABLES` without a pattern means native
+`*`, so use a permitted selector such as `SHOW TABLES LIKE 'reports-%'`.
+
+SQL and EQL share the 128 MiB parser pool and configured language limits.
+SQL grammars/generated files retain their upstream Apache 2.0 notices, separate
+from the EQL grammar's Elastic License 2.0. No Java runtime is required.
+See [SQL qualification and live-test setup](docs/qualification/2026-09-22-elasticsearch-sql.md).
+
 ### 3. Build and verify
 
 The module currently requires Go 1.26.6 or newer because of the maintained
@@ -350,9 +389,9 @@ Use target inventory-test. Inspect the schema and verify whether transaction
 | `query_batch` | Runs several SELECTs in one read-only transaction snapshot. |
 | `query_explain` | Returns an engine-native non-executing plan for a validated SELECT. |
 | `es_metadata` | Resolves scoped Elasticsearch indices, aliases and data streams, or reads their mappings. |
-| `es_query` | Executes scoped native Elasticsearch reads, advanced DSL, scripts, aggregations, supplied vectors, templates and synchronous EQL. |
+| `es_query` | Executes scoped native Elasticsearch reads, advanced DSL, scripts, aggregations, supplied vectors, templates and synchronous EQL/SQL, including SQL translation. |
 | `es_batch` | Executes preflighted independent reads or compatible searches in one owned PIT, with a shared deadline and output budget. |
-| `es_cursor` | Opens, advances and closes session-owned PIT/scroll handles with bounded lifetimes and cleanup. |
+| `es_cursor` | Opens, advances and closes session-owned PIT/scroll/SQL handles with bounded lifetimes and cleanup. |
 | `redis_command` | Runs one attested advanced read-only Redis command vector. |
 | `redis_batch` | Runs a bounded read-only Redis batch; non-atomic commands execute sequentially to bound retained reply memory. |
 

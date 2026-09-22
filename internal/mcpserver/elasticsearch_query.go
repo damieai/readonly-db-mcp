@@ -101,10 +101,10 @@ func (v *ElasticsearchBatchInput) UnmarshalJSON(data []byte) error {
 func (s *Server) registerElasticsearchQueryTools() {
 	properties := func() map[string]any {
 		return map[string]any{
-			"operation": map[string]any{"type": "string", "minLength": 1, "maxLength": 64, "description": "search, count, get, mget, termvectors, mtermvectors, explain, field_caps, search_shards, indices.validate_query, search_template, render_search_template or eql.search"},
+			"operation": map[string]any{"type": "string", "minLength": 1, "maxLength": 64, "description": "search, count, get, mget, termvectors, mtermvectors, explain, field_caps, search_shards, indices.validate_query, search_template, render_search_template eql.search, sql.query or sql.translate"},
 			"indices":   map[string]any{"type": "array", "maxItems": 10000, "items": map[string]any{"type": "string", "maxLength": 255}},
 			"id":        map[string]any{"type": "string", "maxLength": 1024},
-			"body":      map[string]any{"type": "object", "additionalProperties": true, "description": "Native Elasticsearch JSON; advanced DSL, aggregations, scripts and supplied vectors are preserved"},
+			"body":      map[string]any{"type": "object", "additionalProperties": true, "description": "Native Elasticsearch JSON; advanced DSL, aggregations, scripts and supplied vectors and native language queries/parameters are preserved"},
 			"options":   map[string]any{"type": "object", "additionalProperties": true, "description": "Native options from the pinned REST API; no raw URL, headers or paths"},
 			"max_rows":  map[string]any{"type": "integer", "minimum": 0, "maximum": 10000},
 		}
@@ -113,7 +113,7 @@ func (s *Server) registerElasticsearchQueryTools() {
 		name := name
 		p := properties()
 		required := []string{"target", "operation"}
-		description := "Execute a scoped native Elasticsearch read. Supports advanced DSL, scripts, aggregations, supplied-vector, local hybrid retrieval and native synchronous EQL; inspect_target reports pending capabilities."
+		description := "Execute a scoped native Elasticsearch read. Supports advanced DSL, scripts, aggregations, supplied-vector, local hybrid retrieval and native synchronous EQL/SQL; inspect_target reports pending capabilities."
 		if name == "es_batch" {
 			p = map[string]any{"requests": map[string]any{"type": "array", "minItems": 1, "maxItems": 100, "items": map[string]any{"type": "object", "additionalProperties": false, "required": []string{"operation"}, "properties": properties()}}, "consistency": map[string]any{"type": "string", "enum": []string{"independent", "pit"}}}
 			required = []string{"target", "requests"}

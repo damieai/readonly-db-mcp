@@ -40,8 +40,8 @@ func (t *Target) ElasticsearchCursor(ctx context.Context, r core.ElasticsearchCu
 		return nil, failure("invalid_request", "cursor action must be open, next or close")
 	}
 	if r.Action == "open" {
-		if r.Handle != "" || (r.Kind != "pit" && r.Kind != "scroll") {
-			return nil, failure("invalid_request", "open requires pit/scroll kind and no handle")
+		if r.Handle != "" || (r.Kind != "pit" && r.Kind != "scroll" && r.Kind != "sql") {
+			return nil, failure("invalid_request", "open requires pit/scroll/sql kind and no handle")
 		}
 	} else if r.Handle == "" || r.Kind != "" || len(r.Indices) != 0 {
 		return nil, failure("invalid_request", "next/close requires a handle and cannot replace kind or index scope")
@@ -91,6 +91,9 @@ func (t *Target) ElasticsearchCursor(ctx context.Context, r core.ElasticsearchCu
 	}
 	ctx, cancel := context.WithDeadline(ctx, c.absolute)
 	defer cancel()
+	if c.kind == "sql" {
+		return t.nextSQLCursor(ctx, c, r, keep, id, started)
+	}
 	if c.kind == "scroll" && (len(r.Body) != 0 || r.MaxRows != 0) {
 		return nil, failure("invalid_request", "scroll pages use the query and page size fixed by open")
 	}
@@ -184,6 +187,9 @@ func (t *Target) ElasticsearchCursor(ctx context.Context, r core.ElasticsearchCu
 }
 
 func (t *Target) openCursor(ctx context.Context, r core.ElasticsearchCursorRequest, keep time.Duration, id string, started time.Time) (result *core.ElasticsearchCursorResult, err error) {
+	if r.Kind == "sql" {
+		return t.openSQLCursor(ctx, r, keep, id, started)
+	}
 	p := newQueryProof(t, ctx, int(t.next.Add(1)-1)%len(t.wire.clients))
 	q, err := p.prepare(core.ElasticsearchQueryRequest{Operation: "search", Indices: r.Indices, Body: r.Body, Options: r.Options, MaxRows: r.MaxRows})
 	if err != nil {

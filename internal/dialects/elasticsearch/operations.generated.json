@@ -913,6 +913,58 @@
       "sha256": "2f778b72b623fdf3025d91109abd86633b12245ccc189bc767cc56f1fadc89fa",
       "source": "https://raw.githubusercontent.com/elastic/elasticsearch/4fe44c255c3d0da06779b921e132cdc555ed9aff/rest-api-spec/src/main/resources/rest-api-spec/api/search_template.json"
     },
+    "sql.clear_cursor": {
+      "api": "sql.clear_cursor",
+      "effect": "owned_context",
+      "implemented": true,
+      "parameters": [],
+      "routes": [
+        {
+          "methods": [
+            "POST"
+          ],
+          "path": "/_sql/close"
+        }
+      ],
+      "sha256": "89bcd19e2c6ee63bec95aa487dc82fc9c43e5ec7fac36ae4370839765f7e38fb",
+      "source": "https://raw.githubusercontent.com/elastic/elasticsearch/4fe44c255c3d0da06779b921e132cdc555ed9aff/rest-api-spec/src/main/resources/rest-api-spec/api/sql.clear_cursor.json"
+    },
+    "sql.query": {
+      "api": "sql.query",
+      "effect": "read",
+      "implemented": true,
+      "parameters": [
+        "format"
+      ],
+      "routes": [
+        {
+          "methods": [
+            "POST",
+            "GET"
+          ],
+          "path": "/_sql"
+        }
+      ],
+      "sha256": "e4ae5914d834d224aabcf3146d9a0af9e54273c56533b68341f1a0f667ef431a",
+      "source": "https://raw.githubusercontent.com/elastic/elasticsearch/4fe44c255c3d0da06779b921e132cdc555ed9aff/rest-api-spec/src/main/resources/rest-api-spec/api/sql.query.json"
+    },
+    "sql.translate": {
+      "api": "sql.translate",
+      "effect": "read",
+      "implemented": true,
+      "parameters": [],
+      "routes": [
+        {
+          "methods": [
+            "POST",
+            "GET"
+          ],
+          "path": "/_sql/translate"
+        }
+      ],
+      "sha256": "e5f27494876b266c7a1607351fc332031eb10dd243694a816298226af4a089fc",
+      "source": "https://raw.githubusercontent.com/elastic/elasticsearch/4fe44c255c3d0da06779b921e132cdc555ed9aff/rest-api-spec/src/main/resources/rest-api-spec/api/sql.translate.json"
+    },
     "termvectors": {
       "api": "termvectors",
       "effect": "read",
@@ -1940,6 +1992,58 @@
       ],
       "sha256": "fbdab250aa06491e433d7582edb6162c14d1c6203f4d59a7fea909649152119b",
       "source": "https://raw.githubusercontent.com/elastic/elasticsearch/f2e019bd8110088070638ca779ec1543188c0f43/rest-api-spec/src/main/resources/rest-api-spec/api/search_template.json"
+    },
+    "sql.clear_cursor": {
+      "api": "sql.clear_cursor",
+      "effect": "owned_context",
+      "implemented": true,
+      "parameters": [],
+      "routes": [
+        {
+          "methods": [
+            "POST"
+          ],
+          "path": "/_sql/close"
+        }
+      ],
+      "sha256": "16f80057db65fe5ba54dd06cc7f6cc9bfb9632ca8bee8382ab000f5dc4d1e339",
+      "source": "https://raw.githubusercontent.com/elastic/elasticsearch/f2e019bd8110088070638ca779ec1543188c0f43/rest-api-spec/src/main/resources/rest-api-spec/api/sql.clear_cursor.json"
+    },
+    "sql.query": {
+      "api": "sql.query",
+      "effect": "read",
+      "implemented": true,
+      "parameters": [
+        "format"
+      ],
+      "routes": [
+        {
+          "methods": [
+            "POST",
+            "GET"
+          ],
+          "path": "/_sql"
+        }
+      ],
+      "sha256": "fd6b73c4888e5433703b8ac58e460f27e9c019a78b106dee5ee1bc7c1619fb21",
+      "source": "https://raw.githubusercontent.com/elastic/elasticsearch/f2e019bd8110088070638ca779ec1543188c0f43/rest-api-spec/src/main/resources/rest-api-spec/api/sql.query.json"
+    },
+    "sql.translate": {
+      "api": "sql.translate",
+      "effect": "read",
+      "implemented": true,
+      "parameters": [],
+      "routes": [
+        {
+          "methods": [
+            "POST",
+            "GET"
+          ],
+          "path": "/_sql/translate"
+        }
+      ],
+      "sha256": "5da18c8818d1a057a30558aaeda4e0f627bb863d83a84805e30b85cd8b8cfa03",
+      "source": "https://raw.githubusercontent.com/elastic/elasticsearch/f2e019bd8110088070638ca779ec1543188c0f43/rest-api-spec/src/main/resources/rest-api-spec/api/sql.translate.json"
     },
     "termvectors": {
       "api": "termvectors",

@@ -30,7 +30,7 @@ func TestElasticsearchMetadataEnvelopeRejectsAmbiguity(t *testing.T) {
 }
 
 func TestElasticsearchThroughRegistryAndMCP(t *testing.T) {
-	var cleared atomic.Int64
+	var cleared, sqlCleared atomic.Int64
 	upstream := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		w.Header().Set("X-Elastic-Product", "Elasticsearch")
@@ -49,6 +49,23 @@ func TestElasticsearchThroughRegistryAndMCP(t *testing.T) {
 			fmt.Fprint(w, `{"reports-2026":{"mappings":{"_meta":{"number":9007199254740993}}}}`)
 		case "/reports-*/_search":
 			fmt.Fprint(w, `{"timed_out":false,"_shards":{"total":1,"failed":0,"successful":1},"hits":{"hits":[{"_index":"reports-2026","_id":"a","_source":{"number":9007199254740993}}]}}`)
+		case "/_sql":
+			var body map[string]json.RawMessage
+			_ = json.NewDecoder(r.Body).Decode(&body)
+			if _, ok := body["cursor"]; ok {
+				fmt.Fprint(w, `{"rows":[[9007199254740993]]}`)
+			} else {
+				response := `{"columns":[{"name":"n","type":"long"}],"rows":[[9007199254740993]]`
+				if _, open := body["columnar"]; open {
+					response += `,"cursor":"native-private-sql"`
+				}
+				fmt.Fprint(w, response+"}")
+			}
+		case "/_sql/translate":
+			fmt.Fprint(w, `{"query":{"term":{"n":9007199254740993}}}`)
+		case "/_sql/close":
+			sqlCleared.Add(1)
+			fmt.Fprint(w, `{"succeeded":true}`)
 		case "/reports-*/_eql/search":
 			fmt.Fprint(w, `{"took":1,"timed_out":false,"is_partial":false,"is_running":false,"hits":{"events":[{"_index":"reports-2026","_id":"a","_source":{"number":9007199254740993}}]}}`)
 		case "/reports-*/_pit":
@@ -166,6 +183,10 @@ targets:
 		{"es_query", json.RawMessage(`{"target":"es_test","operation":"search","body":{"query":{"script_score":{"query":{"match_all":{}},"script":{"source":"params.x","params":{"x":9007199254740993}}}}}}`)},
 		{"es_batch", json.RawMessage(`{"target":"es_test","requests":[{"operation":"search","body":{"query":{"match_all":{}}}}]}`)},
 		{"es_query", json.RawMessage(`{"target":"es_test","operation":"eql.search","body":{"query":"any where value == 9007199254740993"}}`)},
+		{"es_query", json.RawMessage(`{"target":"es_test","operation":"sql.query","body":{"query":"SELECT ? FROM \"reports-*\"","params":[9007199254740993]}}`)},
+		{"es_query", json.RawMessage(`{"target":"es_test","operation":"sql.translate","body":{"query":"SELECT ? FROM \"reports-*\"","params":[9007199254740993]}}`)},
+		{"es_batch", json.RawMessage(`{"target":"es_test","requests":[{"operation":"sql.query","body":{"query":"SELECT 1 FROM \"reports-*\""}},{"operation":"eql.search","body":{"query":"any where true"}}]}`)},
+
 		{"es_batch", json.RawMessage(`{"target":"es_test","requests":[{"operation":"eql.search","body":{"query":"any where true"}},{"operation":"search","body":{"query":{"match_all":{}}}}]}`)},
 	} {
 		r, err := cs.CallTool(ctx, &mcp.CallToolParams{Name: call.name, Arguments: call.args})
@@ -235,15 +256,30 @@ targets:
 	if err != nil || continued.IsError {
 		t.Fatal("owner continuation", err, continued)
 	}
+	sqlOpened, err := cs.CallTool(ctx, &mcp.CallToolParams{Name: "es_cursor", Arguments: json.RawMessage(`{"target":"es_test","action":"open","kind":"sql","body":{"query":"SELECT * FROM \"reports-*\"","columnar":false}}`)})
+	if err != nil || sqlOpened.IsError {
+		t.Fatal("MCP SQL cursor open", err, sqlOpened)
+	}
+	sqlRaw, _ := json.Marshal(sqlOpened.StructuredContent)
+	var sqlHandle struct {
+		Handle string `json:"handle"`
+	}
+	if json.Unmarshal(sqlRaw, &sqlHandle) != nil || sqlHandle.Handle == "" || strings.Contains(string(sqlRaw), "native-private") {
+		t.Fatal("SQL cursor ID leaked")
+	}
+	foreign, err := cs2.CallTool(ctx, &mcp.CallToolParams{Name: "es_cursor", Arguments: map[string]any{"target": "es_test", "action": "next", "handle": sqlHandle.Handle}})
+	if err == nil && !foreign.IsError {
+		t.Fatal("foreign session advanced SQL cursor")
+	}
 	// Existing metadata assertions below use the second connection.
 	if err := cs.Close(); err != nil {
 		t.Fatal(err)
 	}
 	until := time.Now().Add(time.Second)
-	for cleared.Load() == 0 && time.Now().Before(until) {
+	for (cleared.Load() == 0 || sqlCleared.Load() == 0) && time.Now().Before(until) {
 		time.Sleep(time.Millisecond)
 	}
-	if cleared.Load() != 1 {
+	if cleared.Load() != 1 || sqlCleared.Load() != 1 {
 		t.Fatal("session disconnect failed to release owned PIT")
 	}
 	cs = cs2

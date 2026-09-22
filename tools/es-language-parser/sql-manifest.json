@@ -1,0 +1,25 @@
+{
+  "antlr_sha256": "bc13a9c57a8dd7d5196888211e5ede657cb64a3ce968608697e4f668251a8487",
+  "antlr_version": "4.13.1",
+  "generated_sha256": {
+    "v8/sqlbase_base_listener.go": "1bde5a35d70716a022ae98ebdf3e67400644aa5bc557e252049cfc93bd3ead68",
+    "v8/sqlbase_lexer.go": "75f21b87b18ee77c6d28c6a90f802dad5a8f84ee5c54a29bed1365dbf09b0036",
+    "v8/sqlbase_listener.go": "c76b3894e3728296199b4963aacfac59aba0b95dd7174388935c5f740e618ab0",
+    "v8/sqlbase_parser.go": "a8d1b7795aaa52ed49957b16f26b59901f5b6daf7bacf96e543a7ac5ba2d62cf",
+    "v9/sqlbase_base_listener.go": "ec098e53285ee86220457120699b319739face9e2a9f6d7e6aca67a3f8ddd9ab",
+    "v9/sqlbase_lexer.go": "152edc18145779d20875724bb262269af7539a22746bda707a00a6d78277fc97",
+    "v9/sqlbase_listener.go": "d8b85d6a766c998258aaa664d3d2348e4462c9a9badf48d7d2215038a666e31b",
+    "v9/sqlbase_parser.go": "91cb31a831bcf02db72f94e16ab3613e15403353e467d55f413536d9b565b5a7"
+  },
+  "license_sha256": "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30",
+  "profiles": {
+    "8.19.21": {
+      "grammar_sha256": "89697dd145de475a56c9ca5d0a9c9990a2c69bb769a21e19fc3f656061e02d6f",
+      "source": "https://raw.githubusercontent.com/elastic/elasticsearch/4fe44c255c3d0da06779b921e132cdc555ed9aff/x-pack/plugin/sql/src/main/antlr/SqlBase.g4"
+    },
+    "9.1.10": {
+      "grammar_sha256": "a54ef906a572cec47690fcd7f23bfdf35373619a5ad3d969cb42cc04c69593c7",
+      "source": "https://raw.githubusercontent.com/elastic/elasticsearch/f2e019bd8110088070638ca779ec1543188c0f43/x-pack/plugin/sql/src/main/antlr/SqlBase.g4"
+    }
+  }
+}

@@ -116,6 +116,13 @@ func validateQueryResponse(raw []byte, q *preparedQuery) error {
 		return nil
 	}
 	switch q.request.Operation {
+	case "sql.translate":
+		for _, key := range []string{"cursor", "id", "is_running", "is_partial"} {
+			if _, exists := m[key]; exists {
+				return failure("profile_mismatch", "SQL translation unexpectedly returned execution state")
+			}
+		}
+		return nil
 	case "eql.search":
 		return validateEQLResponse(m, q)
 	case "search", "search_template":

@@ -81,7 +81,7 @@ Untrusted:
     key loss and float conversion of large numbers. Audit fingerprints are keyed
     per process; native error bodies and credentials are not returned or logged.
 
-13. Elasticsearch PIT/scroll handles are random, process-local and bound to the
+13. Elasticsearch PIT/scroll/SQL handles are random, process-local and bound to the
     target, transport session, privilege-proof revision and original source scope.
     Native IDs never cross the tool boundary; clear-all is unavailable. Advances
     and closes serialize per handle, tracking the most recent native ID. Authority
@@ -104,10 +104,22 @@ Untrusted:
     cut apart. Unexpected async IDs/running responses invalidate the target's
     profile proof. Native function and pipe semantic checks stay with ES.
 
+15. Native SQL uses a distinct complete upstream grammar for each pinned version.
+    Structured visitors cover relation nodes, CTE definitions/references, nested
+    queries, joins and metadata patterns (including bound pattern parameters).
+    Local catalogs, request index scope, filters, runtime lookups and full-text
+    inference effects are proved before execution. Native SQL text/parameters
+    are preserved; function and relational semantics remain native decisions.
+    SQL query pages have owned transient tokens, and stateless queries drain
+    them under one deadline and total result limit. Public SQL cursor handles
+    use the same session/authority binding, capacity retention and recovery as
+    PIT/scroll. Native tokens, async IDs, partial data and truncated rows are not
+    returned. Row/columnar orientation and dimensions are checked on every page.
+
 ## Known limitations
 
 - Elasticsearch native queries have TLS fixture coverage, not live engine certification.
-  API-key, custom plugin/inference, SQL/ES|QL, async EQL, dynamic suggestion
+  API-key, custom plugin/inference, ES|QL, persisted async SQL/EQL, dynamic suggestion
   collate and cross-cluster profiles are not yet implemented. Pinned version/hash metadata is an operator trust
   check, not cryptographic remote binary attestation.
 - ES query preflight is not an atomic lock on administrator changes to mappings,

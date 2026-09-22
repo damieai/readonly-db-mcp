@@ -40,6 +40,9 @@ type ownedCursor struct {
 	embedded                                            map[string]map[string]bool
 	after                                               json.RawMessage
 	lastHits                                            int
+	sql                                                 *sqlProfile
+	sqlColumns                                          int
+	sqlDone                                             bool
 }
 
 func (c *ownedCursor) lock(ctx context.Context) error {
@@ -161,13 +164,19 @@ func (t *Target) cleanupCursor(ctx context.Context, c *ownedCursor) error {
 	var cleanupErr error
 	for i, id := range c.ids {
 		path := "/_pit"
+		method := http.MethodDelete
 		body := map[string]any{"id": id}
 		if c.kind == "scroll" {
 			path = "/_search/scroll"
 			body = map[string]any{"scroll_id": []string{id}}
 		}
+		if c.kind == "sql" {
+			path = "/_sql/close"
+			method = http.MethodPost
+			body = map[string]any{"cursor": id}
+		}
 		raw, _ := json.Marshal(body)
-		data, err := t.wire.request(ctx, c.endpoint, http.MethodDelete, path, nil, raw, "application/json", min(t.limits.MaxResultBytes, 64<<10), true)
+		data, err := t.wire.request(ctx, c.endpoint, method, path, nil, raw, "application/json", min(t.limits.MaxResultBytes, 64<<10), true)
 		if err != nil {
 			cleanupErr = err
 			continue
@@ -176,7 +185,7 @@ func (t *Target) cleanupCursor(ctx context.Context, c *ownedCursor) error {
 			Succeeded bool `json:"succeeded"`
 			NumFreed  *int `json:"num_freed"`
 		}
-		if json.Unmarshal(data, &result) != nil || !result.Succeeded || result.NumFreed == nil || *result.NumFreed < 0 {
+		if json.Unmarshal(data, &result) != nil || !result.Succeeded || (c.kind != "sql" && (result.NumFreed == nil || *result.NumFreed < 0)) {
 			cleanupErr = failure("cleanup_failed", "Elasticsearch did not confirm context cleanup")
 		}
 		if i == 0 && cleanupErr == nil && !c.uncertain {

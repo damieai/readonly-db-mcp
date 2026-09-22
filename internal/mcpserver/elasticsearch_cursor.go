@@ -74,12 +74,12 @@ func (v *ElasticsearchCursorInput) UnmarshalJSON(data []byte) error {
 }
 
 func (s *Server) registerElasticsearchCursorTool() {
-	t := tool("es_cursor", "Open, advance or close a session-owned PIT or scroll. PIT next without a body uses the last hit's search_after; an explicit native body supports other continuation strategies. Handles expire; native server IDs are never accepted.")
+	t := tool("es_cursor", "Open, advance or close a session-owned PIT, scroll or native SQL cursor. PIT next without a body uses the last hit's search_after; an explicit native body supports other continuation strategies. Handles expire; native server IDs are never accepted.")
 	t.Annotations.IdempotentHint = false
 	t.InputSchema = map[string]any{"type": "object", "additionalProperties": false, "required": []string{"target", "action"}, "properties": map[string]any{
 		"target":        map[string]any{"type": "string", "minLength": 1, "maxLength": 64},
 		"action":        map[string]any{"type": "string", "enum": []string{"open", "next", "close"}},
-		"kind":          map[string]any{"type": "string", "enum": []string{"pit", "scroll"}},
+		"kind":          map[string]any{"type": "string", "enum": []string{"pit", "scroll", "sql"}},
 		"handle":        map[string]any{"type": "string", "minLength": 43, "maxLength": 43},
 		"indices":       map[string]any{"type": "array", "maxItems": 10000, "items": map[string]any{"type": "string", "maxLength": 255}},
 		"body":          map[string]any{"type": "object", "additionalProperties": true},

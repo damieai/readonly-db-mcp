@@ -1,15 +1,16 @@
-// Package eqlparser parses the complete pinned upstream EQL grammar. The
-// generated grammar is separately licensed; see generated/NOTICE.md.
-package eqlparser
+// Package sqlparser parses the complete version-pinned Elasticsearch SQL grammars.
+package sqlparser
 
 import (
 	"context"
-	"fmt"
+	"strings"
+	"unicode"
 	"unicode/utf8"
 
 	"github.com/antlr4-go/antlr/v4"
-	"github.com/your-org/readonly-db-mcp/internal/dialects/elasticsearch/eqlparser/generated"
 	"github.com/your-org/readonly-db-mcp/internal/dialects/elasticsearch/languagebudget"
+	v8 "github.com/your-org/readonly-db-mcp/internal/dialects/elasticsearch/sqlparser/generated/v8"
+	v9 "github.com/your-org/readonly-db-mcp/internal/dialects/elasticsearch/sqlparser/generated/v9"
 )
 
 // MemoryLimit is a process-wide parser reservation, separately forecast from
@@ -19,27 +20,30 @@ const MemoryLimit int64 = languagebudget.MemoryLimit
 var memory = languagebudget.Memory
 
 type Limits struct{ Bytes, Tokens, Depth int }
+type Source struct{ Index, Catalog string }
+type Catalog struct {
+	Value   string
+	Pattern bool
+}
 type Analysis struct {
-	Kind string
-	// EQL event categories/field names/functions are not index selectors. The
-	// pinned grammar reads the enclosing REST indices; JSON filter/runtime
-	// lookups are proved separately by the native DSL visitor.
-	SourceMode   string
-	EventFilters int
-	MissingTerms int
+	Kind           string
+	Sources        []Source
+	Catalogs       []Catalog
+	Parameters     int
+	FullTextFields []string
 }
 type Error struct{ Code string }
 
 func (e *Error) Error() string {
 	switch e.Code {
 	case "deadline_exceeded":
-		return "deadline_exceeded: EQL analysis exceeded request deadline"
+		return "deadline_exceeded: SQL analysis exceeded request deadline"
 	case "resource_limit":
-		return "resource_limit: EQL analysis exceeds its byte, token, depth, work or memory budget"
+		return "resource_limit: SQL analysis exceeds its byte, token, depth, work or memory budget"
 	case "capability_unavailable":
-		return "capability_unavailable: EQL grammar is not pinned for this version"
+		return "capability_unavailable: SQL grammar is not pinned for this version"
 	default:
-		return "invalid_request: EQL does not match the pinned single-statement grammar"
+		return "invalid_request: SQL does not match the pinned single-statement grammar"
 	}
 }
 
@@ -68,11 +72,18 @@ type characters struct {
 	b *budget
 }
 
-func (c *characters) LA(i int) int { c.b.step(); return c.CharStream.LA(i) }
-func (c *characters) Consume()     { c.b.step(); c.CharStream.Consume() }
+func (c *characters) LA(i int) int {
+	c.b.step()
+	r := c.CharStream.LA(i)
+	if r > 0 {
+		return int(unicode.ToUpper(rune(r)))
+	}
+	return r
+}
+func (c *characters) Consume() { c.b.step(); c.CharStream.Consume() }
 
 type lexer struct {
-	*generated.EqlBaseLexer
+	antlr.Lexer
 	count, limit int
 	b            *budget
 }
@@ -83,7 +94,7 @@ func (l *lexer) NextToken() antlr.Token {
 		stop("resource_limit")
 	}
 	*l.b.charge += 4096
-	token := l.EqlBaseLexer.NextToken()
+	token := l.Lexer.NextToken()
 	l.count++
 	if l.count > l.limit {
 		stop("resource_limit")
@@ -107,10 +118,9 @@ func (*errors) SyntaxError(antlr.Recognizer, interface{}, int, int, string, antl
 }
 
 type listener struct {
-	*generated.BaseEqlBaseListener
+	*antlr.BaseParseTreeListener
 	b               *budget
 	depth, maxDepth int
-	analysis        *Analysis
 }
 
 func (l *listener) EnterEveryRule(antlr.ParserRuleContext) {
@@ -120,13 +130,7 @@ func (l *listener) EnterEveryRule(antlr.ParserRuleContext) {
 		stop("resource_limit")
 	}
 }
-func (l *listener) ExitEveryRule(antlr.ParserRuleContext)          { l.depth-- }
-func (l *listener) EnterEventFilter(*generated.EventFilterContext) { l.analysis.EventFilters++ }
-func (l *listener) ExitSubquery(c *generated.SubqueryContext) {
-	if c.MISSING_EVENT_OPEN() != nil {
-		l.analysis.MissingTerms++
-	}
-}
+func (l *listener) ExitEveryRule(antlr.ParserRuleContext) { l.depth-- }
 
 func freshDFA(atn *antlr.ATN) []*antlr.DFA {
 	result := make([]*antlr.DFA, len(atn.DecisionToState))
@@ -139,7 +143,7 @@ func freshDFA(atn *antlr.ATN) []*antlr.DFA {
 // Analyze neither rewrites the query nor substitutes parameters. Semantic
 // function/type validation stays with the pinned native engine. Errors omit
 // lexer excerpts, query text, literals and parser diagnostics.
-func Analyze(ctx context.Context, version, query string, limits Limits) (result *Analysis, err error) {
+func Analyze(ctx context.Context, version, query string, params []any, limits Limits) (result *Analysis, err error) {
 	defer func() {
 		if r := recover(); r != nil {
 			if a, ok := r.(abort); ok {
@@ -169,30 +173,45 @@ func Analyze(ctx context.Context, version, query string, limits Limits) (result 
 	defer func() { memory.Release(charge) }()
 	b := &budget{ctx: ctx, maxWork: 256*len(query) + 64*limits.Tokens + 4096, charge: &charge}
 	input := &characters{CharStream: antlr.NewInputStream(query), b: b}
-	native := generated.NewEqlBaseLexer(input)
-	native.Interpreter = antlr.NewLexerATNSimulator(native, native.GetATN(), freshDFA(native.GetATN()), antlr.NewPredictionContextCache())
+
+	var native antlr.Lexer
+	if version == "8.19.21" {
+		l := v8.NewSqlBaseLexer(input)
+		l.Interpreter = antlr.NewLexerATNSimulator(l, l.GetATN(), freshDFA(l.GetATN()), antlr.NewPredictionContextCache())
+		native = l
+	} else {
+		l := v9.NewSqlBaseLexer(input)
+		l.Interpreter = antlr.NewLexerATNSimulator(l, l.GetATN(), freshDFA(l.GetATN()), antlr.NewPredictionContextCache())
+		native = l
+	}
 	native.RemoveErrorListeners()
 	native.AddErrorListener(&errors{})
-	lex := &lexer{EqlBaseLexer: native, limit: limits.Tokens, b: b}
+	lex := &lexer{Lexer: native, limit: limits.Tokens, b: b}
 	stream := &tokens{CommonTokenStream: antlr.NewCommonTokenStream(lex, antlr.TokenDefaultChannel), b: b}
 	stream.Fill()
-	// Mirror the upstream recursion guard, using tokens so comments and string
-	// contents cannot count as operators/delimiters. Brackets also cover nested
-	// process relationships; the listener provides a second rule-depth bound.
 	depth, prefix := 0, 0
+	parameters := map[int]any{}
+	var previous antlr.Token
 	for _, token := range stream.GetAllTokens() {
 		b.step()
+		// An unterminated block comment can otherwise fall back to adjacent
+		// division/star tokens in this upstream catch-all lexer.
+		if previous != nil && previous.GetText() == "/" && token.GetText() == "*" && previous.GetStop()+1 == token.GetStart() {
+			stop("invalid_request")
+		}
+		previous = token
 		if token.GetChannel() != antlr.TokenDefaultChannel {
 			continue
 		}
-		switch token.GetTokenType() {
-		case generated.EqlBaseLexerLP, generated.EqlBaseLexerLB, generated.EqlBaseLexerMISSING_EVENT_OPEN:
+		text := strings.ToUpper(token.GetText())
+		switch text {
+		case "(", "{":
 			depth++
 			prefix = 0
-		case generated.EqlBaseLexerRP, generated.EqlBaseLexerRB:
+		case ")", "}":
 			depth--
 			prefix = 0
-		case generated.EqlBaseLexerNOT, generated.EqlBaseLexerMINUS, generated.EqlBaseLexerPLUS:
+		case "NOT", "-", "+":
 			prefix++
 		default:
 			prefix = 0
@@ -200,30 +219,40 @@ func Analyze(ctx context.Context, version, query string, limits Limits) (result 
 		if depth+prefix > limits.Depth {
 			stop("resource_limit")
 		}
+		if text == "?" {
+			if len(parameters) >= len(params) {
+				stop("invalid_request")
+			}
+			parameters[token.GetTokenIndex()] = params[len(parameters)]
+		}
 	}
-	parser := generated.NewEqlBaseParser(stream)
-	parser.Interpreter = antlr.NewParserATNSimulator(parser, parser.GetATN(), freshDFA(parser.GetATN()), antlr.NewPredictionContextCache())
+	if len(parameters) != len(params) {
+		stop("invalid_request")
+	}
+	var parser interface {
+		antlr.Parser
+		AddParseListener(antlr.ParseTreeListener)
+	}
+	var parse func() antlr.ParserRuleContext
+	if version == "8.19.21" {
+		p := v8.NewSqlBaseParser(stream)
+		p.Interpreter = antlr.NewParserATNSimulator(p, p.GetATN(), freshDFA(p.GetATN()), antlr.NewPredictionContextCache())
+		parser, parse = p, func() antlr.ParserRuleContext { return p.SingleStatement() }
+	} else {
+		p := v9.NewSqlBaseParser(stream)
+		p.Interpreter = antlr.NewParserATNSimulator(p, p.GetATN(), freshDFA(p.GetATN()), antlr.NewPredictionContextCache())
+		parser, parse = p, func() antlr.ParserRuleContext { return p.SingleStatement() }
+	}
 	parser.RemoveErrorListeners()
 	parser.AddErrorListener(&errors{})
-	result = &Analysis{SourceMode: "request_indices"}
-	parser.AddParseListener(&listener{BaseEqlBaseListener: &generated.BaseEqlBaseListener{}, b: b, maxDepth: 16*limits.Depth + 64, analysis: result})
-	root := parser.SingleStatement()
+	parser.AddParseListener(&listener{BaseParseTreeListener: &antlr.BaseParseTreeListener{}, b: b, maxDepth: 16*limits.Depth + 64})
+	root := parse()
 	if parser.HasError() {
 		return nil, &Error{"invalid_request"}
 	}
-	q := root.Statement().Query()
-	switch {
-	case q.Sequence() != nil:
-		result.Kind = "sequence"
-	case q.Sample() != nil:
-		result.Kind = "sample"
-	case q.Join() != nil:
-		result.Kind = "join"
-	case q.EventQuery() != nil:
-		result.Kind = "event"
-	default:
-		return nil, fmt.Errorf("invalid_request: unrecognized EQL statement root")
-	}
+	result = &Analysis{Kind: "query", Parameters: len(parameters)}
+	ast := &sourceVisitor{b: b, rules: parser.GetRuleNames(), parameters: parameters, analysis: result}
+	ast.walk(root)
 	b.step()
 	return result, nil
 }

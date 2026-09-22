@@ -21,7 +21,7 @@ SOURCE = "x-pack/plugin/eql/src/main/antlr/EqlBase.g4"
 def sha(data):
     return hashlib.sha256(data).hexdigest()
 
-def clean_go_label_markers(source):
+def clean_go_label_markers(source, parser_name="EqlBaseParser"):
     # ANTLR 4.13.1 emits a goto after each rule's return solely to keep an
     # otherwise unused errorExit label legal. Remove these unreachable markers;
     # also remove the label where no real branch uses it. Parsing transitions,
@@ -33,7 +33,7 @@ def clean_go_label_markers(source):
         if "goto errorExit" not in body:
             body = body.replace("\nerrorExit:\n", "\n")
         return body
-    return re.sub(r"(?m)^func \(p \*EqlBaseParser\)[^\n]+\{\n.*?^\}", rule, source, flags=re.S)
+    return re.sub(r"(?m)^func \(p \*" + re.escape(parser_name) + r"\)[^\n]+\{\n.*?^\}", rule, source, flags=re.S)
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)

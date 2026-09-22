@@ -26,6 +26,9 @@ OPERATIONS = {
     )},
     "msearch_template": ("msearch_template", "read", False),
     "eql.search": ("eql.search", "read", True),
+    "sql.query": ("sql.query", "read", True),
+    "sql.translate": ("sql.translate", "read", True),
+    "sql.clear_cursor": ("sql.clear_cursor", "owned_context", True),
     **{name: (name, "owned_context", True) for name in (
         "open_point_in_time", "close_point_in_time", "scroll", "clear_scroll",
     )},

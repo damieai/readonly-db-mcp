@@ -53,7 +53,7 @@ func newESFixture(t *testing.T) *esFixture {
 		}
 		switch {
 		case r.URL.Path == "/":
-			fmt.Fprintf(w, `{"cluster_uuid":%q,"version":{"number":%q,"build_hash":%q,"build_flavor":"default","build_snapshot":false}}`, cluster, version, config.ElasticsearchBuilds[version])
+			fmt.Fprintf(w, `{"cluster_name":"fixture-cluster","cluster_uuid":%q,"version":{"number":%q,"build_hash":%q,"build_flavor":"default","build_snapshot":false}}`, cluster, version, config.ElasticsearchBuilds[version])
 		case r.URL.Path == "/_security/_authenticate":
 			fmt.Fprint(w, `{"username":"fixture_reader","enabled":true,"authentication_type":"realm"}`)
 		case r.URL.Path == "/_nodes/plugins":

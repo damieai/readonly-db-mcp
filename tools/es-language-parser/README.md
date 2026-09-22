@@ -80,3 +80,45 @@ Elastic License 2.0, whose complete text is in `upstream/LICENSE-Elastic-2.0.txt
 They are not covered by this repository's MIT license. The ANTLR Go runtime has
 its own BSD license. The handwritten adapter and parser wrapper remain under
 the repository license.
+
+## Native SQL profiles
+
+SQL has distinct unmodified `SqlBase.g4` files under `upstream/sql8/` and
+`upstream/sql9/`: the 8.19.21 grammar declares LP/RP lexer tokens, while 9.1.10
+uses implicit literal tokens. Each is compiled into its own Go package. Do not
+substitute one generated parser for the other or use a MySQL/PostgreSQL dialect.
+`sql-manifest.json` records both source URLs, exact grammar hashes, the pinned
+ANTLR artifact, the Apache 2.0 license file and all generated Go hashes.
+
+```sh
+python3 tools/es-language-parser/generate_sql.py --check
+python3 tools/es-language-parser/generate_sql.py --antlr-jar /path/to/antlr-4.13.1-complete.jar
+python3 tools/es-language-parser/generate_sql.py --antlr-jar /path/to/antlr-4.13.1-complete.jar --check
+python3 tools/es-language-parser/generate_sql.py --check --verify-upstream
+```
+
+`--java` works as for EQL. SQL generation uses the same unreachable-marker
+cleanup and LF checkout attributes. SQL grammar/generated files retain their
+upstream Apache License 2.0 notices, including the Presto-parser origin; the
+complete license is `upstream/LICENSE-Apache-2.0.txt`. These SQL notices differ
+from the EQL grammar's Elastic License 2.0.
+
+The SQL wrapper uppercases character lookahead while retaining original text,
+consumes a complete statement through EOF and visits grammar nodes for every
+relation, nested query, CTE definition/reference, metadata pattern and catalog.
+Parameter tokens bind by token order without interpolating strings into SQL.
+LIKE source expansion follows the native mapping resolver (`_` and `%` become
+`*`, respecting native escapes). Dedicated full-text nodes provide inference
+field selectors. Native postprocessor restrictions on backquoted/digit-starting
+identifiers are retained; SQL function/type/plan availability stays with ES.
+
+EQL and SQL share `languagebudget.Memory`: the 128 MiB process parser pool is
+reserved once across both languages, using the same byte/token/depth/work and
+cancellation guards. Both use fresh per-call DFA/prediction caches. SQL test,
+fuzz and allocation entry points:
+
+```sh
+go test -race ./internal/dialects/elasticsearch/sqlparser
+go test ./internal/dialects/elasticsearch/sqlparser -run '^$' -fuzz FuzzSQLParser -fuzztime=8s -parallel=2
+go test ./internal/dialects/elasticsearch/sqlparser -run '^$' -bench BenchmarkSQLParser -benchmem
+```

@@ -30,6 +30,7 @@ type preparedQuery struct {
 	rows         int
 	buckets      int
 	eqlKind      string
+	sql          *sqlProfile
 }
 
 // One request owns admission, the shared deadline, and memory throughout source
@@ -244,6 +245,9 @@ func (t *Target) execute(ctx context.Context, endpoint int, q *preparedQuery) ([
 	if q.request.Operation == "render_search_template" {
 		return q.body, nil
 	}
+	if q.request.Operation == "sql.query" {
+		return t.executeSQL(ctx, q)
+	}
 	// Bound native search execution with the remaining end-to-end budget. Never
 	// inject terminate_after, tracking approximations or smaller aggregation sizes.
 	if strings.HasSuffix(q.path, "/_search") {
@@ -410,6 +414,15 @@ func (p *queryProof) prepare(request core.ElasticsearchQueryRequest) (*preparedQ
 	q := &preparedQuery{request: request, options: options, method: http.MethodPost, rows: rows, buckets: p.t.cfg.Elasticsearch.MaxAggregationBuckets}
 	q.request.Indices = append([]string(nil), indices...)
 	switch request.Operation {
+	case "sql.query", "sql.translate":
+		if err := p.prepareSQL(q, body); err != nil {
+			return nil, err
+		}
+		indices = q.request.Indices
+		q.path = "/_sql"
+		if request.Operation == "sql.translate" {
+			q.path += "/translate"
+		}
 	case "eql.search":
 		if err := p.prepareEQL(q, body); err != nil {
 			return nil, err
@@ -528,7 +541,9 @@ func (p *queryProof) prepare(request core.ElasticsearchQueryRequest) (*preparedQ
 	} else if request.ID != "" {
 		return nil, failure("invalid_request", "id is not valid for this operation")
 	}
-	if p.snapshot != nil && scopeKey(indices) == scopeKey(p.snapshot.query.Indices) {
+	if q.sql != nil && len(indices) == 0 {
+		q.physical = map[string]bool{}
+	} else if p.snapshot != nil && scopeKey(indices) == scopeKey(p.snapshot.query.Indices) {
 		q.physical = p.snapshot.physical
 	} else {
 		q.physical, err = p.sources(indices)

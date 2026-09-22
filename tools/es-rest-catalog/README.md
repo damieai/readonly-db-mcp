@@ -23,7 +23,10 @@ diagnostics and render/execute templates, alongside `resolve` and `mappings`.
 definition-proof route, not a public query operation. PIT/scroll creation, continuation and cleanup are implemented only through
 `es_cursor` and the internal PIT batch lifecycle; they are not raw public query
 operations. `eql.search` uses the pinned upstream grammar and synchronous effect handler.
-SQL/ES|QL and persisted async EQL still require their own grammar/lifecycle
+SQL query/translate are implemented with native SQL grammar/source proofs;
+SQL clear is available only through the owned `es_cursor` lifecycle. Stateless
+SQL queries drain pages with internal owned tokens. ES|QL and persisted async
+SQL/EQL still require their own grammar/lifecycle
 profiles. Their pending status is not a mutation classification.
 
 The selected build hashes are compatibility pins, **not** live-server release

@@ -240,3 +240,32 @@ real data from index validation. Aggregate event and sequence counts share
 or running response invalidates the target profile instead of being exposed.
 Real-server task cancellation, temporary context cleanup and allocation/RSS
 saturation still require deployment qualification.
+
+Native SQL is exposed as `sql.query`, `sql.translate` and the `sql` cursor kind.
+Two complete version-specific upstream grammars generate Go parsers; a bounded
+case-changing character stream changes lexer lookahead only, preserving original
+identifiers, literals and query text. Tree visitors collect all relation nodes,
+CTE definitions/references, nested branches, metadata LIKE patterns/parameters,
+catalogs and full-text field selectors. SQL LIKE `_` is conservatively expanded
+to `*`, matching the native mapping resolver rather than assuming SQL row-filter
+semantics for metadata enumeration. The SQL pre-analyzer resolves relation names
+before CTE substitution, so references are included in source proof too.
+
+SQL request fields come from both pinned native request parsers. Filters/runtime
+mappings use existing DSL visitors; MATCH/QUERY additionally check semantic-text
+inference authority. Statements with no source need no index resolution. Local
+catalog identities are read from the pinned cluster, while remote catalog
+execution remains a separate profile. The native server decides which admitted
+SQL functions/plans its build can execute. Translation returns its native DSL.
+
+Synchronous SQL can create transient pagination state. It reserves an owned
+context before dispatch, captures rotated tokens before validating output, and
+uses SQL-specific `POST /_sql/close` cleanup. Stateless execution drains pages
+within a single deadline and total row/byte limit; session cursors instead expose
+one page per call. Continuation retains only output controls and scope proof;
+it never replays the original SQL or accepts a raw token. Terminal pages close
+on absent/empty native cursor even when rows remain. Row and columnar dimensions
+are validated, values retain exact JSON numbers, and oversized results fail whole.
+Cleanup, uncertainty, authority changes and session disconnection reuse the shared
+owned-context machinery. SQL and EQL have fresh per-call parser DFA caches and
+share one 128 MiB reservation pool already included in resource forecasting.

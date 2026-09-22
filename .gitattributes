@@ -3,3 +3,7 @@ tools/pgvector-proof/build.sh text eol=lf
 tools/es-language-parser/upstream/* text eol=lf
 tools/es-language-parser/manifest.json text eol=lf
 internal/dialects/elasticsearch/eqlparser/generated/*.go text eol=lf
+# Keep vendored SQL grammars byte-identical, including upstream trailing spaces.
+tools/es-language-parser/upstream/sql*/*.g4 text eol=lf whitespace=-blank-at-eol
+tools/es-language-parser/sql-manifest.json text eol=lf
+internal/dialects/elasticsearch/sqlparser/generated/*/*.go text eol=lf
