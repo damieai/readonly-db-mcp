@@ -12,7 +12,7 @@ require (
 	github.com/modelcontextprotocol/go-sdk v1.6.1
 	github.com/pganalyze/pg_query_go/v6 v6.2.2
 	github.com/redis/go-redis/v9 v9.22.0
-	golang.org/x/sync v0.21.0
+	golang.org/x/sync v0.23.0
 	gopkg.in/yaml.v3 v3.0.1
 	vitess.io/vitess v0.24.2
 )
