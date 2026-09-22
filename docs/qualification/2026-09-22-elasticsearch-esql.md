@@ -1,5 +1,9 @@
 # Elasticsearch native ES|QL qualification — 2026-09-22
 
+Follow-up: [ENRICH cluster snapshot scope](2026-09-22-elasticsearch-enrich.md)
+implements the separate authorization profile discussed below. This record
+describes the preceding ES|QL increment.
+
 Status: implementation, generated-parser and TLS/MCP fixture evidence. This does
 **not** certify a real Elasticsearch deployment. ENRICH isolation, external
 inference, experimental pragmas and persisted async profiles remain pending.

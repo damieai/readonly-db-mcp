@@ -1,5 +1,6 @@
 # Native metadata/query/batch/PIT/scroll/SQL/synchronous-EQL/ES|QL profile. Replace endpoint, UUID and secret/CA locations.
-# Native synchronous ES|QL is also available; ENRICH isolation, API keys and attestors remain later stages.
+# ENRICH requires a separate explicit cluster snapshot data grant (disabled below).
+# API keys, finer ENRICH isolation and attestors remain later stages.
 server:
   transport: stdio
   strict_startup: true
@@ -24,6 +25,12 @@ targets:
       version: 8.19.21
       cluster_uuid: REPLACE_WITH_CLUSTER_ID
       allowed_indices: [reports-*]
+      # Optional broad data grant: ALL past/current/future enrichment snapshots
+      # in this cluster, independently of allowed_indices/denied_indices/DLS/FLS.
+      # Also requires explicit monitor_enrich; never grant manage_enrich.
+      # Use a separate cluster if snapshots need finer isolation.
+      # enrich:
+      #   scope: all_cluster_snapshots
       privilege_recheck_interval: 1m
       max_request_bytes: 1048576
       max_json_depth: 128

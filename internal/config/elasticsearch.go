@@ -16,25 +16,38 @@ var ElasticsearchBuilds = map[string]string{
 }
 
 type ElasticsearchConfig struct {
-	Endpoints             []string      `yaml:"endpoints"`
-	Version               string        `yaml:"version"`
-	ClusterUUID           string        `yaml:"cluster_uuid"`
-	AllowedIndices        []string      `yaml:"allowed_indices"`
-	DeniedIndices         []string      `yaml:"denied_indices"`
-	PrivilegeRecheck      time.Duration `yaml:"privilege_recheck_interval"`
-	MaxRequestBytes       int           `yaml:"max_request_bytes"`
-	MaxJSONDepth          int           `yaml:"max_json_depth"`
-	MaxJSONNodes          int           `yaml:"max_json_nodes"`
-	MaxResolvedIndices    int           `yaml:"max_resolved_indices"`
-	MaxAggregationBuckets int           `yaml:"max_aggregation_buckets"`
-	MaxOpenContexts       int           `yaml:"max_open_contexts"`
-	ContextKeepAlive      time.Duration `yaml:"context_keep_alive"`
-	MaxContextLifetime    time.Duration `yaml:"max_context_lifetime"`
-	MaxContextIDBytes     int           `yaml:"max_context_id_bytes"`
-	MaxLanguageBytes      int           `yaml:"max_language_bytes"`
-	MaxLanguageTokens     int           `yaml:"max_language_tokens"`
-	MaxLanguageDepth      int           `yaml:"max_language_depth"`
-	MaxEQLFetchSize       int           `yaml:"max_eql_fetch_size"`
+	Enrich                *ElasticsearchEnrichConfig `yaml:"enrich"`
+	Endpoints             []string                   `yaml:"endpoints"`
+	Version               string                     `yaml:"version"`
+	ClusterUUID           string                     `yaml:"cluster_uuid"`
+	AllowedIndices        []string                   `yaml:"allowed_indices"`
+	DeniedIndices         []string                   `yaml:"denied_indices"`
+	PrivilegeRecheck      time.Duration              `yaml:"privilege_recheck_interval"`
+	MaxRequestBytes       int                        `yaml:"max_request_bytes"`
+	MaxJSONDepth          int                        `yaml:"max_json_depth"`
+	MaxJSONNodes          int                        `yaml:"max_json_nodes"`
+	MaxResolvedIndices    int                        `yaml:"max_resolved_indices"`
+	MaxAggregationBuckets int                        `yaml:"max_aggregation_buckets"`
+	MaxOpenContexts       int                        `yaml:"max_open_contexts"`
+	ContextKeepAlive      time.Duration              `yaml:"context_keep_alive"`
+	MaxContextLifetime    time.Duration              `yaml:"max_context_lifetime"`
+	MaxContextIDBytes     int                        `yaml:"max_context_id_bytes"`
+	MaxLanguageBytes      int                        `yaml:"max_language_bytes"`
+	MaxLanguageTokens     int                        `yaml:"max_language_tokens"`
+	MaxLanguageDepth      int                        `yaml:"max_language_depth"`
+	MaxEQLFetchSize       int                        `yaml:"max_eql_fetch_size"`
+}
+
+// ENRICH has a separate, cluster-wide data scope: native monitor_enrich cannot
+// enforce policy-level or source-index DLS/FLS boundaries. No implicit opt-in.
+type ElasticsearchEnrichConfig struct {
+	Scope string `yaml:"scope"`
+}
+
+const ElasticsearchEnrichScope = "all_cluster_snapshots"
+
+func (e *ElasticsearchConfig) EnrichEnabled() bool {
+	return e != nil && e.Enrich != nil && e.Enrich.Scope == ElasticsearchEnrichScope
 }
 
 func defaultElasticsearch(t *TargetConfig) {
@@ -145,6 +158,9 @@ func validateElasticsearch(t *TargetConfig, limits Limits) []string {
 	e := t.Elasticsearch
 	if e == nil {
 		return append(p, "elasticsearch configuration is required")
+	}
+	if e.Enrich != nil && !e.EnrichEnabled() {
+		add("elasticsearch.enrich.scope must explicitly authorize all_cluster_snapshots; per-policy or source-index isolation is unavailable")
 	}
 	if _, ok := ElasticsearchBuilds[e.Version]; !ok {
 		add("Elasticsearch version has no pinned implementation profile")

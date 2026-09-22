@@ -286,9 +286,26 @@ assignment/rename lineage are inspected for implicit semantic inference. Mapping
 runtime references and request filters reuse existing DSL source/effect visitors.
 The native engine receives the original query and parameters and still validates
 function/type/plan availability. Source-free ROW/SHOW queries need no index proof.
-ENRICH policy names are collected but need a dedicated enrichment-data authority
-profile: current policy/source metadata cannot prove historical snapshot content
-or protect against future policy changes outside ordinary index DLS/FLS.
+ENRICH has a separate optional data namespace: `enrich.scope=all_cluster_snapshots`
+grants every historical/current/future snapshot in the pinned local cluster.
+This grant cannot be narrowed by the normal index allow/deny lists or source
+DLS/FLS; deployments needing those boundaries must provision a separate cluster.
+The runtime user must have explicit read-only `monitor_enrich`. Snapshot inventory
+uses internal fixed GET cluster-state and policy routes, never caller URLs.
+Stock snapshot mapping/write-block/alias checks include retired indices. Active
+policy type/match field are compared with the native snapshot; policy build
+indices/query remain historical metadata and are not executed as query filters.
+The inventory and selected policy digests are checked before/after execution,
+including whole batches; observed drift fails without replay. State comparisons
+are consistency checks, not distributed locks or a confidentiality proof. The
+explicit all-snapshot grant supplies that data scope. Native snapshot provisioning
+and stock node/plugin profiles remain deployment requirements.
+
+ENRICH adds no cursor or persistent state. Inventory bytes and combined physical
+source counts share existing proof budgets; cancellation covers metadata reads.
+Startup/periodic attestation includes the inventory digest, so changes invalidate
+owned contexts. Internal proof routes are not public query/metadata operations;
+policy creation, execution and deletion are classified as writes.
 
 ES|QL routes only to synchronous `POST /_query`, with JSON format and complete
 results. Locale, profiling, columnar output and null-column dropping remain native

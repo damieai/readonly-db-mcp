@@ -42,7 +42,11 @@ func TestElasticsearchThroughRegistryAndMCP(t *testing.T) {
 		case "/_nodes/plugins":
 			fmt.Fprintf(w, `{"_nodes":{"total":1,"successful":1,"failed":0},"nodes":{"node":{"version":"8.19.21","build_hash":%q,"plugins":[]}}}`, config.ElasticsearchBuilds["8.19.21"])
 		case "/_security/user/_privileges":
-			fmt.Fprint(w, `{"cluster":["monitor"],"indices":[{"names":["reports-*"],"privileges":["read","view_index_metadata"],"allow_restricted_indices":false}],"applications":[],"run_as":[],"global":[]}`)
+			fmt.Fprint(w, `{"cluster":["monitor","monitor_enrich"],"indices":[{"names":["reports-*"],"privileges":["read","view_index_metadata"],"allow_restricted_indices":false}],"applications":[],"run_as":[],"global":[]}`)
+		case "/_cluster/state/metadata,version/.enrich-*":
+			fmt.Fprint(w, `{"state_uuid":"state-1","version":1,"metadata":{"cluster_uuid":"abcdefghijklmnopqrstuv","indices":{".enrich-customers-1234":{"state":"open","aliases":[".enrich-customers"],"settings":{"index.uuid":"snapshot-uuid-123456789","index.blocks.write":"true","index.number_of_shards":"1"},"mappings":{"_doc":{"dynamic":"false","_meta":{"enrich_policy_name":"customers","enrich_policy_type":"match","enrich_match_field":"id"},"properties":{"id":{"type":"keyword"},"label":{"type":"keyword","index":false}}}}}}}}`)
+		case "/_enrich/policy/customers":
+			fmt.Fprint(w, `{"policies":[{"config":{"match":{"name":"customers","indices":["private-source-*"],"match_field":"id","enrich_fields":["label"]}}}]}`)
 		case "/_resolve/index/reports-*":
 			fmt.Fprint(w, `{"indices":[{"name":"reports-2026","attributes":["open"]}],"aliases":[],"data_streams":[]}`)
 		case "/reports-*/_mapping":
@@ -110,6 +114,8 @@ targets:
       version: 8.19.21
       cluster_uuid: abcdefghijklmnopqrstuv
       allowed_indices: [reports-*]
+      enrich:
+        scope: all_cluster_snapshots
 `, upstream.URL)
 	path := filepath.Join(dir, "config.yaml")
 	if err := os.WriteFile(path, []byte(text), 0600); err != nil {
@@ -188,6 +194,8 @@ targets:
 		{"es_query", json.RawMessage(`{"target":"es_test","operation":"sql.query","body":{"query":"SELECT ? FROM \"reports-*\"","params":[9007199254740993]}}`)},
 		{"es_query", json.RawMessage(`{"target":"es_test","operation":"sql.translate","body":{"query":"SELECT ? FROM \"reports-*\"","params":[9007199254740993]}}`)},
 		{"es_query", json.RawMessage(`{"target":"es_test","operation":"esql.query","body":{"query":"FROM reports-* | EVAL n=? | LIMIT 1","params":[9007199254740993]}}`)},
+		{"es_query", json.RawMessage(`{"target":"es_test","operation":"esql.query","body":{"query":"ROW id=? | ENRICH customers ON id WITH label","params":[9007199254740993]}}`)},
+		{"es_batch", json.RawMessage(`{"target":"es_test","requests":[{"operation":"esql.query","body":{"query":"FROM reports-* | ENRICH customers WITH name=label"}},{"operation":"sql.query","body":{"query":"SELECT 1"}}]}`)},
 		{"es_batch", json.RawMessage(`{"target":"es_test","requests":[{"operation":"esql.query","body":{"query":"FROM reports-* | STATS n=COUNT(*)"}},{"operation":"sql.query","body":{"query":"SELECT 1"}}]}`)},
 		{"es_batch", json.RawMessage(`{"target":"es_test","requests":[{"operation":"sql.query","body":{"query":"SELECT 1 FROM \"reports-*\""}},{"operation":"eql.search","body":{"query":"any where true"}}]}`)},
 
@@ -211,6 +219,8 @@ targets:
 		{"es_query", json.RawMessage(`{"target":"es_test","operation":"eql.search","body":{"query":"any where true","query":"any where false"}}`)},
 		{"es_query", json.RawMessage(`{"target":"es_test","operation":"eql.search","body":{"query":"any where true; any where false"}}`)},
 		{"es_query", json.RawMessage(`{"target":"es_test","operation":"esql.query","body":{"query":"FROM reports-* | LOOKUP JOIN private ON id"}}`)},
+		{"es_query", json.RawMessage(`{"target":"es_test","operation":"enrich.execute_policy","body":{"name":"customers"}}`)},
+		{"es_query", json.RawMessage(`{"target":"es_test","operation":"enrich.get_policy","body":{"name":"customers"}}`)},
 		{"es_query", json.RawMessage(`{"target":"es_test","operation":"esql.query","body":{"query":"ROW x=1","keep_on_completion":true}}`)},
 		{"es_query", json.RawMessage(`{"target":"es_test","operation":"search","headers":{"Authorization":"x"}}`)},
 		{"es_query", json.RawMessage(`{"target":"es_test","operation":"search","body":null}`)},

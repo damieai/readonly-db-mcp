@@ -81,6 +81,23 @@ func TestESQLEffectsAndParameters(t *testing.T) {
 	}
 }
 
+func TestEnrichPolicyQuotingMatchesNativeLogicalPlanBuilder(t *testing.T) {
+	for _, version := range []string{"8.19.21", "9.1.10"} {
+		for _, tc := range []struct{ query, name string }{
+			{`ROW id=1 | ENRICH customers`, `customers`},
+			{`ROW id=1 | ENRICH "customers"`, `customers`},
+			{`ROW id=1 | ENRICH "_REMOTE:customers"`, `_REMOTE:customers`},
+			{`ROW id=1 | ENRICH "a\tb"`, `a\tb`},
+			{`ROW id=1 | ENRICH """customers"""`, `""customers""`},
+		} {
+			a, err := Analyze(context.Background(), version, tc.query, nil, limits)
+			if err != nil || !reflect.DeepEqual(a.EnrichPolicies, []string{tc.name}) {
+				t.Fatalf("%s %s: %+v %v", version, tc.query, a, err)
+			}
+		}
+	}
+}
+
 func TestESQLMalformedBudgetsAndReleasePredicates(t *testing.T) {
 	for _, version := range []string{"8.19.21", "9.1.10"} {
 		for _, query := range []string{`FROM`, `ROW x=1; FROM private`, `FROM reports-* /* secret`, `FROM "reports-*`, `DELETE FROM reports-*`, `ROW x=?`, `FROM reports-* | INLINESTATS n=COUNT(*)`, `FROM reports-* | LOOKUP_🐔 private ON id`, "ROW x=\xff"} {

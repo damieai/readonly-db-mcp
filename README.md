@@ -18,7 +18,7 @@ repository.
 > Elasticsearch implements pinned target/permission attestation, native metadata,
 > and scoped `es_query` / `es_batch` / `es_cursor` tools with advanced DSL, aggregations, scripts,
 > supplied-vector retrieval, templates, owned PIT/scroll/SQL pagination and synchronous EQL/SQL/ES|QL.
-> ENRICH isolation, inference and other advanced profiles remain tracked by
+> ENRICH supports explicit cluster snapshot scope; finer isolation, inference and other advanced profiles remain tracked by
 > [RFC-0006](docs/RFC-0006-elasticsearch-readonly-support.md); ES is not yet
 > advertised as a complete or live-server-certified query adapter.
 
@@ -215,7 +215,7 @@ external-plugin inventory; custom plugin profiles remain pending.
 `render_search_template`, `eql.search`, `sql.query`, `sql.translate` and `esql.query`. IDs use the structured `id` field. Native JSON and
 large integer values remain intact. Wildcards use ES `*` / `?` semantics, with containment
 checked for future index names; aliases and data streams are resolved for each
-call. Date math, custom plugins, cross-cluster and ENRICH isolation profiles still
+call. Date math, custom plugins, cross-cluster and finer ENRICH isolation profiles still
 need their respective proof implementations. Missing capabilities are reported
 by `inspect_target`, separately from mutation denial. See the
 [native query qualification record](docs/qualification/2026-09-22-elasticsearch-native-queries.md)
@@ -360,8 +360,32 @@ uses the synchronous cancellable REST channel; ES|QL has no cursor in this profi
 `drop_null_columns` is supported, except when columnar output drops every column
 and makes row cardinality unprovable; retain null columns or use row output then.
 
-ENRICH is parsed but needs a separate enrichment-data isolation profile: existing
-snapshots do not inherit ordinary source-index DLS/FLS. COMPLETION, semantic-text
+ENRICH supports existing native `match`, `range` and `geo_match` policies,
+ON/WITH aliases, chains and nested branches. It is disabled by default. An
+operator may authorize **all historical, current and future enrichment snapshots
+in the pinned cluster**, independently of `allowed_indices` / `denied_indices`,
+by configuring:
+
+```yaml
+elasticsearch:
+  # Additional to the endpoint, version, cluster_uuid and ordinary index scope.
+  enrich:
+    scope: all_cluster_snapshots
+```
+
+This is a broad data grant, not a claim that source-index DLS/FLS or a policy
+allowlist isolates snapshots. The runtime identity additionally needs explicit
+`monitor_enrich`; `manage_enrich` and policy creation/execution/deletion remain
+forbidden. Use a separately provisioned cluster when finer isolation is needed.
+Native snapshot mappings, write blocks and active aliases are checked at startup
+and on recheck; query preflight also checks the selected policies. Observed
+metadata/policy drift fails the whole result, without an automatic retry. These
+reads do not atomically lock distributed metadata. Normal FROM/JOIN source
+checks remain in force. All native mode qualifiers work with proved local
+sources; actual cross-cluster reads require a separate profile. See
+[ENRICH qualification and provisioning](docs/qualification/2026-09-22-elasticsearch-enrich.md).
+
+COMPLETION, semantic-text
 matching and other inference require endpoint/egress/cost proof. Experimental
 pragmas and persisted async results also need separate resource/lifecycle profiles.
 These are reported as unavailable capabilities, not classified as writes merely

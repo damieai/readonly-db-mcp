@@ -128,13 +128,25 @@ Untrusted:
     unexpected async/cursor state, shape mismatches and resource overflows fail
     whole. HTTP cancellation shares the request deadline; native parameters and
     exact JSON numbers remain intact. ES|QL shares parser memory admission with
-    SQL/EQL, with an 8 MiB baseline for its larger grammar. ENRICH snapshots require
-    a separate isolation proof; ordinary source-index privileges do not supply it.
+    SQL/EQL, with an 8 MiB baseline for its larger grammar.
+
+17. ENRICH is default-off and requires `enrich.scope=all_cluster_snapshots` plus
+    explicit read-only `monitor_enrich`. This authorizes every historical/current/
+    future enrichment snapshot in the pinned local cluster, independently of
+    ordinary index allow/deny patterns and source DLS/FLS. It does not offer
+    per-policy/document/field isolation; use a separate cluster if needed. All
+    current snapshot mappings, write blocks, identities and active aliases are
+    checked, including retired snapshots. Policy and inventory checks detect
+    observed drift and reject the whole result. They cannot fence stale distributed
+    state or atomically lock administrator actions; the broad explicit data grant
+    and controlled native provisioning are the authorization contract. Normal
+    FROM/JOIN scope still applies. Policy create/execute/delete and `manage_enrich`
+    remain forbidden; fixed metadata proof routes are internal only.
 
 ## Known limitations
 
 - Elasticsearch native queries have TLS fixture coverage, not live engine certification.
-  API-key, custom plugin/inference, ENRICH isolation, experimental ES|QL pragmas,
+  API-key, custom plugin/inference, finer ENRICH isolation, experimental ES|QL pragmas,
   persisted async language results, dynamic suggestion
   collate and cross-cluster profiles are not yet implemented. Pinned version/hash metadata is an operator trust
   check, not cryptographic remote binary attestation.

@@ -1,6 +1,6 @@
 # RFC-0006: Elasticsearch Read-Only Query Support
 
-- Status: Metadata, native query/batch, owned PIT/scroll/SQL and synchronous EQL/SQL/ES|QL implemented; ENRICH isolation, other advanced profiles and live qualification pending
+- Status: Metadata, native query/batch, owned PIT/scroll/SQL, synchronous EQL/SQL/ES|QL and explicit cluster snapshot ENRICH scope implemented; finer isolation, other advanced profiles and live qualification pending
 - Authors: readonly-db-mcp maintainers
 - Created: 2026-09-12
 - Depends on: RFC-0001 resource governance and the common architecture contract
@@ -72,6 +72,20 @@ changes have an explicit isolation/authority proof; source-index DLS/FLS alone
 cannot provide that proof. Inference, experimental pragmas, persisted async and
 live certification remain separate gates. See
 [ES|QL evidence and remaining gates](qualification/2026-09-22-elasticsearch-esql.md).
+
+Implementation update (2026-09-22, ENRICH): the dedicated authority profile is
+now explicit `enrich.scope=all_cluster_snapshots`, disabled by default. This
+amends scope configuration to grant **all historical/current/future native
+snapshot data in the pinned local cluster**, separately from ordinary index
+allow/deny patterns and source-index DLS/FLS. It is deliberately not a per-policy
+allowlist or an assertion of snapshot provenance from current policy sources.
+Native `monitor_enrich` is required; policy writes and `manage_enrich` are denied.
+ENRICH preserves match/range/geo_match, ON/WITH, chaining, branches, parameters
+and local resolution of every native mode qualifier. Snapshot inventory and
+selected policy checks reject observed drift but cannot fence distributed state;
+controlled native provisioning remains required. Finer confidentiality boundaries
+require a separately provisioned cluster. Real-server certification remains open.
+See [ENRICH evidence and live gates](qualification/2026-09-22-elasticsearch-enrich.md).
 
 ## Summary
 

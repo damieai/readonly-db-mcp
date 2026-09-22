@@ -42,11 +42,6 @@ func (p *queryProof) prepareESQL(q *preparedQuery, body map[string]any) error {
 	if a.Inference {
 		return failure("capability_unavailable", "ES|QL inference commands require an endpoint, egress and cost authority profile")
 	}
-	if len(a.EnrichPolicies) != 0 {
-		// ENRICH bypasses ordinary source-index DLS/FLS and reads historical
-		// snapshots. Resolving today's policy sources cannot prove that scope.
-		return failure("capability_unavailable", "ES|QL ENRICH requires an isolated enrichment-data authority profile")
-	}
 	q.esql = &esqlProfile{}
 	for _, key := range []string{"columnar", "profile", "include_ccs_metadata"} {
 		if value, exists := body[key]; exists {
@@ -136,6 +131,11 @@ func (p *queryProof) prepareESQL(q *preparedQuery, body map[string]any) error {
 	}
 	if filter, exists := body["filter"]; exists {
 		if err := p.query(filter, q.rows, 0); err != nil {
+			return err
+		}
+	}
+	if len(a.EnrichPolicies) != 0 {
+		if err := p.prepareEnrich(a.EnrichPolicies); err != nil {
 			return err
 		}
 	}

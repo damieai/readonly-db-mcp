@@ -288,6 +288,7 @@ type queryProof struct {
 	stockProven   bool
 	embedded      map[string]map[string]bool
 	snapshot      *ownedCursor
+	enrich        *enrichProof
 	// Shared traversal work includes decoded wrapper queries and rendered DSL.
 	work int
 }
@@ -322,7 +323,11 @@ func (p *queryProof) sources(indices []string) (map[string]bool, error) {
 	for name := range physical {
 		p.physical[name] = true
 	}
-	if len(p.physical) > p.t.cfg.Elasticsearch.MaxResolvedIndices {
+	enrichCount := 0
+	if p.enrich != nil {
+		enrichCount = p.enrich.inventory.count
+	}
+	if len(p.physical)+enrichCount > p.t.cfg.Elasticsearch.MaxResolvedIndices {
 		return nil, failure("resource_limit", "combined source inventory exceeds limit")
 	}
 	retained := len(key) + 128
@@ -356,6 +361,11 @@ func (p *queryProof) verifySources() error {
 			if !after[name] {
 				return failure("scope_denied", "source inventory changed during request; retry explicitly")
 			}
+		}
+	}
+	if p.enrich != nil {
+		if err := p.verifyEnrich(); err != nil {
+			return err
 		}
 	}
 	return nil

@@ -27,6 +27,8 @@ OPERATIONS = {
     "msearch_template": ("msearch_template", "read", False),
     "eql.search": ("eql.search", "read", True),
     "esql.query": ("esql.query", "read", True),
+    "cluster.state": ("cluster.state", "internal_proof", True),
+    "enrich.get_policy": ("enrich.get_policy", "internal_proof", True),
     "sql.query": ("sql.query", "read", True),
     "sql.translate": ("sql.translate", "read", True),
     "sql.clear_cursor": ("sql.clear_cursor", "owned_context", True),
@@ -36,6 +38,7 @@ OPERATIONS = {
     **{name: (name, "mutation", False) for name in (
         "index", "update", "delete", "bulk", "update_by_query", "delete_by_query", "reindex",
         "indices.refresh", "indices.flush", "indices.forcemerge",
+        "enrich.put_policy", "enrich.execute_policy", "enrich.delete_policy",
     )},
 }
 

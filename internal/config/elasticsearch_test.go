@@ -29,6 +29,9 @@ func TestElasticsearchDefaultsAndForecast(t *testing.T) {
 		t.Fatal(err)
 	}
 	v := c.Targets["test"]
+	if v.Elasticsearch.Enrich != nil || v.Elasticsearch.EnrichEnabled() {
+		t.Fatal("ENRICH data scope was implicitly authorized")
+	}
 	if v.Port != 0 || v.Database != "" || v.Consistency != ConsistencyEventual || v.Elasticsearch.PrivilegeRecheck != time.Minute {
 		t.Fatal("ES acquired SQL defaults")
 	}
@@ -46,6 +49,17 @@ func TestElasticsearchDefaultsAndForecast(t *testing.T) {
 	v.Elasticsearch.MaxJSONNodes *= 2
 	if c.ResourceForecastBytes() <= before {
 		t.Fatal("ES parser budget omitted from forecast")
+	}
+}
+
+func TestElasticsearchEnrichRequiresExplicitSeparateDataScope(t *testing.T) {
+	for _, scope := range []string{"", "reports-*", "policy_allowlist", ElasticsearchEnrichScope} {
+		c := validESConfig()
+		c.Targets["test"].Elasticsearch.Enrich = &ElasticsearchEnrichConfig{Scope: scope}
+		err := c.Validate()
+		if (err == nil) != (scope == ElasticsearchEnrichScope) {
+			t.Fatalf("scope %q: %v", scope, err)
+		}
 	}
 }
 

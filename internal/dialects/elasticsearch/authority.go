@@ -37,13 +37,21 @@ func validatePrivileges(ctx context.Context, raw []byte, cfg *config.Elasticsear
 	if len(p.Applications)+len(p.RunAs)+len(p.Global)+len(p.RemoteIndices)+len(p.RemoteCluster) > 0 {
 		return failure("authority_unproven", "application, delegation, global or remote authority is outside this profile")
 	}
+	hasEnrich := false
 	for _, name := range p.Cluster {
 		// The pinned resolver expands an action name to its action-prefix grant.
 		// script/get has only read handlers in these builds; never permit the
 		// broader script/* or manage privilege to inspect stored scripts.
+		if name == "monitor_enrich" && cfg.EnrichEnabled() {
+			hasEnrich = true
+			continue
+		}
 		if name != "monitor" && name != "none" && name != "cluster:admin/script/get" {
 			return failure("authority_unproven", "cluster privilege exceeds the read-only profile")
 		}
+	}
+	if cfg.EnrichEnabled() && !hasEnrich {
+		return failure("authority_unproven", "ENRICH requires the read-only monitor_enrich privilege and explicit cluster snapshot scope")
 	}
 	if len(p.Indices) == 0 || len(p.Indices) > 128 {
 		return failure("authority_unproven", "missing or excessive index authority")
@@ -114,6 +122,14 @@ func (t *Target) attest(ctx context.Context) error {
 		canonical, _ := json.Marshal(proof)
 		_, _ = digest.Write(canonical)
 		_, _ = digest.Write([]byte{0})
+		if t.cfg.Elasticsearch.EnrichEnabled() {
+			inventory, err := t.readEnrichInventory(ctx, i)
+			if err != nil {
+				return err
+			}
+			_, _ = digest.Write([]byte(config.ElasticsearchEnrichScope))
+			_, _ = digest.Write(inventory.digest[:])
+		}
 	}
 	var hash [32]byte
 	copy(hash[:], digest.Sum(nil))

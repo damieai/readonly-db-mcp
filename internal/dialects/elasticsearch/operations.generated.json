@@ -75,6 +75,43 @@
       "sha256": "4c69f4e2496c83fc1be1eab5404b0ffa55fcc75f5be550183f8aa59daecfd5ba",
       "source": "https://raw.githubusercontent.com/elastic/elasticsearch/4fe44c255c3d0da06779b921e132cdc555ed9aff/rest-api-spec/src/main/resources/rest-api-spec/api/close_point_in_time.json"
     },
+    "cluster.state": {
+      "api": "cluster.state",
+      "effect": "internal_proof",
+      "implemented": true,
+      "parameters": [
+        "allow_no_indices",
+        "expand_wildcards",
+        "flat_settings",
+        "ignore_unavailable",
+        "local",
+        "master_timeout",
+        "wait_for_metadata_version",
+        "wait_for_timeout"
+      ],
+      "routes": [
+        {
+          "methods": [
+            "GET"
+          ],
+          "path": "/_cluster/state"
+        },
+        {
+          "methods": [
+            "GET"
+          ],
+          "path": "/_cluster/state/{metric}"
+        },
+        {
+          "methods": [
+            "GET"
+          ],
+          "path": "/_cluster/state/{metric}/{index}"
+        }
+      ],
+      "sha256": "1b0351e2cb9d9148af281c15bbbda3e689b7781f8a38c2e043465f4f80488c26",
+      "source": "https://raw.githubusercontent.com/elastic/elasticsearch/4fe44c255c3d0da06779b921e132cdc555ed9aff/rest-api-spec/src/main/resources/rest-api-spec/api/cluster.state.json"
+    },
     "count": {
       "api": "count",
       "effect": "read",
@@ -184,6 +221,85 @@
       ],
       "sha256": "c261e6478f43073d5f587038dedf89bbf1f0e1251d6b222b5713cd640f9e5099",
       "source": "https://raw.githubusercontent.com/elastic/elasticsearch/4fe44c255c3d0da06779b921e132cdc555ed9aff/rest-api-spec/src/main/resources/rest-api-spec/api/delete_by_query.json"
+    },
+    "enrich.delete_policy": {
+      "api": "enrich.delete_policy",
+      "effect": "mutation",
+      "implemented": false,
+      "parameters": [
+        "master_timeout"
+      ],
+      "routes": [
+        {
+          "methods": [
+            "DELETE"
+          ],
+          "path": "/_enrich/policy/{name}"
+        }
+      ],
+      "sha256": "01a6c2609fb5a1433315d52d10fc78a0b7b2d3daca7aa8ca9cb04c480dc56200",
+      "source": "https://raw.githubusercontent.com/elastic/elasticsearch/4fe44c255c3d0da06779b921e132cdc555ed9aff/rest-api-spec/src/main/resources/rest-api-spec/api/enrich.delete_policy.json"
+    },
+    "enrich.execute_policy": {
+      "api": "enrich.execute_policy",
+      "effect": "mutation",
+      "implemented": false,
+      "parameters": [
+        "master_timeout",
+        "wait_for_completion"
+      ],
+      "routes": [
+        {
+          "methods": [
+            "PUT"
+          ],
+          "path": "/_enrich/policy/{name}/_execute"
+        }
+      ],
+      "sha256": "13042fd242cf2c3b76a274c17c137ad5076b4e153e782ede0db2e8f41b6d532f",
+      "source": "https://raw.githubusercontent.com/elastic/elasticsearch/4fe44c255c3d0da06779b921e132cdc555ed9aff/rest-api-spec/src/main/resources/rest-api-spec/api/enrich.execute_policy.json"
+    },
+    "enrich.get_policy": {
+      "api": "enrich.get_policy",
+      "effect": "internal_proof",
+      "implemented": true,
+      "parameters": [
+        "master_timeout"
+      ],
+      "routes": [
+        {
+          "methods": [
+            "GET"
+          ],
+          "path": "/_enrich/policy/{name}"
+        },
+        {
+          "methods": [
+            "GET"
+          ],
+          "path": "/_enrich/policy"
+        }
+      ],
+      "sha256": "099e8311d53413f27461d654fb05d86d2a9c3fa6b820681118355d40540e7766",
+      "source": "https://raw.githubusercontent.com/elastic/elasticsearch/4fe44c255c3d0da06779b921e132cdc555ed9aff/rest-api-spec/src/main/resources/rest-api-spec/api/enrich.get_policy.json"
+    },
+    "enrich.put_policy": {
+      "api": "enrich.put_policy",
+      "effect": "mutation",
+      "implemented": false,
+      "parameters": [
+        "master_timeout"
+      ],
+      "routes": [
+        {
+          "methods": [
+            "PUT"
+          ],
+          "path": "/_enrich/policy/{name}"
+        }
+      ],
+      "sha256": "ad447e4c6c636df9bc02dce76d9c3b3b4afe6deab8aabd7e85a413d2a1ccd9ff",
+      "source": "https://raw.githubusercontent.com/elastic/elasticsearch/4fe44c255c3d0da06779b921e132cdc555ed9aff/rest-api-spec/src/main/resources/rest-api-spec/api/enrich.put_policy.json"
     },
     "eql.search": {
       "api": "eql.search",
@@ -1177,6 +1293,43 @@
       "sha256": "44dc8707b7870fc5c22f9c871d898e418fa2e6ed2d62aa8fc8c7d695cc7e0c5f",
       "source": "https://raw.githubusercontent.com/elastic/elasticsearch/f2e019bd8110088070638ca779ec1543188c0f43/rest-api-spec/src/main/resources/rest-api-spec/api/close_point_in_time.json"
     },
+    "cluster.state": {
+      "api": "cluster.state",
+      "effect": "internal_proof",
+      "implemented": true,
+      "parameters": [
+        "allow_no_indices",
+        "expand_wildcards",
+        "flat_settings",
+        "ignore_unavailable",
+        "local",
+        "master_timeout",
+        "wait_for_metadata_version",
+        "wait_for_timeout"
+      ],
+      "routes": [
+        {
+          "methods": [
+            "GET"
+          ],
+          "path": "/_cluster/state"
+        },
+        {
+          "methods": [
+            "GET"
+          ],
+          "path": "/_cluster/state/{metric}"
+        },
+        {
+          "methods": [
+            "GET"
+          ],
+          "path": "/_cluster/state/{metric}/{index}"
+        }
+      ],
+      "sha256": "aa27775d76cad56195a1a1674397bd3a76dde3cd5b843d180379205af3f7aedc",
+      "source": "https://raw.githubusercontent.com/elastic/elasticsearch/f2e019bd8110088070638ca779ec1543188c0f43/rest-api-spec/src/main/resources/rest-api-spec/api/cluster.state.json"
+    },
     "count": {
       "api": "count",
       "effect": "read",
@@ -1286,6 +1439,85 @@
       ],
       "sha256": "9937e36089d29bd77baf9b2409c6aaa834fc691092f942d1a9b85b2f86af2ac5",
       "source": "https://raw.githubusercontent.com/elastic/elasticsearch/f2e019bd8110088070638ca779ec1543188c0f43/rest-api-spec/src/main/resources/rest-api-spec/api/delete_by_query.json"
+    },
+    "enrich.delete_policy": {
+      "api": "enrich.delete_policy",
+      "effect": "mutation",
+      "implemented": false,
+      "parameters": [
+        "master_timeout"
+      ],
+      "routes": [
+        {
+          "methods": [
+            "DELETE"
+          ],
+          "path": "/_enrich/policy/{name}"
+        }
+      ],
+      "sha256": "51ce7a39d2541fa74cfa6ec454981c0ce009d13ccd649be648786939c47c16ed",
+      "source": "https://raw.githubusercontent.com/elastic/elasticsearch/f2e019bd8110088070638ca779ec1543188c0f43/rest-api-spec/src/main/resources/rest-api-spec/api/enrich.delete_policy.json"
+    },
+    "enrich.execute_policy": {
+      "api": "enrich.execute_policy",
+      "effect": "mutation",
+      "implemented": false,
+      "parameters": [
+        "master_timeout",
+        "wait_for_completion"
+      ],
+      "routes": [
+        {
+          "methods": [
+            "PUT"
+          ],
+          "path": "/_enrich/policy/{name}/_execute"
+        }
+      ],
+      "sha256": "7a1d733b04ecc424e2e4005db073d5f505c45d93e58b1bb7e4e5c1228a12349a",
+      "source": "https://raw.githubusercontent.com/elastic/elasticsearch/f2e019bd8110088070638ca779ec1543188c0f43/rest-api-spec/src/main/resources/rest-api-spec/api/enrich.execute_policy.json"
+    },
+    "enrich.get_policy": {
+      "api": "enrich.get_policy",
+      "effect": "internal_proof",
+      "implemented": true,
+      "parameters": [
+        "master_timeout"
+      ],
+      "routes": [
+        {
+          "methods": [
+            "GET"
+          ],
+          "path": "/_enrich/policy/{name}"
+        },
+        {
+          "methods": [
+            "GET"
+          ],
+          "path": "/_enrich/policy"
+        }
+      ],
+      "sha256": "4230be9d6ca41cbcbe49b95228332f34a2828bfdf7295c3c3dc11c5c9e1b94c4",
+      "source": "https://raw.githubusercontent.com/elastic/elasticsearch/f2e019bd8110088070638ca779ec1543188c0f43/rest-api-spec/src/main/resources/rest-api-spec/api/enrich.get_policy.json"
+    },
+    "enrich.put_policy": {
+      "api": "enrich.put_policy",
+      "effect": "mutation",
+      "implemented": false,
+      "parameters": [
+        "master_timeout"
+      ],
+      "routes": [
+        {
+          "methods": [
+            "PUT"
+          ],
+          "path": "/_enrich/policy/{name}"
+        }
+      ],
+      "sha256": "58b4b23ea92d36a8c15a9cfc5e96cd28ddaa89870da8357a45dbf6356e307972",
+      "source": "https://raw.githubusercontent.com/elastic/elasticsearch/f2e019bd8110088070638ca779ec1543188c0f43/rest-api-spec/src/main/resources/rest-api-spec/api/enrich.put_policy.json"
     },
     "eql.search": {
       "api": "eql.search",

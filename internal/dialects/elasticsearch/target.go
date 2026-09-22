@@ -131,7 +131,13 @@ func (t *Target) ready() error {
 	return nil
 }
 func (t *Target) Info() core.TargetInfo {
-	return core.TargetInfo{Name: t.cfg.Name, Engine: config.EngineElasticsearch, Environment: t.cfg.Environment, Consistency: config.ConsistencyEventual, Healthy: t.ready() == nil, ReadOnlyUser: t.ready() == nil, ServerReadOnly: false, ServerVersion: t.cfg.Elasticsearch.Version, DeploymentMode: "elasticsearch-phase-6-esql", AllowedIndices: append([]string(nil), t.cfg.Elasticsearch.AllowedIndices...), PolicyRevision: "es-native-esql-v6", ProofCheckedAt: time.Unix(0, t.checked.Load()).UTC().Format(time.RFC3339), Capabilities: capabilities(t.cfg.Elasticsearch.Version)}
+	features := capabilities(t.cfg.Elasticsearch.Version)
+	features["esql_enrich"] = "requires_explicit_cluster_snapshot_scope"
+	if t.cfg.Elasticsearch.EnrichEnabled() {
+		features["esql_enrich"] = "implemented_native_cluster_snapshot_scope"
+		features["enrich_data_scope"] = config.ElasticsearchEnrichScope
+	}
+	return core.TargetInfo{Name: t.cfg.Name, Engine: config.EngineElasticsearch, Environment: t.cfg.Environment, Consistency: config.ConsistencyEventual, Healthy: t.ready() == nil, ReadOnlyUser: t.ready() == nil, ServerReadOnly: false, ServerVersion: t.cfg.Elasticsearch.Version, DeploymentMode: "elasticsearch-phase-7-enrich", AllowedIndices: append([]string(nil), t.cfg.Elasticsearch.AllowedIndices...), PolicyRevision: "es-native-enrich-v7", ProofCheckedAt: time.Unix(0, t.checked.Load()).UTC().Format(time.RFC3339), Capabilities: features}
 }
 
 func (t *Target) ElasticsearchMetadata(ctx context.Context, request core.ElasticsearchMetadataRequest) (result *core.ElasticsearchResult, err error) {

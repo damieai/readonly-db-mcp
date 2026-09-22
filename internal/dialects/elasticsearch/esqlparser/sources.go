@@ -162,7 +162,13 @@ func (v *sourceVisitor) walk(c antlr.ParserRuleContext) {
 		}
 		return
 	case "enrichPolicyName":
-		v.analysis.EnrichPolicies = append(v.analysis.EnrichPolicies, unquote(c.GetText()))
+		// LogicalPlanBuilder.parsePolicyName strips exactly one quote at each
+		// end; unlike indexString, it does not unescape or trim triple quotes.
+		name := c.GetText()
+		if strings.HasPrefix(name, `"`) {
+			name = name[1 : len(name)-1]
+		}
+		v.analysis.EnrichPolicies = append(v.analysis.EnrichPolicies, name)
 		return
 	case "completionCommand", "rerankCommand":
 		v.analysis.Inference = true
