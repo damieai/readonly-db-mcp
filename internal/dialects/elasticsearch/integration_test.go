@@ -58,6 +58,27 @@ func TestElasticsearchLiveReadOnlyMetadata(t *testing.T) {
 	if _, err := target.ElasticsearchBatch(ctx, core.ElasticsearchBatchRequest{Requests: []core.ElasticsearchQueryRequest{{Operation: "search", Indices: []string{index}, Body: json.RawMessage(`{"size":0}`)}, {Operation: "search", Indices: []string{index}, Body: json.RawMessage(`{"size":0}`)}}}); err != nil {
 		t.Fatal(err)
 	}
+	for _, kind := range []string{"pit", "scroll"} {
+		page, err := target.ElasticsearchCursor(ctx, core.ElasticsearchCursorRequest{Action: "open", Kind: kind, Owner: "live-qualification", OwnerContext: ctx, Indices: []string{index}, Body: json.RawMessage(`{"size":1,"sort":["_doc"]}`)})
+		if err != nil {
+			t.Fatal(kind, err)
+		}
+		if page.Handle != "" {
+			page, err = target.ElasticsearchCursor(ctx, core.ElasticsearchCursorRequest{Action: "next", Owner: "live-qualification", Handle: page.Handle})
+			if err != nil {
+				t.Fatal(kind, err)
+			}
+			if page.Handle != "" {
+				if _, err := target.ElasticsearchCursor(ctx, core.ElasticsearchCursorRequest{Action: "close", Owner: "live-qualification", Handle: page.Handle}); err != nil {
+					t.Fatal(kind, err)
+				}
+			}
+		}
+	}
+	if _, err := target.ElasticsearchBatch(ctx, core.ElasticsearchBatchRequest{Consistency: "pit", Requests: []core.ElasticsearchQueryRequest{{Operation: "search", Indices: []string{index}, Body: json.RawMessage(`{"size":0}`)}, {Operation: "search", Indices: []string{index}, Body: json.RawMessage(`{"size":0}`)}}}); err != nil {
+		t.Fatal(err)
+	}
+
 	request, err := http.NewRequestWithContext(ctx, http.MethodPut, "/"+index+"/_doc/readonly-must-fail-"+uuid.NewString(), strings.NewReader(`{"fixture":"native_write_must_fail"}`))
 	if err != nil {
 		t.Fatal(err)

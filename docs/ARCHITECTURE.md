@@ -174,5 +174,38 @@ preserve literals and script parameters while resolving executable source
 positions. Mtermvectors defaults are materialized in original input order before
 source validation. Compatible search batches use generated NDJSON and limit
 native concurrent searches to one; heterogeneous batches preserve each operation
-sequentially. Both modes report independent consistency. Partial shard/time
+sequentially. Those modes report independent consistency. PIT batches instead
+preflight compatible searches, open one owned PIT, apply rotating IDs to every
+member, and close it before returning `consistency: pit`. Partial shard/time
 results fail, and requested aggregate semantics are never shortened to fit limits.
+
+
+Elasticsearch contexts have a separate process registry budget: 128 slots and
+64 MiB retained state, included once in the configuration memory forecast.
+Each target defaults to 32 contexts (maximum 128). Reservations precede native
+creation and include frozen DSL, snapshot mappings/source inventories, native IDs
+and continuation sort values. Per-handle gates serialize fetch and close without
+holding the registry mutex during network or admission waits. The MCP server
+assigns a nonce to the actual transport session; SDK session IDs may be empty on
+stdio. Disconnect cancels that owner's requests and initiates owned cleanup.
+
+PIT stores the resolved snapshot and mapping proof, permitting alias rollover
+without substituting a new reader. Subsequent PIT searches use no index URL,
+routing or preference; those are applied at creation. Live embedded sources,
+including mapping runtime lookups, are proved on each page. Explicit PIT bodies
+support aggregation continuation and advanced DSL. Scroll preserves its frozen
+query, page size and slices. Both paths remove internal context IDs while
+preserving native JSON numbers. No raw native continuation/clear operations are
+available through `es_query`.
+
+Observed privilege-proof changes (including DLS/FLS), stale proof and closed
+sessions invalidate handles. Normal cleanup uses the remaining caller deadline;
+a canceled request schedules a separate five-second maintenance attempt and
+returns without waiting for that recovery. Background cleanup reserves response
+memory and maintenance admission. Unconfirmed creation/rotation/cleanup keeps
+both slot and retained memory until the conservative native lease horizon.
+Native lease accounting retains the longest requested keep-alive, since shorter
+renewals cannot be assumed to shorten ES reader retention. Local idle and
+absolute deadlines still bound handle usability. The horizon for an ambiguous
+request includes the maximum request interval. Actual task cancellation and
+native context lifetime measurements remain live-server qualification gates.

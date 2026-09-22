@@ -16,8 +16,8 @@ repository.
 > before each query. Production rollout still
 > requires validation against your provisioned accounts and server builds.
 > Elasticsearch implements pinned target/permission attestation, native metadata,
-> and scoped `es_query` / `es_batch` tools with advanced DSL, aggregations, scripts,
-> supplied-vector retrieval and templates. Owned pagination and language tools remain scheduled by
+> and scoped `es_query` / `es_batch` / `es_cursor` tools with advanced DSL, aggregations, scripts,
+> supplied-vector retrieval, templates and owned PIT/scroll pagination. Language tools remain scheduled by
 > [RFC-0006](docs/RFC-0006-elasticsearch-readonly-support.md); ES is not yet
 > advertised as a complete or live-server-certified query adapter.
 
@@ -228,9 +228,42 @@ Use `es_batch` with `requests: [{"operation":"search","body":{...}}, ...]` and
 `consistency: "independent"`. All members are proved before execution and share
 one deadline and one encoded result budget. Compatible searches use generated
 `_msearch` framing; other combinations execute sequentially without dropping
-native options. A batch is not a shared snapshot. Oversized pages, buckets or
+native options. Set `consistency: "pit"` for compatible `search` / `search_template`
+members with the same index scope and routing options: one service-owned PIT
+is used by every member and closed before the response. Independent batches
+do not share a snapshot. Oversized pages, buckets or
 documents fail explicitly; aggregations are never silently truncated. Configure
 `max_rows`, `max_result_bytes`, and ES `max_aggregation_buckets` for those limits.
+
+`es_cursor` supports PIT and scroll with `action: "open" | "next" | "close"`.
+Open returns the first page and an opaque handle bound to this MCP session and
+configured target. Native PIT/scroll IDs cannot be supplied and are removed from
+responses. For example:
+
+```json
+{"target":"search-reporting","action":"open","kind":"pit","indices":["reports-*"],"body":{"size":100,"sort":["_shard_doc"],"query":{"match_all":{}}},"keep_alive_ms":300000}
+{"target":"search-reporting","action":"next","handle":"<handle returned by open>"}
+{"target":"search-reporting","action":"close","handle":"<handle returned by open>"}
+```
+
+PIT `next` without a body uses the retained query and last hit's `search_after`,
+preserving integer sort values. An explicit native body allows composite
+`after_key`, changed aggregations, scripts and vector queries on the same snapshot.
+PIT pages retain the original index snapshot across alias rollover; embedded
+lookup sources are still validated live. Scroll fixes its query and page size at
+open, including native `slice` options. Empty hit pages close ordinary hit cursors;
+aggregation-only PITs remain open for explicit continuation or close.
+
+Defaults are 32 contexts per target, 128 per process, 5 minutes idle, 30 minutes
+absolute lifetime, and 64 KiB per native ID/sort continuation. Configuration can
+raise target contexts to 128, idle to 15 minutes, lifetime to 2 hours, and ID bytes
+to 1 MiB. Context state has a separate 64 MiB process budget and holds no query
+permit while idle. Expiry, session disconnect, observed privilege drift and
+shutdown trigger cleanup. Uncertain native outcomes disable the handle and keep
+its reservation until cleanup or a conservative native lease horizon; queries
+never silently restart a snapshot. See the
+[cursor qualification record](docs/qualification/2026-09-22-elasticsearch-owned-contexts.md)
+for fixture evidence and remaining live-server gates.
 
 ### 3. Build and verify
 
@@ -285,7 +318,8 @@ Use target inventory-test. Inspect the schema and verify whether transaction
 | `query_explain` | Returns an engine-native non-executing plan for a validated SELECT. |
 | `es_metadata` | Resolves scoped Elasticsearch indices, aliases and data streams, or reads their mappings. |
 | `es_query` | Executes scoped native Elasticsearch reads, advanced DSL, scripts, aggregations, supplied vectors and templates. |
-| `es_batch` | Executes preflighted independent Elasticsearch reads under a shared deadline and combined output budget. |
+| `es_batch` | Executes preflighted independent reads or compatible searches in one owned PIT, with a shared deadline and output budget. |
+| `es_cursor` | Opens, advances and closes session-owned PIT/scroll handles with bounded lifetimes and cleanup. |
 | `redis_command` | Runs one attested advanced read-only Redis command vector. |
 | `redis_batch` | Runs a bounded read-only Redis batch; non-atomic commands execute sequentially to bound retained reply memory. |
 

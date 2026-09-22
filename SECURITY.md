@@ -81,10 +81,22 @@ Untrusted:
     key loss and float conversion of large numbers. Audit fingerprints are keyed
     per process; native error bodies and credentials are not returned or logged.
 
+13. Elasticsearch PIT/scroll handles are random, process-local and bound to the
+    target, transport session, privilege-proof revision and original source scope.
+    Native IDs never cross the tool boundary; clear-all is unavailable. Advances
+    and closes serialize per handle, tracking the most recent native ID. Authority
+    changes include DLS/FLS proof changes, not only new write privileges. Cleanup
+    works after a target becomes unhealthy. Failed/ambiguous context requests keep
+    their context/memory reservation through cleanup or a conservative lease
+    horizon, and never retry creation or advancement. Canceled callers release
+    query admission before bounded maintenance recovery. Idle contexts hold no
+    connection or execution permit. Disconnect, expiry and shutdown close owned
+    contexts; `es_cursor` is read-only but deliberately not marked idempotent.
+
 ## Known limitations
 
 - Elasticsearch native queries have TLS fixture coverage, not live engine certification.
-  API-key, custom plugin/inference, language, owned context, dynamic suggestion
+  API-key, custom plugin/inference, language, dynamic suggestion
   collate and cross-cluster profiles are not yet implemented. Pinned version/hash metadata is an operator trust
   check, not cryptographic remote binary attestation.
 - ES query preflight is not an atomic lock on administrator changes to mappings,

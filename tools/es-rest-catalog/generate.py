@@ -25,7 +25,7 @@ OPERATIONS = {
         "explain", "field_caps", "search_shards", "indices.validate_query",
     )},
     "msearch_template": ("msearch_template", "read", False),
-    **{name: (name, "owned_context", False) for name in (
+    **{name: (name, "owned_context", True) for name in (
         "open_point_in_time", "close_point_in_time", "scroll", "clear_scroll",
     )},
     **{name: (name, "mutation", False) for name in (

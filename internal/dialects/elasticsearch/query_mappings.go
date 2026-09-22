@@ -15,6 +15,28 @@ func (p *queryProof) sourceMappings(indices []string) (map[string]any, error) {
 	if m, ok := p.mappings[key]; ok {
 		return m, nil
 	}
+	if p.snapshot != nil && key == scopeKey(p.snapshot.query.Indices) {
+		root := p.snapshot.mappings
+		// Runtime lookup fields still address live indices, even when the main
+		// reader is a PIT snapshot. Reprove those references on every new page.
+		for _, v := range root {
+			index, err := object(v)
+			if err != nil {
+				return nil, err
+			}
+			mapping, err := object(index["mappings"])
+			if err != nil {
+				return nil, err
+			}
+			if runtime, ok := mapping["runtime"]; ok {
+				if err := p.runtime(runtime); err != nil {
+					return nil, err
+				}
+			}
+		}
+		p.mappings[key] = root
+		return root, nil
+	}
 	physical, err := p.sources(indices)
 	if err != nil {
 		return nil, err

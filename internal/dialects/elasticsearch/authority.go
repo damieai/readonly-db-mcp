@@ -1,7 +1,9 @@
 package elasticsearch
 
 import (
+	"bytes"
 	"context"
+	"crypto/sha256"
 	"encoding/json"
 
 	"github.com/your-org/readonly-db-mcp/internal/config"
@@ -65,6 +67,7 @@ func validatePrivileges(ctx context.Context, raw []byte, cfg *config.Elasticsear
 }
 
 func (t *Target) attest(ctx context.Context) error {
+	digest := sha256.New()
 	for i := range t.wire.clients {
 		data, err := t.wire.get(ctx, i, "/", nil, t.limits.MaxResultBytes)
 		if err != nil {
@@ -101,6 +104,30 @@ func (t *Target) attest(ctx context.Context) error {
 		if err := validatePrivileges(ctx, data, t.cfg.Elasticsearch); err != nil {
 			return err
 		}
+		// Retain DLS/FLS values without float conversion and canonicalize keys.
+		var proof any
+		decoder := json.NewDecoder(bytes.NewReader(data))
+		decoder.UseNumber()
+		if err := decoder.Decode(&proof); err != nil {
+			return failure("authority_unproven", "invalid privilege proof")
+		}
+		canonical, _ := json.Marshal(proof)
+		_, _ = digest.Write(canonical)
+		_, _ = digest.Write([]byte{0})
 	}
+	var hash [32]byte
+	copy(hash[:], digest.Sum(nil))
+	t.authorityMu.Lock()
+	if hash != t.authorityHash {
+		t.authorityHash = hash
+		t.authorityEpoch.Add(1)
+	}
+	t.authorityMu.Unlock()
 	return nil
+}
+
+func (t *Target) invalidateAuthority() {
+	if t.healthy.Swap(false) {
+		t.authorityEpoch.Add(1)
+	}
 }

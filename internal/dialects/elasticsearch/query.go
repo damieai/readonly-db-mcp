@@ -35,6 +35,10 @@ type preparedQuery struct {
 // proof, rendering, execution and response encoding. A batch never reacquires
 // permits while holding another permit.
 func (t *Target) queryLease(ctx context.Context, timeout time.Duration, raw []byte, class admission.Class) (context.Context, func(), error) {
+	return t.requestLease(ctx, timeout, raw, class, true)
+}
+
+func (t *Target) requestLease(ctx context.Context, timeout time.Duration, raw []byte, class admission.Class, requireReady bool) (context.Context, func(), error) {
 	if timeout == 0 {
 		timeout = t.limits.DefaultTimeout
 	}
@@ -44,8 +48,10 @@ func (t *Target) queryLease(ctx context.Context, timeout time.Duration, raw []by
 	if len(raw) > t.cfg.Elasticsearch.MaxRequestBytes {
 		return nil, nil, failure("resource_limit", "Elasticsearch request exceeds byte limit")
 	}
-	if err := t.ready(); err != nil {
-		return nil, nil, err
+	if requireReady {
+		if err := t.ready(); err != nil {
+			return nil, nil, err
+		}
 	}
 	ctx, cancel := context.WithTimeout(ctx, timeout)
 	unlink := context.AfterFunc(t.ctx, cancel)
@@ -86,7 +92,7 @@ func (t *Target) recordQuery(ctx context.Context, id, operation string, raw []by
 		}
 	}
 	if code == "permission_denied" || code == "profile_mismatch" {
-		t.healthy.Store(false)
+		t.invalidateAuthority()
 	}
 	if t.metrics != nil {
 		t.metrics.Observe("elasticsearch_request", time.Since(started), operation)
@@ -137,8 +143,8 @@ func (t *Target) ElasticsearchBatch(ctx context.Context, request core.Elasticsea
 	if encodeErr != nil {
 		return nil, failure("invalid_request", "invalid batch envelope")
 	}
-	if request.Consistency != "" && request.Consistency != "independent" {
-		return nil, failure("capability_unavailable", "only independent batch consistency is implemented; owned PIT support is pending")
+	if request.Consistency != "" && request.Consistency != "independent" && request.Consistency != "pit" {
+		return nil, failure("invalid_request", "batch consistency must be independent or pit")
 	}
 	if len(request.Requests) == 0 || len(request.Requests) > t.limits.MaxBatchQueries {
 		return nil, failure("resource_limit", "batch member count exceeds configured limit")
@@ -164,6 +170,9 @@ func (t *Target) ElasticsearchBatch(ctx context.Context, request core.Elasticsea
 		if preparedBytes > t.cfg.Elasticsearch.MaxRequestBytes {
 			return nil, failure("resource_limit", "materialized batch exceeds request byte limit")
 		}
+	}
+	if request.Consistency == "pit" {
+		return t.pitBatch(ctx, p, queries, id, started)
 	}
 	// Preflight EVERY member before dispatching any executable query. Rendering,
 	// script inspection and source resolution above are bounded read-only proofs.
@@ -271,12 +280,14 @@ type queryProof struct {
 	mappings      map[string]map[string]any
 	proofBytes    int
 	stockProven   bool
+	embedded      map[string]map[string]bool
+	snapshot      *ownedCursor
 	// Shared traversal work includes decoded wrapper queries and rendered DSL.
 	work int
 }
 
 func newQueryProof(t *Target, ctx context.Context, endpoint int) *queryProof {
-	return &queryProof{t: t, ctx: ctx, endpoint: endpoint, resolved: map[string]map[string]bool{}, physical: map[string]bool{}, scripts: map[string]map[string]any{}, mappings: map[string]map[string]any{}}
+	return &queryProof{t: t, ctx: ctx, endpoint: endpoint, resolved: map[string]map[string]bool{}, physical: map[string]bool{}, scripts: map[string]map[string]any{}, mappings: map[string]map[string]any{}, embedded: map[string]map[string]bool{}}
 }
 
 func (p *queryProof) sources(indices []string) (map[string]bool, error) {
@@ -511,7 +522,11 @@ func (p *queryProof) prepare(request core.ElasticsearchQueryRequest) (*preparedQ
 	} else if request.ID != "" {
 		return nil, failure("invalid_request", "id is not valid for this operation")
 	}
-	q.physical, err = p.sources(indices)
+	if p.snapshot != nil && scopeKey(indices) == scopeKey(p.snapshot.query.Indices) {
+		q.physical = p.snapshot.physical
+	} else {
+		q.physical, err = p.sources(indices)
+	}
 	if err != nil {
 		return nil, err
 	}

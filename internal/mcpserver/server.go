@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log/slog"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
@@ -20,8 +21,10 @@ Use parameter placeholders for SQL values. Redis uses structured command argumen
 Encode integers larger than JSON's safe range as strings.`
 
 type Server struct {
-	mcp      *mcp.Server
-	registry *registry.Registry
+	mcp          *mcp.Server
+	registry     *registry.Registry
+	esSessionsMu sync.Mutex
+	esSessions   map[*mcp.ServerSession]*elasticsearchSession
 }
 
 func New(targets *registry.Registry, logger *slog.Logger, version string) *Server {

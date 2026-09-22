@@ -395,7 +395,10 @@ func (p *queryProof) reference(m map[string]any, key, fallback string) error {
 	if name == "" {
 		return failure("invalid_request", "embedded lookup requires an explicit index")
 	}
-	_, err := p.sources([]string{name})
+	physical, err := p.sources([]string{name})
+	if err == nil {
+		p.embedded[name] = physical
+	}
 	return err
 }
 

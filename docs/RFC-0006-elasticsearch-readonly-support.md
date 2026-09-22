@@ -1,6 +1,6 @@
 # RFC-0006: Elasticsearch Read-Only Query Support
 
-- Status: Metadata and native query/batch foundation implemented; remaining advanced profiles and live qualification pending
+- Status: Metadata, native query/batch and owned PIT/scroll foundation implemented; remaining advanced profiles and live qualification pending
 - Authors: readonly-db-mcp maintainers
 - Created: 2026-09-12
 - Depends on: RFC-0001 resource governance and the common architecture contract
@@ -26,6 +26,17 @@ templates are checked before execution. Stock node/plugin inventories are proved
 for queries. This is a partial implementation of the full RFC, with fixture
 coverage rather than real-engine certification. See the
 [native query evidence and remaining gates](qualification/2026-09-22-elasticsearch-native-queries.md).
+
+Implementation update (2026-09-22, owned contexts): `es_cursor` now opens,
+advances and closes session-owned PIT/scroll handles, including rotating native
+IDs, explicit PIT aggregation continuation, idle/absolute expiry, authority
+revision invalidation and bounded cleanup. `es_batch.consistency=pit` shares
+one PIT across compatible preflighted searches. Context reservations survive
+ambiguous outcomes; canceled requests schedule maintenance recovery. The current
+profile fixes process limits at 128 contexts / 64 MiB retained state and recovery
+at 5 seconds; the broader configurable ceilings below remain proposals. SQL
+cursors and live-server lifecycle/cancellation qualification remain pending.
+See [owned-context evidence](qualification/2026-09-22-elasticsearch-owned-contexts.md).
 
 ## Summary
 

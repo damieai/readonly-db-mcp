@@ -1,5 +1,5 @@
-# Native metadata/query/batch profile. Replace endpoint, UUID and secret/CA locations.
-# Owned contexts, query languages, API keys and attestors remain later stages.
+# Native metadata/query/batch/PIT/scroll profile. Replace endpoint, UUID and secret/CA locations.
+# Query languages, API keys and attestors remain later stages.
 server:
   transport: stdio
   strict_startup: true
@@ -30,6 +30,10 @@ targets:
       max_json_nodes: 100000
       max_resolved_indices: 1024
       max_aggregation_buckets: 10000
+      max_open_contexts: 32
+      context_keep_alive: 5m
+      max_context_lifetime: 30m
+      max_context_id_bytes: 65536
     tls:
       mode: verify-full
       ca_file: /run/secrets/es-ca.pem

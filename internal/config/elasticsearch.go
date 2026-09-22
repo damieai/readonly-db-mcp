@@ -27,6 +27,10 @@ type ElasticsearchConfig struct {
 	MaxJSONNodes          int           `yaml:"max_json_nodes"`
 	MaxResolvedIndices    int           `yaml:"max_resolved_indices"`
 	MaxAggregationBuckets int           `yaml:"max_aggregation_buckets"`
+	MaxOpenContexts       int           `yaml:"max_open_contexts"`
+	ContextKeepAlive      time.Duration `yaml:"context_keep_alive"`
+	MaxContextLifetime    time.Duration `yaml:"max_context_lifetime"`
+	MaxContextIDBytes     int           `yaml:"max_context_id_bytes"`
 }
 
 func defaultElasticsearch(t *TargetConfig) {
@@ -51,6 +55,18 @@ func defaultElasticsearch(t *TargetConfig) {
 	}
 	if e.MaxAggregationBuckets == 0 {
 		e.MaxAggregationBuckets = 10000
+	}
+	if e.MaxOpenContexts == 0 {
+		e.MaxOpenContexts = 32
+	}
+	if e.ContextKeepAlive == 0 {
+		e.ContextKeepAlive = 5 * time.Minute
+	}
+	if e.MaxContextLifetime == 0 {
+		e.MaxContextLifetime = 30 * time.Minute
+	}
+	if e.MaxContextIDBytes == 0 {
+		e.MaxContextIDBytes = 64 << 10
 	}
 }
 
@@ -148,6 +164,9 @@ func validateElasticsearch(t *TargetConfig, limits Limits) []string {
 	if e.PrivilegeRecheck < 10*time.Second || e.PrivilegeRecheck > 5*time.Minute {
 		add("Elasticsearch privilege_recheck_interval must be between 10s and 5m")
 	}
+	if e.ContextKeepAlive < time.Second || e.ContextKeepAlive > 15*time.Minute || e.MaxContextLifetime < e.ContextKeepAlive || e.MaxContextLifetime > 2*time.Hour {
+		add("Elasticsearch context leases require 1s-15m idle and idle-to-2h absolute lifetimes")
+	}
 	for _, v := range []struct {
 		name            string
 		value, min, max int
@@ -155,6 +174,7 @@ func validateElasticsearch(t *TargetConfig, limits Limits) []string {
 		{"max_request_bytes", e.MaxRequestBytes, 1024, 16 << 20}, {"max_json_depth", e.MaxJSONDepth, 8, 512},
 		{"max_json_nodes", e.MaxJSONNodes, 128, 1000000}, {"max_resolved_indices", e.MaxResolvedIndices, 1, 10000},
 		{"max_aggregation_buckets", e.MaxAggregationBuckets, 1, 65536},
+		{"max_open_contexts", e.MaxOpenContexts, 1, 128}, {"max_context_id_bytes", e.MaxContextIDBytes, 1024, 1 << 20},
 	} {
 		if v.value < v.min || v.value > v.max {
 			add(fmt.Sprintf("elasticsearch.%s is outside its resource ceiling", v.name))

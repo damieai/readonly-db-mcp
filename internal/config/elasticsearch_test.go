@@ -32,6 +32,9 @@ func TestElasticsearchDefaultsAndForecast(t *testing.T) {
 	if v.Port != 0 || v.Database != "" || v.Consistency != ConsistencyEventual || v.Elasticsearch.PrivilegeRecheck != time.Minute {
 		t.Fatal("ES acquired SQL defaults")
 	}
+	if v.Elasticsearch.MaxOpenContexts != 32 || v.Elasticsearch.ContextKeepAlive != 5*time.Minute || v.Elasticsearch.MaxContextLifetime != 30*time.Minute || v.Elasticsearch.MaxContextIDBytes != 64<<10 {
+		t.Fatal("context defaults differ from resource contract")
+	}
 	resolveRelativePaths(v, "/srv/config")
 	if v.TLS.CAFile != filepath.Join("/srv/config", "ca.pem") {
 		t.Fatal("CA path not resolved")
@@ -69,6 +72,11 @@ func TestElasticsearchRejectsConflictingOrUnboundedConfiguration(t *testing.T) {
 		{"excess connections", func(t *TargetConfig) { t.Connection.MaxOpen = 65 }},
 		{"two secrets", func(t *TargetConfig) { t.PasswordEnv = "ANOTHER_SECRET"; t.PasswordFile = "password" }},
 		{"result cache", func(t *TargetConfig) { t.ResultCache.Enabled = true }},
+		{"context count", func(t *TargetConfig) { t.Elasticsearch.MaxOpenContexts = 129 }},
+		{"context bytes", func(t *TargetConfig) { t.Elasticsearch.MaxContextIDBytes = (1 << 20) + 1 }},
+		{"idle lifetime", func(t *TargetConfig) { t.Elasticsearch.ContextKeepAlive = 16 * time.Minute }},
+		{"absolute lifetime", func(t *TargetConfig) { t.Elasticsearch.MaxContextLifetime = 3 * time.Hour }},
+		{"absolute shorter than idle", func(t *TargetConfig) { t.Elasticsearch.MaxContextLifetime = time.Second }},
 		{"bucket ceiling", func(t *TargetConfig) { t.Elasticsearch.MaxAggregationBuckets = 65537 }},
 	} {
 		t.Run(test.name, func(t *testing.T) {

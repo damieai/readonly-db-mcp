@@ -11,6 +11,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -29,6 +30,7 @@ func TestElasticsearchMetadataEnvelopeRejectsAmbiguity(t *testing.T) {
 }
 
 func TestElasticsearchThroughRegistryAndMCP(t *testing.T) {
+	var cleared atomic.Int64
 	upstream := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		w.Header().Set("X-Elastic-Product", "Elasticsearch")
@@ -47,6 +49,13 @@ func TestElasticsearchThroughRegistryAndMCP(t *testing.T) {
 			fmt.Fprint(w, `{"reports-2026":{"mappings":{"_meta":{"number":9007199254740993}}}}`)
 		case "/reports-*/_search":
 			fmt.Fprint(w, `{"timed_out":false,"_shards":{"total":1,"failed":0,"successful":1},"hits":{"hits":[{"_index":"reports-2026","_id":"a","_source":{"number":9007199254740993}}]}}`)
+		case "/reports-*/_pit":
+			fmt.Fprint(w, `{"id":"native-private-pit","_shards":{"total":1,"successful":1,"failed":0}}`)
+		case "/_search":
+			fmt.Fprint(w, `{"pit_id":"native-private-rotated","timed_out":false,"_shards":{"total":1,"successful":1,"failed":0},"hits":{"hits":[{"_index":"reports-2026","_id":"a","sort":[9007199254740993]}]}}`)
+		case "/_pit":
+			cleared.Add(1)
+			fmt.Fprint(w, `{"succeeded":true,"num_freed":1}`)
 		case "/_msearch":
 			fmt.Fprint(w, `{"responses":[{"timed_out":false,"_shards":{"total":1,"failed":0,"successful":1},"hits":{"hits":[{"_index":"reports-2026","_id":"a","_source":{"number":9007199254740993}}]}}]}`)
 		default:
@@ -121,6 +130,9 @@ targets:
 	}
 	found := false
 	for _, tool := range tools.Tools {
+		if tool.Name == "es_cursor" && (!tool.Annotations.ReadOnlyHint || tool.Annotations.IdempotentHint) {
+			t.Fatal("cursor annotations must describe non-idempotent readonly operations")
+		}
 		if tool.Name == "es_metadata" {
 			found = true
 			if !tool.Annotations.ReadOnlyHint || !tool.Annotations.IdempotentHint {
@@ -177,6 +189,58 @@ targets:
 			t.Fatalf("ambiguous %s envelope admitted", call.name)
 		}
 	}
+	// In-memory/stdio sessions have an empty SDK ID; distinct connections must
+	// still get distinct ownership and disconnect must release their contexts.
+	opened, err := cs.CallTool(ctx, &mcp.CallToolParams{Name: "es_cursor", Arguments: json.RawMessage(`{"target":"es_test","action":"open","kind":"pit","body":{"sort":["_shard_doc"]}}`)})
+	if err != nil || opened.IsError {
+		t.Fatal("MCP cursor open", err, opened)
+	}
+	var cursor struct {
+		Handle string `json:"handle"`
+	}
+	raw, _ := json.Marshal(opened.StructuredContent)
+	if json.Unmarshal(raw, &cursor) != nil || cursor.Handle == "" || strings.Contains(string(raw), "native-private") {
+		t.Fatal("invalid public handle", string(raw))
+	}
+	a2, b2 := mcp.NewInMemoryTransports()
+	ss2, err := server.mcp.Connect(ctx, a2, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer ss2.Close()
+	cs2, err := client.Connect(ctx, b2, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer cs2.Close()
+	for _, args := range []any{
+		map[string]any{"target": "es_test", "action": "next", "handle": cursor.Handle},
+		json.RawMessage(`{"target":"es_test","action":"open","kind":"pit","owner":"forged"}`),
+		json.RawMessage(`{"target":"es_test","action":"open","kind":"pit","body":{"size":1,"size":2}}`),
+		json.RawMessage(`{"target":"es_test","action":"open","kind":"pit","scroll_id":"_all"}`),
+	} {
+		r, err := cs2.CallTool(ctx, &mcp.CallToolParams{Name: "es_cursor", Arguments: args})
+		if err == nil && !r.IsError {
+			t.Fatal("foreign/ambiguous cursor admitted")
+		}
+	}
+	continued, err := cs.CallTool(ctx, &mcp.CallToolParams{Name: "es_cursor", Arguments: map[string]any{"target": "es_test", "action": "next", "handle": cursor.Handle}})
+	if err != nil || continued.IsError {
+		t.Fatal("owner continuation", err, continued)
+	}
+	// Existing metadata assertions below use the second connection.
+	if err := cs.Close(); err != nil {
+		t.Fatal(err)
+	}
+	until := time.Now().Add(time.Second)
+	for cleared.Load() == 0 && time.Now().Before(until) {
+		time.Sleep(time.Millisecond)
+	}
+	if cleared.Load() != 1 {
+		t.Fatal("session disconnect failed to release owned PIT")
+	}
+	cs = cs2
+
 	for _, args := range []json.RawMessage{
 		json.RawMessage(`{"target":"es_test","operation":"resolve","operation":"mappings"}`),
 		json.RawMessage(`{"target":"es_test","operation":"resolve","headers":{"Host":"other"}}`),

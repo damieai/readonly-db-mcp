@@ -115,9 +115,9 @@ func (s *Server) registerElasticsearchQueryTools() {
 		required := []string{"target", "operation"}
 		description := "Execute a scoped native Elasticsearch read. Supports advanced DSL, scripts, aggregations, supplied-vector and local hybrid retrieval; inspect_target reports pending capabilities."
 		if name == "es_batch" {
-			p = map[string]any{"requests": map[string]any{"type": "array", "minItems": 1, "maxItems": 100, "items": map[string]any{"type": "object", "additionalProperties": false, "required": []string{"operation"}, "properties": properties()}}, "consistency": map[string]any{"type": "string", "enum": []string{"independent"}}}
+			p = map[string]any{"requests": map[string]any{"type": "array", "minItems": 1, "maxItems": 100, "items": map[string]any{"type": "object", "additionalProperties": false, "required": []string{"operation"}, "properties": properties()}}, "consistency": map[string]any{"type": "string", "enum": []string{"independent", "pit"}}}
 			required = []string{"target", "requests"}
-			description = "Execute independent Elasticsearch reads under one deadline and combined result budget. All members are validated before execution; no shared snapshot is implied."
+			description = "Execute Elasticsearch reads under one deadline and combined result budget. Independent reads have no shared snapshot; pit requires compatible searches and uses one service-owned PIT, closed before returning."
 		} else {
 			p["purpose"] = map[string]any{"type": "string", "maxLength": 1024}
 		}

@@ -26,20 +26,25 @@ var responseMemory = semaphore.NewWeighted(512 << 20)
 var queuedMemory = semaphore.NewWeighted(64 << 20)
 
 type Target struct {
-	cfg       *config.TargetConfig
-	limits    config.Limits
-	wire      *wire
-	admission *admission.Controller
-	auditor   audit.Auditor
-	metrics   metrics.Recorder
-	ctx       context.Context
-	stop      context.CancelFunc
-	wg        sync.WaitGroup
-	closed    atomic.Bool
-	healthy   atomic.Bool
-	checked   atomic.Int64
-	next      atomic.Uint64
-	auditKey  [32]byte
+	cfg            *config.TargetConfig
+	limits         config.Limits
+	wire           *wire
+	admission      *admission.Controller
+	auditor        audit.Auditor
+	metrics        metrics.Recorder
+	ctx            context.Context
+	stop           context.CancelFunc
+	wg             sync.WaitGroup
+	closed         atomic.Bool
+	healthy        atomic.Bool
+	checked        atomic.Int64
+	next           atomic.Uint64
+	auditKey       [32]byte
+	authorityMu    sync.Mutex
+	authorityHash  [32]byte
+	authorityEpoch atomic.Uint64
+	cursorMu       sync.Mutex
+	cursors        map[string]*ownedCursor
 }
 
 func Open(ctx context.Context, cfg *config.TargetConfig, limits config.Limits, controller *admission.Controller, auditor audit.Auditor, recorder metrics.Recorder) (*Target, error) {
@@ -51,7 +56,7 @@ func Open(ctx context.Context, cfg *config.TargetConfig, limits config.Limits, c
 		return nil, err
 	}
 	w.maxCell = limits.MaxCellBytes
-	t := &Target{cfg: cfg, limits: limits, wire: w, admission: controller, auditor: auditor, metrics: recorder}
+	t := &Target{cfg: cfg, limits: limits, wire: w, admission: controller, auditor: auditor, metrics: recorder, cursors: map[string]*ownedCursor{}}
 	t.ctx, t.stop = context.WithCancel(context.Background())
 	if _, err := rand.Read(t.auditKey[:]); err != nil {
 		t.Close()
@@ -63,8 +68,9 @@ func Open(ctx context.Context, cfg *config.TargetConfig, limits config.Limits, c
 		t.Close()
 		return nil, err
 	}
-	t.wg.Add(1)
+	t.wg.Add(2)
 	go t.maintain()
+	go t.maintainCursors()
 	return t, nil
 }
 
@@ -72,20 +78,23 @@ func (t *Target) memoryCost() int64 {
 	return 6*int64(t.limits.MaxResultBytes) + int64(t.cfg.Elasticsearch.MaxJSONNodes)*64 + int64(t.cfg.Elasticsearch.MaxRequestBytes) + (2 << 20)
 }
 func (t *Target) refresh(ctx context.Context) error {
+	if checked := t.checked.Load(); checked != 0 && time.Since(time.Unix(0, checked)) >= t.cfg.Elasticsearch.PrivilegeRecheck {
+		t.invalidateAuthority()
+	}
 	permit, err := t.admission.Acquire(ctx, t.cfg.Name, admission.Maintenance)
 	if err != nil {
-		t.healthy.Store(false)
+		t.invalidateAuthority()
 		return err
 	}
 	defer permit.Release()
 	charge := t.memoryCost()
 	if !responseMemory.TryAcquire(charge) {
-		t.healthy.Store(false)
+		t.invalidateAuthority()
 		return failure("resource_limit", "Elasticsearch proof memory budget is exhausted")
 	}
 	defer responseMemory.Release(charge)
 	if err := t.attest(ctx); err != nil {
-		t.healthy.Store(false)
+		t.invalidateAuthority()
 		return err
 	}
 	t.checked.Store(time.Now().UnixNano())
@@ -116,12 +125,13 @@ func (t *Target) maintain() {
 }
 func (t *Target) ready() error {
 	if t.closed.Load() || !t.healthy.Load() || time.Since(time.Unix(0, t.checked.Load())) >= t.cfg.Elasticsearch.PrivilegeRecheck {
+		t.invalidateAuthority()
 		return failure("permission_proof_stale", "Elasticsearch authority proof is unavailable or stale")
 	}
 	return nil
 }
 func (t *Target) Info() core.TargetInfo {
-	return core.TargetInfo{Name: t.cfg.Name, Engine: config.EngineElasticsearch, Environment: t.cfg.Environment, Consistency: config.ConsistencyEventual, Healthy: t.ready() == nil, ReadOnlyUser: t.ready() == nil, ServerReadOnly: false, ServerVersion: t.cfg.Elasticsearch.Version, DeploymentMode: "elasticsearch-phase-2", AllowedIndices: append([]string(nil), t.cfg.Elasticsearch.AllowedIndices...), PolicyRevision: "es-native-read-v2", ProofCheckedAt: time.Unix(0, t.checked.Load()).UTC().Format(time.RFC3339), Capabilities: capabilities(t.cfg.Elasticsearch.Version)}
+	return core.TargetInfo{Name: t.cfg.Name, Engine: config.EngineElasticsearch, Environment: t.cfg.Environment, Consistency: config.ConsistencyEventual, Healthy: t.ready() == nil, ReadOnlyUser: t.ready() == nil, ServerReadOnly: false, ServerVersion: t.cfg.Elasticsearch.Version, DeploymentMode: "elasticsearch-phase-3", AllowedIndices: append([]string(nil), t.cfg.Elasticsearch.AllowedIndices...), PolicyRevision: "es-owned-context-v3", ProofCheckedAt: time.Unix(0, t.checked.Load()).UTC().Format(time.RFC3339), Capabilities: capabilities(t.cfg.Elasticsearch.Version)}
 }
 
 func (t *Target) ElasticsearchMetadata(ctx context.Context, request core.ElasticsearchMetadataRequest) (result *core.ElasticsearchResult, err error) {
@@ -138,7 +148,7 @@ func (t *Target) ElasticsearchMetadata(ctx context.Context, request core.Elastic
 			}
 		}
 		if code == "permission_denied" || code == "profile_mismatch" {
-			t.healthy.Store(false)
+			t.invalidateAuthority()
 		}
 		if t.metrics != nil {
 			t.metrics.Observe("elasticsearch_request", time.Since(started), "metadata")
@@ -240,6 +250,14 @@ func (t *Target) Close() error {
 		t.stop()
 	}
 	t.wg.Wait()
+	if t.wire != nil {
+		ctx, cancel := context.WithTimeout(context.Background(), cursorCleanupTimeout)
+		if permit, err := t.admission.Acquire(ctx, t.cfg.Name, admission.Maintenance); err == nil {
+			_ = t.closeOwnedCursors(ctx, "")
+			permit.Release()
+		}
+		cancel()
+	}
 	if t.wire != nil {
 		t.wire.close()
 	}

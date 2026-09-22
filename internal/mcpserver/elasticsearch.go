@@ -53,6 +53,7 @@ func (v *ElasticsearchMetadataInput) UnmarshalJSON(data []byte) error {
 
 func (s *Server) registerElasticsearchTools() {
 	s.registerElasticsearchQueryTools()
+	s.registerElasticsearchCursorTool()
 	t := tool("es_metadata", "Resolve scoped Elasticsearch indices, aliases and data streams, or read their mappings. Query capabilities are reported by inspect_target.")
 	t.InputSchema = map[string]any{"type": "object", "additionalProperties": false, "required": []string{"target", "operation"}, "properties": map[string]any{
 		"target":     map[string]any{"type": "string", "minLength": 1, "maxLength": 64},

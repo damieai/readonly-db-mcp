@@ -10,6 +10,11 @@ func validateQueryResponse(raw []byte, q *preparedQuery) error {
 	if _, ok := m["error"]; ok {
 		return failure("upstream_error", "Elasticsearch returned an item error")
 	}
+	for _, key := range []string{"pit_id", "_scroll_id"} {
+		if _, ok := m[key]; ok {
+			return failure("invalid_response", "unexpected native context identifier outside owned lifecycle")
+		}
+	}
 	if err := completeResponse(m); err != nil {
 		return err
 	}
