@@ -16,16 +16,17 @@ var ElasticsearchBuilds = map[string]string{
 }
 
 type ElasticsearchConfig struct {
-	Endpoints          []string      `yaml:"endpoints"`
-	Version            string        `yaml:"version"`
-	ClusterUUID        string        `yaml:"cluster_uuid"`
-	AllowedIndices     []string      `yaml:"allowed_indices"`
-	DeniedIndices      []string      `yaml:"denied_indices"`
-	PrivilegeRecheck   time.Duration `yaml:"privilege_recheck_interval"`
-	MaxRequestBytes    int           `yaml:"max_request_bytes"`
-	MaxJSONDepth       int           `yaml:"max_json_depth"`
-	MaxJSONNodes       int           `yaml:"max_json_nodes"`
-	MaxResolvedIndices int           `yaml:"max_resolved_indices"`
+	Endpoints             []string      `yaml:"endpoints"`
+	Version               string        `yaml:"version"`
+	ClusterUUID           string        `yaml:"cluster_uuid"`
+	AllowedIndices        []string      `yaml:"allowed_indices"`
+	DeniedIndices         []string      `yaml:"denied_indices"`
+	PrivilegeRecheck      time.Duration `yaml:"privilege_recheck_interval"`
+	MaxRequestBytes       int           `yaml:"max_request_bytes"`
+	MaxJSONDepth          int           `yaml:"max_json_depth"`
+	MaxJSONNodes          int           `yaml:"max_json_nodes"`
+	MaxResolvedIndices    int           `yaml:"max_resolved_indices"`
+	MaxAggregationBuckets int           `yaml:"max_aggregation_buckets"`
 }
 
 func defaultElasticsearch(t *TargetConfig) {
@@ -47,6 +48,9 @@ func defaultElasticsearch(t *TargetConfig) {
 	}
 	if e.MaxResolvedIndices == 0 {
 		e.MaxResolvedIndices = 1024
+	}
+	if e.MaxAggregationBuckets == 0 {
+		e.MaxAggregationBuckets = 10000
 	}
 }
 
@@ -150,6 +154,7 @@ func validateElasticsearch(t *TargetConfig, limits Limits) []string {
 	}{
 		{"max_request_bytes", e.MaxRequestBytes, 1024, 16 << 20}, {"max_json_depth", e.MaxJSONDepth, 8, 512},
 		{"max_json_nodes", e.MaxJSONNodes, 128, 1000000}, {"max_resolved_indices", e.MaxResolvedIndices, 1, 10000},
+		{"max_aggregation_buckets", e.MaxAggregationBuckets, 1, 65536},
 	} {
 		if v.value < v.min || v.value > v.max {
 			add(fmt.Sprintf("elasticsearch.%s is outside its resource ceiling", v.name))

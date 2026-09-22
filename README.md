@@ -15,9 +15,9 @@ repository.
 > verifiable module artifact. Search index prefixes are checked at startup and
 > before each query. Production rollout still
 > requires validation against your provisioned accounts and server builds.
-> Elasticsearch phase 1 implements pinned target/permission attestation and
-> native index resolution/mappings through `es_metadata`. Advanced queries,
-> pagination and language tools remain scheduled by
+> Elasticsearch implements pinned target/permission attestation, native metadata,
+> and scoped `es_query` / `es_batch` tools with advanced DSL, aggregations, scripts,
+> supplied-vector retrieval and templates. Owned pagination and language tools remain scheduled by
 > [RFC-0006](docs/RFC-0006-elasticsearch-readonly-support.md); ES is not yet
 > advertised as a complete or live-server-certified query adapter.
 
@@ -193,7 +193,7 @@ node before publishing a client generation. Unknown redirect endpoints are
 refused. See [RFC-0004](docs/RFC-0004-redis-sentinel-cluster-modules.md) for the
 configuration and signed module-profile format.
 
-For Elasticsearch phase 1, configure explicit HTTPS origins, the cluster UUID,
+For Elasticsearch, configure explicit HTTPS origins, the cluster UUID,
 one of the pinned build versions, and a dedicated realm user. Give that user
 cluster `monitor` and only `read` / `view_index_metadata` on the configured
 index patterns. Startup inspects effective privileges on **every** endpoint;
@@ -202,14 +202,35 @@ The current profile uses username/password; API-key proofs and a separate
 attestor remain future work. Do not grant security-management privileges to
 work around missing introspection.
 
-`es_metadata` supports `resolve` and `mappings`. Native JSON and large integer
-values remain intact. Wildcards use ES `*` / `?` semantics, with containment
+Stored script/template inspection additionally accepts the narrowly scoped
+`cluster:admin/script/get` action grant. Do not replace it with `manage` or
+`cluster:admin/script/*`. Inline scripts/templates do not require this grant.
+Query preflight checks all nodes against the pinned build and requires an empty
+external-plugin inventory; custom plugin profiles remain pending.
+
+`es_metadata` supports `resolve` and `mappings`. `es_query` supports `search`,
+`count`, `get`, `mget`, `termvectors`, `mtermvectors`, `explain`, `field_caps`,
+`search_shards`, `indices.validate_query`, `search_template` and
+`render_search_template`. IDs use the structured `id` field. Native JSON and
+large integer values remain intact. Wildcards use ES `*` / `?` semantics, with containment
 checked for future index names; aliases and data streams are resolved for each
 call. Date math, custom plugins, cross-cluster and query-language profiles still
 need their respective proof implementations. Missing capabilities are reported
 by `inspect_target`, separately from mutation denial. See the
-[phase 1 qualification record](docs/qualification/2026-09-21-elasticsearch-phase-1.md)
+[native query qualification record](docs/qualification/2026-09-22-elasticsearch-native-queries.md)
 for setup, tests and remaining gates.
+
+```json
+{"target":"search-reporting","operation":"search","body":{"size":0,"runtime_mappings":{"taxed":{"type":"double","script":{"source":"emit(doc['amount'].value * params.factor)","params":{"factor":1.1}}}},"aggs":{"total":{"sum":{"field":"taxed"}}}}}
+```
+
+Use `es_batch` with `requests: [{"operation":"search","body":{...}}, ...]` and
+`consistency: "independent"`. All members are proved before execution and share
+one deadline and one encoded result budget. Compatible searches use generated
+`_msearch` framing; other combinations execute sequentially without dropping
+native options. A batch is not a shared snapshot. Oversized pages, buckets or
+documents fail explicitly; aggregations are never silently truncated. Configure
+`max_rows`, `max_result_bytes`, and ES `max_aggregation_buckets` for those limits.
 
 ### 3. Build and verify
 
@@ -263,6 +284,8 @@ Use target inventory-test. Inspect the schema and verify whether transaction
 | `query_batch` | Runs several SELECTs in one read-only transaction snapshot. |
 | `query_explain` | Returns an engine-native non-executing plan for a validated SELECT. |
 | `es_metadata` | Resolves scoped Elasticsearch indices, aliases and data streams, or reads their mappings. |
+| `es_query` | Executes scoped native Elasticsearch reads, advanced DSL, scripts, aggregations, supplied vectors and templates. |
+| `es_batch` | Executes preflighted independent Elasticsearch reads under a shared deadline and combined output budget. |
 | `redis_command` | Runs one attested advanced read-only Redis command vector. |
 | `redis_batch` | Runs a bounded read-only Redis batch; non-atomic commands execute sequentially to bound retained reply memory. |
 

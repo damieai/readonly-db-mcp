@@ -17,9 +17,11 @@ when intentionally updating profiles. Never enable a route merely because its
 REST specification exists: source, effect, privilege and lifecycle handlers must
 be implemented before changing its availability.
 
-This first phase enables `resolve` and `mappings`. Search, templates, vector and
-script queries remain planned reads, and PIT/scroll remain planned owned-context
-operations. SQL/ES|QL/EQL require their own upstream grammar and REST-profile
+Native query handlers now enable search/count, document/term-vector reads,
+diagnostics and render/execute templates, alongside `resolve` and `mappings`.
+`msearch` is implemented through `es_batch`, and `get_script` is an internal
+definition-proof route, not a public query operation. PIT/scroll remain planned
+owned-context operations. SQL/ES|QL/EQL require their own upstream grammar and REST-profile
 work. Their pending status is not a mutation classification.
 
 The selected build hashes are compatibility pins, **not** live-server release

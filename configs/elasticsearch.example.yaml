@@ -1,5 +1,5 @@
-# Phase 1: metadata only. Replace endpoint, cluster UUID and secret/CA locations.
-# Query DSL, contexts, query languages, API keys and attestors are later stages.
+# Native metadata/query/batch profile. Replace endpoint, UUID and secret/CA locations.
+# Owned contexts, query languages, API keys and attestors remain later stages.
 server:
   transport: stdio
   strict_startup: true
@@ -29,6 +29,7 @@ targets:
       max_json_depth: 128
       max_json_nodes: 100000
       max_resolved_indices: 1024
+      max_aggregation_buckets: 10000
     tls:
       mode: verify-full
       ca_file: /run/secrets/es-ca.pem

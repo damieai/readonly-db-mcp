@@ -645,7 +645,7 @@ func (cfg *Config) ResourceForecastBytes() int64 {
 	if esNodes > 0 {
 		// Include native JSON validation, typed proof data and final MCP encoding.
 		active := min(cfg.Limits.GlobalConcurrency, esTargets*cfg.Limits.PerTargetConcurrency)
-		extraRequest := max(0, esRequest-cfg.Limits.MaxParameterBytes)
+		extraRequest := max(0, 7*esRequest-cfg.Limits.MaxParameterBytes)
 		total += int64(active) * (int64(cfg.Limits.MaxResultBytes)*3 + int64(esNodes)*64 + int64(extraRequest) + (2 << 20))
 	}
 	for _, target := range cfg.Targets {

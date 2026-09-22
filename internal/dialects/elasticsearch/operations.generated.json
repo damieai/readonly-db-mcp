@@ -78,7 +78,7 @@
     "count": {
       "api": "count",
       "effect": "read",
-      "implemented": false,
+      "implemented": true,
       "parameters": [
         "allow_no_indices",
         "analyze_wildcard",
@@ -185,10 +185,73 @@
       "sha256": "c261e6478f43073d5f587038dedf89bbf1f0e1251d6b222b5713cd640f9e5099",
       "source": "https://raw.githubusercontent.com/elastic/elasticsearch/4fe44c255c3d0da06779b921e132cdc555ed9aff/rest-api-spec/src/main/resources/rest-api-spec/api/delete_by_query.json"
     },
+    "explain": {
+      "api": "explain",
+      "effect": "read",
+      "implemented": true,
+      "parameters": [
+        "_source",
+        "_source_excludes",
+        "_source_includes",
+        "analyze_wildcard",
+        "analyzer",
+        "default_operator",
+        "df",
+        "lenient",
+        "preference",
+        "q",
+        "routing",
+        "stored_fields"
+      ],
+      "routes": [
+        {
+          "methods": [
+            "GET",
+            "POST"
+          ],
+          "path": "/{index}/_explain/{id}"
+        }
+      ],
+      "sha256": "fb5775d6a2cf1e605b49983c63b01e666e3578e41f55f621b972b29c136788c4",
+      "source": "https://raw.githubusercontent.com/elastic/elasticsearch/4fe44c255c3d0da06779b921e132cdc555ed9aff/rest-api-spec/src/main/resources/rest-api-spec/api/explain.json"
+    },
+    "field_caps": {
+      "api": "field_caps",
+      "effect": "read",
+      "implemented": true,
+      "parameters": [
+        "allow_no_indices",
+        "expand_wildcards",
+        "fields",
+        "filters",
+        "ignore_unavailable",
+        "include_empty_fields",
+        "include_unmapped",
+        "types"
+      ],
+      "routes": [
+        {
+          "methods": [
+            "GET",
+            "POST"
+          ],
+          "path": "/_field_caps"
+        },
+        {
+          "methods": [
+            "GET",
+            "POST"
+          ],
+          "path": "/{index}/_field_caps"
+        }
+      ],
+      "sha256": "40b4aa357556f0a65cf69d226c169da62c9628c3d67ae62fad8db56e5c6c49b5",
+      "source": "https://raw.githubusercontent.com/elastic/elasticsearch/4fe44c255c3d0da06779b921e132cdc555ed9aff/rest-api-spec/src/main/resources/rest-api-spec/api/field_caps.json"
+    },
     "get": {
       "api": "get",
       "effect": "read",
-      "implemented": false,
+      "implemented": true,
       "parameters": [
         "_source",
         "_source_excludes",
@@ -212,6 +275,24 @@
       ],
       "sha256": "226927c5007ce20c8218f2488c79d3c2258748c8abe72c70d3d1debbc52562db",
       "source": "https://raw.githubusercontent.com/elastic/elasticsearch/4fe44c255c3d0da06779b921e132cdc555ed9aff/rest-api-spec/src/main/resources/rest-api-spec/api/get.json"
+    },
+    "get_script": {
+      "api": "get_script",
+      "effect": "read",
+      "implemented": true,
+      "parameters": [
+        "master_timeout"
+      ],
+      "routes": [
+        {
+          "methods": [
+            "GET"
+          ],
+          "path": "/_scripts/{id}"
+        }
+      ],
+      "sha256": "86cc40e25bc0fd4364a6273e8f9ff1ab8ba5cf79c0eb14e38043906fc5213451",
+      "source": "https://raw.githubusercontent.com/elastic/elasticsearch/4fe44c255c3d0da06779b921e132cdc555ed9aff/rest-api-spec/src/main/resources/rest-api-spec/api/get_script.json"
     },
     "index": {
       "api": "index",
@@ -338,6 +419,43 @@
       "sha256": "df7674c78515170a9a4059958b0eaf60404ac7034d10bebb20a0ad258fbbc6a5",
       "source": "https://raw.githubusercontent.com/elastic/elasticsearch/4fe44c255c3d0da06779b921e132cdc555ed9aff/rest-api-spec/src/main/resources/rest-api-spec/api/indices.refresh.json"
     },
+    "indices.validate_query": {
+      "api": "indices.validate_query",
+      "effect": "read",
+      "implemented": true,
+      "parameters": [
+        "all_shards",
+        "allow_no_indices",
+        "analyze_wildcard",
+        "analyzer",
+        "default_operator",
+        "df",
+        "expand_wildcards",
+        "explain",
+        "ignore_unavailable",
+        "lenient",
+        "q",
+        "rewrite"
+      ],
+      "routes": [
+        {
+          "methods": [
+            "GET",
+            "POST"
+          ],
+          "path": "/_validate/query"
+        },
+        {
+          "methods": [
+            "GET",
+            "POST"
+          ],
+          "path": "/{index}/_validate/query"
+        }
+      ],
+      "sha256": "cbbe8fe0c7d9d85c0f60a5c3cf54d2d8697fdc98fc4cebf95c116bf02d1dd885",
+      "source": "https://raw.githubusercontent.com/elastic/elasticsearch/4fe44c255c3d0da06779b921e132cdc555ed9aff/rest-api-spec/src/main/resources/rest-api-spec/api/indices.validate_query.json"
+    },
     "mappings": {
       "api": "indices.get_mapping",
       "effect": "read",
@@ -369,7 +487,7 @@
     "mget": {
       "api": "mget",
       "effect": "read",
-      "implemented": false,
+      "implemented": true,
       "parameters": [
         "_source",
         "_source_excludes",
@@ -403,7 +521,7 @@
     "msearch": {
       "api": "msearch",
       "effect": "read",
-      "implemented": false,
+      "implemented": true,
       "parameters": [
         "allow_no_indices",
         "ccs_minimize_roundtrips",
@@ -472,7 +590,7 @@
     "mtermvectors": {
       "api": "mtermvectors",
       "effect": "read",
-      "implemented": false,
+      "implemented": true,
       "parameters": [
         "field_statistics",
         "fields",
@@ -559,7 +677,7 @@
     "render_search_template": {
       "api": "render_search_template",
       "effect": "read",
-      "implemented": false,
+      "implemented": true,
       "parameters": [],
       "routes": [
         {
@@ -631,7 +749,7 @@
     "search": {
       "api": "search",
       "effect": "read",
-      "implemented": false,
+      "implemented": true,
       "parameters": [
         "_source",
         "_source_excludes",
@@ -698,10 +816,42 @@
       "sha256": "5972368004bc6d382d988ce6652b2a62f56751b470c3596ca96db0025e79bf10",
       "source": "https://raw.githubusercontent.com/elastic/elasticsearch/4fe44c255c3d0da06779b921e132cdc555ed9aff/rest-api-spec/src/main/resources/rest-api-spec/api/search.json"
     },
+    "search_shards": {
+      "api": "search_shards",
+      "effect": "read",
+      "implemented": true,
+      "parameters": [
+        "allow_no_indices",
+        "expand_wildcards",
+        "ignore_unavailable",
+        "local",
+        "master_timeout",
+        "preference",
+        "routing"
+      ],
+      "routes": [
+        {
+          "methods": [
+            "GET",
+            "POST"
+          ],
+          "path": "/_search_shards"
+        },
+        {
+          "methods": [
+            "GET",
+            "POST"
+          ],
+          "path": "/{index}/_search_shards"
+        }
+      ],
+      "sha256": "a833fc6c26bfae35b4bed12cedfcbcb7e4b604cc4bc11097546858f5d6ef961a",
+      "source": "https://raw.githubusercontent.com/elastic/elasticsearch/4fe44c255c3d0da06779b921e132cdc555ed9aff/rest-api-spec/src/main/resources/rest-api-spec/api/search_shards.json"
+    },
     "search_template": {
       "api": "search_template",
       "effect": "read",
-      "implemented": false,
+      "implemented": true,
       "parameters": [
         "allow_no_indices",
         "ccs_minimize_roundtrips",
@@ -739,7 +889,7 @@
     "termvectors": {
       "api": "termvectors",
       "effect": "read",
-      "implemented": false,
+      "implemented": true,
       "parameters": [
         "field_statistics",
         "fields",
@@ -930,7 +1080,7 @@
     "count": {
       "api": "count",
       "effect": "read",
-      "implemented": false,
+      "implemented": true,
       "parameters": [
         "allow_no_indices",
         "analyze_wildcard",
@@ -1037,10 +1187,73 @@
       "sha256": "9937e36089d29bd77baf9b2409c6aaa834fc691092f942d1a9b85b2f86af2ac5",
       "source": "https://raw.githubusercontent.com/elastic/elasticsearch/f2e019bd8110088070638ca779ec1543188c0f43/rest-api-spec/src/main/resources/rest-api-spec/api/delete_by_query.json"
     },
+    "explain": {
+      "api": "explain",
+      "effect": "read",
+      "implemented": true,
+      "parameters": [
+        "_source",
+        "_source_excludes",
+        "_source_includes",
+        "analyze_wildcard",
+        "analyzer",
+        "default_operator",
+        "df",
+        "lenient",
+        "preference",
+        "q",
+        "routing",
+        "stored_fields"
+      ],
+      "routes": [
+        {
+          "methods": [
+            "GET",
+            "POST"
+          ],
+          "path": "/{index}/_explain/{id}"
+        }
+      ],
+      "sha256": "2b062aef540cee6552926a19417a034facfa5e88d11909870d0e66e99b2353c4",
+      "source": "https://raw.githubusercontent.com/elastic/elasticsearch/f2e019bd8110088070638ca779ec1543188c0f43/rest-api-spec/src/main/resources/rest-api-spec/api/explain.json"
+    },
+    "field_caps": {
+      "api": "field_caps",
+      "effect": "read",
+      "implemented": true,
+      "parameters": [
+        "allow_no_indices",
+        "expand_wildcards",
+        "fields",
+        "filters",
+        "ignore_unavailable",
+        "include_empty_fields",
+        "include_unmapped",
+        "types"
+      ],
+      "routes": [
+        {
+          "methods": [
+            "GET",
+            "POST"
+          ],
+          "path": "/_field_caps"
+        },
+        {
+          "methods": [
+            "GET",
+            "POST"
+          ],
+          "path": "/{index}/_field_caps"
+        }
+      ],
+      "sha256": "ef64844ca7393b463c02872be85c670fb305448493ffe6ab3cc32b0612c2aa5d",
+      "source": "https://raw.githubusercontent.com/elastic/elasticsearch/f2e019bd8110088070638ca779ec1543188c0f43/rest-api-spec/src/main/resources/rest-api-spec/api/field_caps.json"
+    },
     "get": {
       "api": "get",
       "effect": "read",
-      "implemented": false,
+      "implemented": true,
       "parameters": [
         "_source",
         "_source_excludes",
@@ -1064,6 +1277,24 @@
       ],
       "sha256": "c363eeb8168ac8fa5369a7e79fa26563d5d82f5908dfd8c3cfc124ea4c8552e5",
       "source": "https://raw.githubusercontent.com/elastic/elasticsearch/f2e019bd8110088070638ca779ec1543188c0f43/rest-api-spec/src/main/resources/rest-api-spec/api/get.json"
+    },
+    "get_script": {
+      "api": "get_script",
+      "effect": "read",
+      "implemented": true,
+      "parameters": [
+        "master_timeout"
+      ],
+      "routes": [
+        {
+          "methods": [
+            "GET"
+          ],
+          "path": "/_scripts/{id}"
+        }
+      ],
+      "sha256": "7089cfb1513501b58f1b2e75df12119e4a640f1d485ff9f18e631fc5f6be68b3",
+      "source": "https://raw.githubusercontent.com/elastic/elasticsearch/f2e019bd8110088070638ca779ec1543188c0f43/rest-api-spec/src/main/resources/rest-api-spec/api/get_script.json"
     },
     "index": {
       "api": "index",
@@ -1190,6 +1421,43 @@
       "sha256": "182c6b21cee72e612ae6f6e789e1757e56cba98b1c569981959f29691d7bd703",
       "source": "https://raw.githubusercontent.com/elastic/elasticsearch/f2e019bd8110088070638ca779ec1543188c0f43/rest-api-spec/src/main/resources/rest-api-spec/api/indices.refresh.json"
     },
+    "indices.validate_query": {
+      "api": "indices.validate_query",
+      "effect": "read",
+      "implemented": true,
+      "parameters": [
+        "all_shards",
+        "allow_no_indices",
+        "analyze_wildcard",
+        "analyzer",
+        "default_operator",
+        "df",
+        "expand_wildcards",
+        "explain",
+        "ignore_unavailable",
+        "lenient",
+        "q",
+        "rewrite"
+      ],
+      "routes": [
+        {
+          "methods": [
+            "GET",
+            "POST"
+          ],
+          "path": "/_validate/query"
+        },
+        {
+          "methods": [
+            "GET",
+            "POST"
+          ],
+          "path": "/{index}/_validate/query"
+        }
+      ],
+      "sha256": "5d09173cf0675200471af7bc6634f33d423ac5729db4f9d8dc5b8756f4c29bfa",
+      "source": "https://raw.githubusercontent.com/elastic/elasticsearch/f2e019bd8110088070638ca779ec1543188c0f43/rest-api-spec/src/main/resources/rest-api-spec/api/indices.validate_query.json"
+    },
     "mappings": {
       "api": "indices.get_mapping",
       "effect": "read",
@@ -1221,7 +1489,7 @@
     "mget": {
       "api": "mget",
       "effect": "read",
-      "implemented": false,
+      "implemented": true,
       "parameters": [
         "_source",
         "_source_excludes",
@@ -1255,7 +1523,7 @@
     "msearch": {
       "api": "msearch",
       "effect": "read",
-      "implemented": false,
+      "implemented": true,
       "parameters": [
         "allow_no_indices",
         "ccs_minimize_roundtrips",
@@ -1324,7 +1592,7 @@
     "mtermvectors": {
       "api": "mtermvectors",
       "effect": "read",
-      "implemented": false,
+      "implemented": true,
       "parameters": [
         "field_statistics",
         "fields",
@@ -1411,7 +1679,7 @@
     "render_search_template": {
       "api": "render_search_template",
       "effect": "read",
-      "implemented": false,
+      "implemented": true,
       "parameters": [],
       "routes": [
         {
@@ -1483,7 +1751,7 @@
     "search": {
       "api": "search",
       "effect": "read",
-      "implemented": false,
+      "implemented": true,
       "parameters": [
         "_source",
         "_source_excludes",
@@ -1549,10 +1817,42 @@
       "sha256": "80c4a43a051a110a5f5add359392362abf3d13ab3778245272484ee17c683c57",
       "source": "https://raw.githubusercontent.com/elastic/elasticsearch/f2e019bd8110088070638ca779ec1543188c0f43/rest-api-spec/src/main/resources/rest-api-spec/api/search.json"
     },
+    "search_shards": {
+      "api": "search_shards",
+      "effect": "read",
+      "implemented": true,
+      "parameters": [
+        "allow_no_indices",
+        "expand_wildcards",
+        "ignore_unavailable",
+        "local",
+        "master_timeout",
+        "preference",
+        "routing"
+      ],
+      "routes": [
+        {
+          "methods": [
+            "GET",
+            "POST"
+          ],
+          "path": "/_search_shards"
+        },
+        {
+          "methods": [
+            "GET",
+            "POST"
+          ],
+          "path": "/{index}/_search_shards"
+        }
+      ],
+      "sha256": "4a654f79c9b588e9058b1a59570daa659d682e95150f5f8012a842afe3202775",
+      "source": "https://raw.githubusercontent.com/elastic/elasticsearch/f2e019bd8110088070638ca779ec1543188c0f43/rest-api-spec/src/main/resources/rest-api-spec/api/search_shards.json"
+    },
     "search_template": {
       "api": "search_template",
       "effect": "read",
-      "implemented": false,
+      "implemented": true,
       "parameters": [
         "allow_no_indices",
         "ccs_minimize_roundtrips",
@@ -1590,7 +1890,7 @@
     "termvectors": {
       "api": "termvectors",
       "effect": "read",
-      "implemented": false,
+      "implemented": true,
       "parameters": [
         "field_statistics",
         "fields",

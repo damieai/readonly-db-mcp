@@ -32,11 +32,6 @@ func newESFixture(t *testing.T) *esFixture {
 	t.Helper()
 	f := &esFixture{version: "8.19.21", cluster: "abcdefghijklmnopqrstuv", privilege: string(readonlyProof()), mapping: `{"reports-2026":{"mappings":{"_meta":{"precise":9007199254740993},"properties":{"title":{"type":"text"}}}}}`, resolution: `{"indices":[{"name":"reports-2026","attributes":["open"],"aliases":[]}],"aliases":[],"data_streams":[]}`}
 	f.server = httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.Method != http.MethodGet {
-			t.Errorf("unexpected non-GET request %s", r.Method)
-			w.WriteHeader(405)
-			return
-		}
 		user, password, ok := r.BasicAuth()
 		if !ok || user != "fixture_reader" || password != "fixture-only-password" {
 			w.WriteHeader(401)
@@ -51,11 +46,18 @@ func newESFixture(t *testing.T) *esFixture {
 		if intercept != nil && intercept(w, r) {
 			return
 		}
+		if r.Method != http.MethodGet {
+			t.Errorf("unexpected non-GET fixture request %s %s", r.Method, r.URL.Path)
+			w.WriteHeader(405)
+			return
+		}
 		switch {
 		case r.URL.Path == "/":
 			fmt.Fprintf(w, `{"cluster_uuid":%q,"version":{"number":%q,"build_hash":%q,"build_flavor":"default","build_snapshot":false}}`, cluster, version, config.ElasticsearchBuilds[version])
 		case r.URL.Path == "/_security/_authenticate":
 			fmt.Fprint(w, `{"username":"fixture_reader","enabled":true,"authentication_type":"realm"}`)
+		case r.URL.Path == "/_nodes/plugins":
+			fmt.Fprintf(w, `{"_nodes":{"total":1,"successful":1,"failed":0},"nodes":{"node":{"version":%q,"build_hash":%q,"plugins":[]}}}`, version, config.ElasticsearchBuilds[version])
 		case r.URL.Path == "/_security/user/_privileges":
 			fmt.Fprint(w, privilege)
 		case strings.HasPrefix(r.URL.Path, "/_resolve/index/"):
@@ -84,8 +86,8 @@ func fixtureConfig(t *testing.T, fixtures ...*esFixture) (*config.TargetConfig, 
 		t.Fatal(err)
 	}
 	t.Setenv("ES_FIXTURE_PASSWORD", "fixture-only-password")
-	cfg := &config.TargetConfig{Name: "es-fixture", Engine: config.EngineElasticsearch, Environment: "test", Consistency: config.ConsistencyEventual, Username: "fixture_reader", PasswordEnv: "ES_FIXTURE_PASSWORD", TLS: config.TLSConfig{Mode: config.TLSVerifyFull, CAFile: caPath}, Connection: config.ConnectionConfig{MaxOpen: 2, MaxIdle: 1, ConnectTimeout: time.Second, WriteTimeout: time.Second, ReadTimeout: 3 * time.Second, MaxLifetime: time.Minute, MaxIdleTime: time.Second}, Elasticsearch: &config.ElasticsearchConfig{Version: "8.19.21", ClusterUUID: "abcdefghijklmnopqrstuv", Endpoints: endpoints, AllowedIndices: []string{"reports-*"}, PrivilegeRecheck: time.Minute, MaxRequestBytes: 4096, MaxJSONDepth: 32, MaxJSONNodes: 1000, MaxResolvedIndices: 64}}
-	limits := config.Limits{DefaultTimeout: time.Second, MaxTimeout: 2 * time.Second, MaxResultBytes: 32 << 10}
+	cfg := &config.TargetConfig{Name: "es-fixture", Engine: config.EngineElasticsearch, Environment: "test", Consistency: config.ConsistencyEventual, Username: "fixture_reader", PasswordEnv: "ES_FIXTURE_PASSWORD", TLS: config.TLSConfig{Mode: config.TLSVerifyFull, CAFile: caPath}, Connection: config.ConnectionConfig{MaxOpen: 2, MaxIdle: 1, ConnectTimeout: time.Second, WriteTimeout: time.Second, ReadTimeout: 3 * time.Second, MaxLifetime: time.Minute, MaxIdleTime: time.Second}, Elasticsearch: &config.ElasticsearchConfig{Version: "8.19.21", ClusterUUID: "abcdefghijklmnopqrstuv", Endpoints: endpoints, AllowedIndices: []string{"reports-*"}, PrivilegeRecheck: time.Minute, MaxRequestBytes: 4096, MaxJSONDepth: 32, MaxJSONNodes: 1000, MaxResolvedIndices: 64, MaxAggregationBuckets: 10000}}
+	limits := config.Limits{DefaultTimeout: time.Second, MaxTimeout: 2 * time.Second, MaxResultBytes: 32 << 10, MaxRows: 100, MaxBatchQueries: 10, MaxParameters: 100}
 	controller := admission.New(admission.Config{Global: 4, PerTarget: 2, MaxQueued: 8, QueueTimeout: time.Second, MaintenanceMax: 1, MetadataReserved: 1, BatchMax: 1})
 	return cfg, limits, controller
 }

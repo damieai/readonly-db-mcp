@@ -1,4 +1,4 @@
-# Elasticsearch phase 1 has its own runnable shape in elasticsearch.example.yaml.
+# Elasticsearch native metadata/query tools have their own shape in elasticsearch.example.yaml.
 # It uses HTTPS endpoints and index scopes, without SQL host/database fields.
 server:
   transport: stdio

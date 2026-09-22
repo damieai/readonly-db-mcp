@@ -1,6 +1,7 @@
 package elasticsearch
 
 import (
+	"bytes"
 	"context"
 	"crypto/tls"
 	"crypto/x509"
@@ -147,14 +148,25 @@ func newWire(cfg *config.TargetConfig) (*wire, error) {
 }
 
 func (w *wire) get(ctx context.Context, endpoint int, path string, query url.Values, maxBytes int) ([]byte, error) {
+	return w.request(ctx, endpoint, http.MethodGet, (&url.URL{Path: path}).EscapedPath(), query, nil, "application/json", maxBytes, false)
+}
+
+func (w *wire) request(ctx context.Context, endpoint int, method, path string, query url.Values, body []byte, contentType string, maxBytes int, documentMissing bool) ([]byte, error) {
 	// No public method/path/host/header entry point. The wire stays package-private.
-	u := &url.URL{Path: path, RawQuery: query.Encode()}
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, u.String(), nil)
+	u, err := url.Parse(path)
+	if err != nil || u.IsAbs() || u.Host != "" || u.RawQuery != "" || u.Fragment != "" {
+		return nil, failure("invalid_request", "invalid internal Elasticsearch route")
+	}
+	u.RawQuery = query.Encode()
+	req, err := http.NewRequestWithContext(ctx, method, u.String(), bytes.NewReader(body))
 	if err != nil {
-		return nil, failure("invalid_request", "cannot construct metadata request")
+		return nil, failure("invalid_request", "cannot construct Elasticsearch request")
 	}
 	req.Header.Set("Accept", "application/json")
 	req.Header.Set("Accept-Encoding", "identity")
+	if len(body) > 0 {
+		req.Header.Set("Content-Type", contentType)
+	}
 	var connection net.Conn
 	trace := &httptrace.ClientTrace{
 		GotConn: func(info httptrace.GotConnInfo) {
@@ -190,8 +202,8 @@ func (w *wire) get(ctx context.Context, endpoint int, path string, query url.Val
 	if response.StatusCode == 401 || response.StatusCode == 403 {
 		return nil, failure("permission_denied", "Elasticsearch denied the configured identity")
 	}
-	if response.StatusCode < 200 || response.StatusCode >= 300 {
-		return nil, failure("upstream_error", "Elasticsearch metadata request failed")
+	if (response.StatusCode < 200 || response.StatusCode >= 300) && !(documentMissing && response.StatusCode == http.StatusNotFound) {
+		return nil, failure("upstream_error", "Elasticsearch request failed")
 	}
 	if response.Header.Get("X-Elastic-Product") != "Elasticsearch" {
 		return nil, failure("profile_mismatch", "upstream is not the pinned Elasticsearch product")

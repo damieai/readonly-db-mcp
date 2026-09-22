@@ -1,6 +1,6 @@
 # RFC-0006: Elasticsearch Read-Only Query Support
 
-- Status: Phase 1 metadata foundation implemented; advanced query stages and live qualification pending
+- Status: Metadata and native query/batch foundation implemented; remaining advanced profiles and live qualification pending
 - Authors: readonly-db-mcp maintainers
 - Created: 2026-09-12
 - Depends on: RFC-0001 resource governance and the common architecture contract
@@ -15,6 +15,17 @@ adversarial fixtures. `es_metadata` is available; `es_query`, `es_batch`,
 `es_cursor`, API-key/attestor, language and cross-cluster profiles remain pending.
 The selected builds are compatibility pins, not certified deployments. See
 [phase 1 evidence](qualification/2026-09-21-elasticsearch-phase-1.md).
+
+Implementation update (2026-09-22): `es_query` and independent `es_batch` now
+execute native search/count, document/term-vector reads, diagnostics and templates.
+Contextual visitors cover compound queries, embedded sources, aggregations,
+Painless/expression scripts, runtime lookups, supplied vectors and local fusion.
+Compatible batches use service-built `_msearch`; all members share preflight,
+deadline and output limits. Stored definitions are inspected and frozen; rendered
+templates are checked before execution. Stock node/plugin inventories are proved
+for queries. This is a partial implementation of the full RFC, with fixture
+coverage rather than real-engine certification. See the
+[native query evidence and remaining gates](qualification/2026-09-22-elasticsearch-native-queries.md).
 
 ## Summary
 
@@ -31,8 +42,8 @@ expressions, complex aggregations or expensive query features. Resource limits
 are explicit availability controls, independently configurable from mutation
 policy. The final write boundary is an attested Elasticsearch identity.
 
-The full query design below remains the completion contract. Only the phase 1
-subset described above is enabled in the current binary; unimplemented reads
+The full query design below remains the completion contract. Only the delivered
+subsets described above are enabled in the current binary; unimplemented reads
 are reported as unavailable capabilities, not mutations.
 
 ## Context and problem

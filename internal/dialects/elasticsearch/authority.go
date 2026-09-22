@@ -36,7 +36,10 @@ func validatePrivileges(ctx context.Context, raw []byte, cfg *config.Elasticsear
 		return failure("authority_unproven", "application, delegation, global or remote authority is outside this profile")
 	}
 	for _, name := range p.Cluster {
-		if name != "monitor" && name != "none" {
+		// The pinned resolver expands an action name to its action-prefix grant.
+		// script/get has only read handlers in these builds; never permit the
+		// broader script/* or manage privilege to inspect stored scripts.
+		if name != "monitor" && name != "none" && name != "cluster:admin/script/get" {
 			return failure("authority_unproven", "cluster privilege exceeds the read-only profile")
 		}
 	}

@@ -142,7 +142,7 @@ Allowing a model to supply a host or DSN would turn the MCP server into an SSRF
 and credential-routing primitive. Network destinations and credentials are
 operator configuration, never tool input.
 
-## Elasticsearch phase 1 resource accounting
+## Elasticsearch metadata and native query resource accounting
 
 Metadata calls start the shared deadline before admission. Queued index selectors
 use a process-wide 64 MiB byte budget; admitted adapter work reserves from a
@@ -160,3 +160,19 @@ Connect/TLS and writes have their own phase budgets; the request context bounds
 execution and collection. No runtime credential can be selected by a caller.
 Metadata responses fail on oversized native JSON or encoded MCP envelopes, with
 no silent truncation. Target-level metadata caches are not used for ES proofs.
+
+Native query/batch calls reuse these budgets and reserve an additional six times
+their serialized request bytes for decoded DSL, rendered templates, frozen
+scripts and batch framing. Configuration forecasts include up to seven request
+copies. One lease covers the whole request: all source proofs and batch members
+share one deadline, one admission permit and one combined encoded response cap.
+Retained mapping/script proof bytes are bounded together; rendered member bodies
+are bounded together. Whole-envelope JSON node/depth limits cover batch input.
+
+Effect dispatch uses the pinned REST catalog. Contextual native DSL visitors
+preserve literals and script parameters while resolving executable source
+positions. Mtermvectors defaults are materialized in original input order before
+source validation. Compatible search batches use generated NDJSON and limit
+native concurrent searches to one; heterogeneous batches preserve each operation
+sequentially. Both modes report independent consistency. Partial shard/time
+results fail, and requested aggregate semantics are never shortened to fit limits.

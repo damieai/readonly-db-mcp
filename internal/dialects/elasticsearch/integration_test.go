@@ -2,6 +2,7 @@ package elasticsearch
 
 import (
 	"context"
+	"encoding/json"
 	"net/http"
 	"os"
 	"strings"
@@ -42,6 +43,20 @@ func TestElasticsearchLiveReadOnlyMetadata(t *testing.T) {
 		if _, err := target.ElasticsearchMetadata(ctx, core.ElasticsearchMetadataRequest{Operation: operation, Indices: []string{index}}); err != nil {
 			t.Fatal(err)
 		}
+	}
+	// Searches only depend on the operator-owned index existing, not on a
+	// particular document schema or a writable identity inside this process.
+	for _, body := range []string{
+		`{"size":0,"query":{"match_all":{}},"aggs":{"n":{"filter":{"match_all":{}}}}}`,
+		`{"size":0,"query":{"script_score":{"query":{"match_all":{}},"script":{"source":"1.0"}}}}`,
+		`{"size":0,"runtime_mappings":{"mcp_value":{"type":"long","script":{"source":"emit(1)"}}},"aggs":{"n":{"sum":{"field":"mcp_value"}}}}`,
+	} {
+		if _, err := target.ElasticsearchQuery(ctx, core.ElasticsearchQueryRequest{Operation: "search", Indices: []string{index}, Body: json.RawMessage(body)}); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if _, err := target.ElasticsearchBatch(ctx, core.ElasticsearchBatchRequest{Requests: []core.ElasticsearchQueryRequest{{Operation: "search", Indices: []string{index}, Body: json.RawMessage(`{"size":0}`)}, {Operation: "search", Indices: []string{index}, Body: json.RawMessage(`{"size":0}`)}}}); err != nil {
+		t.Fatal(err)
 	}
 	request, err := http.NewRequestWithContext(ctx, http.MethodPut, "/"+index+"/_doc/readonly-must-fail-"+uuid.NewString(), strings.NewReader(`{"fixture":"native_write_must_fail"}`))
 	if err != nil {

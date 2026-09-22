@@ -69,6 +69,7 @@ func TestElasticsearchRejectsConflictingOrUnboundedConfiguration(t *testing.T) {
 		{"excess connections", func(t *TargetConfig) { t.Connection.MaxOpen = 65 }},
 		{"two secrets", func(t *TargetConfig) { t.PasswordEnv = "ANOTHER_SECRET"; t.PasswordFile = "password" }},
 		{"result cache", func(t *TargetConfig) { t.ResultCache.Enabled = true }},
+		{"bucket ceiling", func(t *TargetConfig) { t.Elasticsearch.MaxAggregationBuckets = 65537 }},
 	} {
 		t.Run(test.name, func(t *testing.T) {
 			c := validESConfig()

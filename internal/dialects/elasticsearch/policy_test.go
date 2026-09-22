@@ -111,8 +111,13 @@ func TestEffectiveAuthorityRejectsWritesUnknownAndFutureScope(t *testing.T) {
 	if err := validatePrivileges(context.Background(), readonlyProof(), cfg); err != nil {
 		t.Fatal(err)
 	}
+	if err := validatePrivileges(context.Background(), []byte(strings.Replace(string(readonlyProof()), `"monitor"`, `"monitor","cluster:admin/script/get"`, 1)), cfg); err != nil {
+		t.Fatal("read-only stored script proof grant rejected", err)
+	}
 	for _, raw := range []string{
 		strings.Replace(string(readonlyProof()), `"monitor"`, `"manage"`, 1),
+		strings.Replace(string(readonlyProof()), `"monitor"`, `"cluster:admin/script/*"`, 1),
+		strings.Replace(string(readonlyProof()), `"monitor"`, `"cluster:admin/script/put"`, 1),
 		strings.Replace(string(readonlyProof()), `"read"`, `"write"`, 1),
 		strings.Replace(string(readonlyProof()), `"reports-*"`, `"*"`, 1),
 		strings.Replace(string(readonlyProof()), `false`, `true`, 1),

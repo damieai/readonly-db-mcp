@@ -63,13 +63,18 @@ Untrusted:
     proof fails closed; there is no lexical-parser fallback. Native transactions
     always roll back, and a connection whose SHOWPLAN cleanup fails is discarded.
 
-11. Elasticsearch phase 1 exposes only fixed metadata routes, verifies TLS and
+11. Elasticsearch exposes fixed metadata and native read routes, verifies TLS and
     pinned cluster/build identity on every configured origin, and proves the
     realm user's effective authority is read-only and within index scope.
     Proof expiry or recheck failure blocks new calls. Wildcard containment is
     checked against future names; metadata resolution and response checks reject
     alias/data-stream scope escapes. Native read and owned-context operations
     remain separately classified from administrative mutations.
+    Query visitors prove embedded lookup/document sources, including base64
+    wrapper queries and rendered templates. Stored scripts are frozen to inspected
+    inline definitions; only Painless/expression execution and Mustache rendering
+    are admitted. Query node inventories must match the pinned stock build without
+    external plugins. Implicit semantic-text inference needs its own profile.
 12. Elasticsearch ignores environment proxies, node advertisements and HTTP
     redirects. The official transport disables SDK retries and shares a bounded
     HTTP/1.1 socket pool across origins. Raw MCP JSON handling prevents duplicate
@@ -78,10 +83,14 @@ Untrusted:
 
 ## Known limitations
 
-- Elasticsearch phase 1 has TLS fixture coverage, not live engine certification.
-  Advanced query, API-key, plugin, language, context and cross-cluster profiles
-  are not yet implemented. Pinned version/hash metadata is an operator trust
+- Elasticsearch native queries have TLS fixture coverage, not live engine certification.
+  API-key, custom plugin/inference, language, owned context, dynamic suggestion
+  collate and cross-cluster profiles are not yet implemented. Pinned version/hash metadata is an operator trust
   check, not cryptographic remote binary attestation.
+- ES query preflight is not an atomic lock on administrator changes to mappings,
+  aliases, scripts or node membership. Native scoped grants remain the final index
+  authorization boundary. HTTP cancellation has fixture coverage; actual ES task
+  termination, privilege actions and licensed features require live qualification.
 - A valid SELECT can still consume database CPU before timeout or read sensitive
   data the account is allowed to see.
 - A valid Redis read can still consume server CPU beyond the client timeout.

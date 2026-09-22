@@ -19,10 +19,12 @@ PROFILES = {
 OPERATIONS = {
     "resolve": ("indices.resolve_index", "read", True),
     "mappings": ("indices.get_mapping", "read", True),
-    **{name: (name, "read", False) for name in (
+    **{name: (name, "read", True) for name in (
         "search", "count", "msearch", "get", "mget", "termvectors",
-        "mtermvectors", "search_template", "msearch_template", "render_search_template",
+        "mtermvectors", "search_template", "render_search_template", "get_script",
+        "explain", "field_caps", "search_shards", "indices.validate_query",
     )},
+    "msearch_template": ("msearch_template", "read", False),
     **{name: (name, "owned_context", False) for name in (
         "open_point_in_time", "close_point_in_time", "scroll", "clear_scroll",
     )},
