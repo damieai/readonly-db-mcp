@@ -26,6 +26,14 @@ and re-resolves the source inventory before returning. Full `mappings` reads als
 accept their pinned native query options. See
 [field-mapping evidence](qualification/2026-09-23-elasticsearch-field-mappings.md).
 
+Implementation update (2026-09-23, document convenience reads):
+`es_query` and independent `es_batch` now support native `exists`, `get_source`
+and `exists_source`. HEAD status 200/404 becomes a bounded JSON existence value;
+GET source retains the original document body and treats ordinary fields such as
+`error` as user data. The same one-index ID, native option, source-resolution,
+deadline and authority checks used by `get` apply. See
+[document-read evidence](qualification/2026-09-23-elasticsearch-document-reads.md).
+
 Implementation update (2026-09-23, date math): native `<...{now/...}>` index
 sources now pass unchanged through metadata, search, EQL, SQL, ES|QL and
 embedded read-only lookups. Each expression is URI-escaped as one path element;

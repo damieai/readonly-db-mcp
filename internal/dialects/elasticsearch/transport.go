@@ -211,6 +211,15 @@ func (w *wire) request(ctx context.Context, endpoint int, method, path string, q
 	if encoding := response.Header.Get("Content-Encoding"); encoding != "" && encoding != "identity" {
 		return nil, failure("invalid_response", "unexpected compressed Elasticsearch response")
 	}
+	if method == http.MethodHead {
+		if response.StatusCode == http.StatusOK {
+			return []byte(`{"exists":true}`), nil
+		}
+		if response.StatusCode == http.StatusNotFound {
+			return []byte(`{"exists":false}`), nil
+		}
+		return nil, failure("invalid_response", "unexpected Elasticsearch HEAD status")
+	}
 	if response.ContentLength > int64(maxBytes) {
 		return nil, failure("resource_limit", "Elasticsearch response exceeds byte limit")
 	}

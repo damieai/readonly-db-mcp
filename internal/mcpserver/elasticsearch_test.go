@@ -49,6 +49,8 @@ func TestElasticsearchThroughRegistryAndMCP(t *testing.T) {
 			fmt.Fprint(w, `{"policies":[{"config":{"match":{"name":"customers","indices":["private-source-*"],"match_field":"id","enrich_fields":["label"]}}}]}`)
 		case "/_resolve/index/reports-*":
 			fmt.Fprint(w, `{"indices":[{"name":"reports-2026","attributes":["open"]}],"aliases":[],"data_streams":[]}`)
+		case "/_resolve/index/reports-2026":
+			fmt.Fprint(w, `{"indices":[{"name":"reports-2026","attributes":["open"]}],"aliases":[],"data_streams":[]}`)
 		case "/_resolve/index/<reports-{now/d}>":
 			if !strings.Contains(r.RequestURI, "%2F") {
 				t.Error("date math resolve slash was not encoded")
@@ -73,6 +75,19 @@ func TestElasticsearchThroughRegistryAndMCP(t *testing.T) {
 			fmt.Fprint(w, `{"reports-2026":{"mappings":{"_meta":{"number":9007199254740993}}}}`)
 		case "/reports-*/_search":
 			fmt.Fprint(w, `{"timed_out":false,"_shards":{"total":1,"failed":0,"successful":1},"hits":{"hits":[{"_index":"reports-2026","_id":"a","_source":{"number":9007199254740993}}]}}`)
+		case "/reports-2026/_doc/a":
+			if r.Method != http.MethodHead {
+				t.Error("MCP existence request lost HEAD method")
+			}
+			w.WriteHeader(http.StatusOK)
+		case "/reports-2026/_source/a":
+			if r.Method == http.MethodHead {
+				w.WriteHeader(http.StatusOK)
+			} else if r.Method == http.MethodGet {
+				fmt.Fprint(w, `{"error":"user data","number":9007199254740993}`)
+			} else {
+				t.Error("MCP source request used unexpected method")
+			}
 		case "/<reports-{now/d}>/_search":
 			if !strings.Contains(r.RequestURI, "%2F") {
 				t.Error("date math path slash was not encoded")
@@ -266,6 +281,21 @@ targets:
 		raw, _ := json.Marshal(r)
 		if call.name != "es_metadata" && !strings.Contains(string(raw), "9007199254740993") {
 			t.Fatal("query result lost precision")
+		}
+	}
+	for _, operation := range []string{"exists", "exists_source", "get_source"} {
+		args := map[string]any{"target": "es_test", "operation": operation, "indices": []string{"reports-2026"}, "id": "a"}
+		out, err := cs.CallTool(ctx, &mcp.CallToolParams{Name: "es_query", Arguments: args})
+		if err != nil || out.IsError {
+			t.Fatal("MCP document read failed", operation, err, out)
+		}
+		raw, _ := json.Marshal(out)
+		if operation == "get_source" {
+			if !strings.Contains(string(raw), `"user data"`) || !strings.Contains(string(raw), "9007199254740993") {
+				t.Fatal("MCP source response lost user fields or number precision")
+			}
+		} else if !strings.Contains(string(raw), `"exists":true`) {
+			t.Fatal("MCP HEAD result lost existence status")
 		}
 	}
 	for _, call := range []struct {

@@ -215,7 +215,7 @@ definitions, including wildcards. Alias and settings reads accept `names` to
 select native alias or setting names. Mapping, alias and settings reads accept
 pinned native `options`, such as `flat_settings` and `include_defaults`; returned
 index and alias names are checked against configured scope. `es_query` supports `search`,
-`count`, `get`, `mget`, `termvectors`, `mtermvectors`, `explain`, `field_caps`,
+`count`, `get`, `exists`, `get_source`, `exists_source`, `mget`, `termvectors`, `mtermvectors`, `explain`, `field_caps`,
 `search_shards`, `indices.validate_query`, `search_template` and
 `render_search_template`, `eql.search`, `sql.query`, `sql.translate` and `esql.query`. IDs use the structured `id` field. Native JSON and
 large integer values remain intact. Wildcards use ES `*` / `?` semantics, with containment
@@ -236,6 +236,8 @@ See [alias/settings qualification](docs/qualification/2026-09-23-elasticsearch-m
 for native options and response checks.
 See [field mapping qualification](docs/qualification/2026-09-23-elasticsearch-field-mappings.md)
 for selected field paths and validation.
+See [document read qualification](docs/qualification/2026-09-23-elasticsearch-document-reads.md)
+for native source and existence operations.
 
 ```json
 {"target":"search-reporting","operation":"search","body":{"size":0,"runtime_mappings":{"taxed":{"type":"double","script":{"source":"emit(doc['amount'].value * params.factor)","params":{"factor":1.1}}}},"aggs":{"total":{"sum":{"field":"taxed"}}}}}

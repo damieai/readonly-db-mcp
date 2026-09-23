@@ -7,6 +7,20 @@ func validateQueryResponse(raw []byte, q *preparedQuery) error {
 	if err != nil {
 		return failure("invalid_response", "expected native response object")
 	}
+	if q.request.Operation == "get_source" {
+		// This response is the user's original document. Names such as "error",
+		// "pit_id" and "_scroll_id" are ordinary source fields here.
+		return nil
+	}
+	if q.request.Operation == "exists" || q.request.Operation == "exists_source" {
+		if len(m) != 1 {
+			return failure("invalid_response", "unexpected document existence response")
+		}
+		if _, ok := m["exists"].(bool); !ok {
+			return failure("invalid_response", "document existence status is missing")
+		}
+		return nil
+	}
 	if _, ok := m["error"]; ok {
 		return failure("upstream_error", "Elasticsearch returned an item error")
 	}

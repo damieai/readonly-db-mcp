@@ -23,7 +23,8 @@ OPERATIONS = {
     "aliases": ("indices.get_alias", "read", True),
     "settings": ("indices.get_settings", "read", True),
     **{name: (name, "read", True) for name in (
-        "search", "count", "msearch", "get", "mget", "termvectors",
+        "search", "count", "msearch", "get", "exists", "get_source",
+        "exists_source", "mget", "termvectors",
         "mtermvectors", "search_template", "render_search_template", "get_script",
         "explain", "field_caps", "search_shards", "indices.validate_query",
     )},

@@ -137,7 +137,7 @@ func (t *Target) Info() core.TargetInfo {
 		features["esql_enrich"] = "implemented_native_cluster_snapshot_scope"
 		features["enrich_data_scope"] = config.ElasticsearchEnrichScope
 	}
-	return core.TargetInfo{Name: t.cfg.Name, Engine: config.EngineElasticsearch, Environment: t.cfg.Environment, Consistency: config.ConsistencyEventual, Healthy: t.ready() == nil, ReadOnlyUser: t.ready() == nil, ServerReadOnly: false, ServerVersion: t.cfg.Elasticsearch.Version, DeploymentMode: "elasticsearch-phase-12-field-mappings", AllowedIndices: append([]string(nil), t.cfg.Elasticsearch.AllowedIndices...), PolicyRevision: "es-native-metadata-v12", ProofCheckedAt: time.Unix(0, t.checked.Load()).UTC().Format(time.RFC3339), Capabilities: features}
+	return core.TargetInfo{Name: t.cfg.Name, Engine: config.EngineElasticsearch, Environment: t.cfg.Environment, Consistency: config.ConsistencyEventual, Healthy: t.ready() == nil, ReadOnlyUser: t.ready() == nil, ServerReadOnly: false, ServerVersion: t.cfg.Elasticsearch.Version, DeploymentMode: "elasticsearch-phase-13-document-reads", AllowedIndices: append([]string(nil), t.cfg.Elasticsearch.AllowedIndices...), PolicyRevision: "es-native-documents-v13", ProofCheckedAt: time.Unix(0, t.checked.Load()).UTC().Format(time.RFC3339), Capabilities: features}
 }
 
 func (t *Target) ElasticsearchMetadata(ctx context.Context, request core.ElasticsearchMetadataRequest) (result *core.ElasticsearchResult, err error) {

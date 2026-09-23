@@ -219,7 +219,7 @@ func (t *Target) ElasticsearchBatch(ctx context.Context, request core.Elasticsea
 
 func (t *Target) queryResult(id string, q *preparedQuery, raw []byte, started time.Time) *core.ElasticsearchResult {
 	consistency := config.ConsistencyEventual
-	if q.request.Operation == "get" || q.request.Operation == "mget" || q.request.Operation == "termvectors" || q.request.Operation == "mtermvectors" {
+	if q.request.Operation == "get" || q.request.Operation == "exists" || q.request.Operation == "get_source" || q.request.Operation == "exists_source" || q.request.Operation == "mget" || q.request.Operation == "termvectors" || q.request.Operation == "mtermvectors" {
 		if q.options.Get("realtime") != "false" {
 			consistency = "realtime"
 		}
@@ -263,7 +263,8 @@ func (t *Target) execute(ctx context.Context, endpoint int, q *preparedQuery) ([
 	if len(q.body) > t.cfg.Elasticsearch.MaxRequestBytes {
 		return nil, failure("resource_limit", "materialized query exceeds request byte limit")
 	}
-	raw, err := t.wire.request(ctx, endpoint, q.method, q.path, q.options, q.body, "application/json", t.limits.MaxResultBytes, q.request.Operation == "get")
+	allowMissing := q.request.Operation == "get" || q.request.Operation == "exists" || q.request.Operation == "exists_source"
+	raw, err := t.wire.request(ctx, endpoint, q.method, q.path, q.options, q.body, "application/json", t.limits.MaxResultBytes, allowMissing)
 	if err != nil {
 		return nil, err
 	}
@@ -503,11 +504,18 @@ func (p *queryProof) prepare(request core.ElasticsearchQueryRequest) (*preparedQ
 		if request.Operation == "explain" {
 			q.path = base + "/_explain/" + url.PathEscape(request.ID)
 		}
-	case "get":
+	case "get", "exists", "get_source", "exists_source":
 		if len(body) != 0 {
-			return nil, failure("invalid_request", "get accepts document id and options, not a body")
+			return nil, failure("invalid_request", "document read accepts id and options, not a body")
 		}
-		q.path, q.method = base+"/_doc/"+url.PathEscape(request.ID), http.MethodGet
+		pathKind := "/_doc/"
+		if request.Operation == "get_source" || request.Operation == "exists_source" {
+			pathKind = "/_source/"
+		}
+		q.path, q.method = base+pathKind+url.PathEscape(request.ID), http.MethodGet
+		if request.Operation == "exists" || request.Operation == "exists_source" {
+			q.method = http.MethodHead
+		}
 	case "mget", "mtermvectors":
 		if request.Operation == "mtermvectors" {
 			body, err = normalizeTermVectors(raw, body)
@@ -555,7 +563,7 @@ func (p *queryProof) prepare(request core.ElasticsearchQueryRequest) (*preparedQ
 	default:
 		return nil, failure("capability_unavailable", "query handler is not implemented")
 	}
-	needsID := request.Operation == "get" || request.Operation == "explain"
+	needsID := request.Operation == "get" || request.Operation == "exists" || request.Operation == "get_source" || request.Operation == "exists_source" || request.Operation == "explain"
 	if needsID || request.Operation == "termvectors" {
 		if len(indices) != 1 || !concreteName(indices[0]) {
 			return nil, failure("invalid_request", "document operation requires one concrete index or alias")
@@ -600,7 +608,7 @@ func (p *queryProof) prepare(request core.ElasticsearchQueryRequest) (*preparedQ
 			return nil, err
 		}
 	}
-	if q.method == http.MethodGet {
+	if q.method == http.MethodGet || q.method == http.MethodHead {
 		q.body = nil
 	}
 	return q, nil

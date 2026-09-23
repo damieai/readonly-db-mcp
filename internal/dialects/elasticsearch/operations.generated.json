@@ -388,6 +388,59 @@
       "sha256": "7085110a27c70ed902d3099441d32d5f1ba65ce205b572b9fdb62f45499d8afc",
       "source": "https://raw.githubusercontent.com/elastic/elasticsearch/4fe44c255c3d0da06779b921e132cdc555ed9aff/rest-api-spec/src/main/resources/rest-api-spec/api/esql.query.json"
     },
+    "exists": {
+      "api": "exists",
+      "effect": "read",
+      "implemented": true,
+      "parameters": [
+        "_source",
+        "_source_excludes",
+        "_source_includes",
+        "preference",
+        "realtime",
+        "refresh",
+        "routing",
+        "stored_fields",
+        "version",
+        "version_type"
+      ],
+      "routes": [
+        {
+          "methods": [
+            "HEAD"
+          ],
+          "path": "/{index}/_doc/{id}"
+        }
+      ],
+      "sha256": "72761b662937b4ef412dd6ce0c23a691628d6f4b8917f28ce562dc8682811283",
+      "source": "https://raw.githubusercontent.com/elastic/elasticsearch/4fe44c255c3d0da06779b921e132cdc555ed9aff/rest-api-spec/src/main/resources/rest-api-spec/api/exists.json"
+    },
+    "exists_source": {
+      "api": "exists_source",
+      "effect": "read",
+      "implemented": true,
+      "parameters": [
+        "_source",
+        "_source_excludes",
+        "_source_includes",
+        "preference",
+        "realtime",
+        "refresh",
+        "routing",
+        "version",
+        "version_type"
+      ],
+      "routes": [
+        {
+          "methods": [
+            "HEAD"
+          ],
+          "path": "/{index}/_source/{id}"
+        }
+      ],
+      "sha256": "fee268576ecc5e74cedc5a9dace39f73bedc87632164920b1d414263c4b4bdc9",
+      "source": "https://raw.githubusercontent.com/elastic/elasticsearch/4fe44c255c3d0da06779b921e132cdc555ed9aff/rest-api-spec/src/main/resources/rest-api-spec/api/exists_source.json"
+    },
     "explain": {
       "api": "explain",
       "effect": "read",
@@ -524,6 +577,32 @@
       ],
       "sha256": "86cc40e25bc0fd4364a6273e8f9ff1ab8ba5cf79c0eb14e38043906fc5213451",
       "source": "https://raw.githubusercontent.com/elastic/elasticsearch/4fe44c255c3d0da06779b921e132cdc555ed9aff/rest-api-spec/src/main/resources/rest-api-spec/api/get_script.json"
+    },
+    "get_source": {
+      "api": "get_source",
+      "effect": "read",
+      "implemented": true,
+      "parameters": [
+        "_source",
+        "_source_excludes",
+        "_source_includes",
+        "preference",
+        "realtime",
+        "refresh",
+        "routing",
+        "version",
+        "version_type"
+      ],
+      "routes": [
+        {
+          "methods": [
+            "GET"
+          ],
+          "path": "/{index}/_source/{id}"
+        }
+      ],
+      "sha256": "b94ecbc02fad4de2fe1d54c2dd59673bd9401aa91e34d5aa5a1ada134c46eaaf",
+      "source": "https://raw.githubusercontent.com/elastic/elasticsearch/4fe44c255c3d0da06779b921e132cdc555ed9aff/rest-api-spec/src/main/resources/rest-api-spec/api/get_source.json"
     },
     "index": {
       "api": "index",
@@ -1715,6 +1794,59 @@
       "sha256": "f127f18ffdc80b36f489742dce675352fca4b86b8fd1fb6a26516310419fd384",
       "source": "https://raw.githubusercontent.com/elastic/elasticsearch/f2e019bd8110088070638ca779ec1543188c0f43/rest-api-spec/src/main/resources/rest-api-spec/api/esql.query.json"
     },
+    "exists": {
+      "api": "exists",
+      "effect": "read",
+      "implemented": true,
+      "parameters": [
+        "_source",
+        "_source_excludes",
+        "_source_includes",
+        "preference",
+        "realtime",
+        "refresh",
+        "routing",
+        "stored_fields",
+        "version",
+        "version_type"
+      ],
+      "routes": [
+        {
+          "methods": [
+            "HEAD"
+          ],
+          "path": "/{index}/_doc/{id}"
+        }
+      ],
+      "sha256": "72ac7acd9e2fe5b54f8a4b481fa6165a3ede0c740c9ac9db2e1218074766861b",
+      "source": "https://raw.githubusercontent.com/elastic/elasticsearch/f2e019bd8110088070638ca779ec1543188c0f43/rest-api-spec/src/main/resources/rest-api-spec/api/exists.json"
+    },
+    "exists_source": {
+      "api": "exists_source",
+      "effect": "read",
+      "implemented": true,
+      "parameters": [
+        "_source",
+        "_source_excludes",
+        "_source_includes",
+        "preference",
+        "realtime",
+        "refresh",
+        "routing",
+        "version",
+        "version_type"
+      ],
+      "routes": [
+        {
+          "methods": [
+            "HEAD"
+          ],
+          "path": "/{index}/_source/{id}"
+        }
+      ],
+      "sha256": "15227241ed410ee0f313f7af63621523ddd6c871091ce6500a3a2e04bfba5044",
+      "source": "https://raw.githubusercontent.com/elastic/elasticsearch/f2e019bd8110088070638ca779ec1543188c0f43/rest-api-spec/src/main/resources/rest-api-spec/api/exists_source.json"
+    },
     "explain": {
       "api": "explain",
       "effect": "read",
@@ -1850,6 +1982,32 @@
       ],
       "sha256": "7089cfb1513501b58f1b2e75df12119e4a640f1d485ff9f18e631fc5f6be68b3",
       "source": "https://raw.githubusercontent.com/elastic/elasticsearch/f2e019bd8110088070638ca779ec1543188c0f43/rest-api-spec/src/main/resources/rest-api-spec/api/get_script.json"
+    },
+    "get_source": {
+      "api": "get_source",
+      "effect": "read",
+      "implemented": true,
+      "parameters": [
+        "_source",
+        "_source_excludes",
+        "_source_includes",
+        "preference",
+        "realtime",
+        "refresh",
+        "routing",
+        "version",
+        "version_type"
+      ],
+      "routes": [
+        {
+          "methods": [
+            "GET"
+          ],
+          "path": "/{index}/_source/{id}"
+        }
+      ],
+      "sha256": "e83c3575a67fd9233762f67dcd40e27ac4491e72bedfe8e44938dcd81085dfb1",
+      "source": "https://raw.githubusercontent.com/elastic/elasticsearch/f2e019bd8110088070638ca779ec1543188c0f43/rest-api-spec/src/main/resources/rest-api-spec/api/get_source.json"
     },
     "index": {
       "api": "index",

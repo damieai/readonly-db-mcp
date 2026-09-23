@@ -174,6 +174,11 @@ func TestOperationEffectsDoNotFollowHTTPMethods(t *testing.T) {
 		if catalog[version]["search"].Effect != "read" || catalog[version]["close_point_in_time"].Effect != "owned_context" || catalog[version]["indices.refresh"].Effect != "mutation" {
 			t.Fatal("HTTP method substituted for effect classification")
 		}
+		for _, name := range []string{"exists", "get_source", "exists_source"} {
+			if !catalog[version][name].Implemented || catalog[version][name].Effect != "read" {
+				t.Fatal("document convenience read has no reviewed effect", name)
+			}
+		}
 	}
 	for _, name := range []string{"search", "search_template", "open_point_in_time"} {
 		err := metadataOperation("8.19.21", name)
