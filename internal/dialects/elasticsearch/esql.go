@@ -85,14 +85,14 @@ func (p *queryProof) prepareESQL(q *preparedQuery, body map[string]any) error {
 				continue
 			}
 			name := strings.TrimSuffix(source, "::data")
-			if strings.Contains(name, ":") {
+			if !dateMathSource(name) && strings.Contains(name, ":") {
 				return failure("capability_unavailable", "ES|QL remote or backing-index selector requires a separate authority profile")
 			}
-			if err := scopePattern(p.ctx, name, cfg); err != nil {
+			if err := requestSourcePattern(p.ctx, name, cfg); err != nil {
 				return err
 			}
 			if len(q.request.Indices) > 0 {
-				allowed, err := globRelation(p.ctx, []string{name}, q.request.Indices, false)
+				allowed, err := p.requestedSource(name, q.request.Indices)
 				if err != nil {
 					return err
 				}

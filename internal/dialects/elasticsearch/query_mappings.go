@@ -1,6 +1,9 @@
 package elasticsearch
 
-import "strings"
+import (
+	"net/http"
+	"strings"
+)
 
 func (p *queryProof) retainProof(size int) error {
 	p.proofBytes += size
@@ -44,7 +47,7 @@ func (p *queryProof) sourceMappings(indices []string) (map[string]any, error) {
 	if err := p.t.ready(); err != nil {
 		return nil, err
 	}
-	raw, err := p.t.wire.get(p.ctx, p.endpoint, "/"+key+"/_mapping", nil, p.t.limits.MaxResultBytes)
+	raw, err := p.t.wire.request(p.ctx, p.endpoint, http.MethodGet, "/"+escapedIndexTargets(indices)+"/_mapping", nil, nil, "application/json", p.t.limits.MaxResultBytes, false)
 	if err != nil {
 		return nil, err
 	}

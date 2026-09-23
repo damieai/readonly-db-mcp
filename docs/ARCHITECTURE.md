@@ -46,8 +46,9 @@ dedicated SELECT-only SQL identity / read-key-only Redis ACL
   Cluster route attestation, RESP normalization and bounded command execution.
 - `internal/dialects/elasticsearch`: pinned metadata routes, effective-user
   authority proofs, bounded glob containment/resolution, strict native JSON,
-  HTTP/1.1 TLS/socket leases and periodic re-attestation. Phase 1 exposes only
-  resolve/mappings; advanced query/language/lifecycle handlers remain pending.
+  HTTP/1.1 TLS/socket leases and periodic re-attestation. Native query, batch,
+  owned cursor and language handlers preserve read-only syntax; date math index
+  sources use native resolution with scope checks before execution and return.
 - `tools/es-rest-catalog`: reproducible REST catalog extraction from immutable
   upstream commits, with reviewed endpoint effects and source hashes.
 - `internal/config`: strict YAML decoding, hard ceilings and secret resolution.

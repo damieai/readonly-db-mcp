@@ -70,6 +70,9 @@ Untrusted:
     checked against future names; metadata resolution and response checks reject
     alias/data-stream scope escapes. Native read and owned-context operations
     remain separately classified from administrative mutations.
+    Native date math index selectors are resolved on the pinned endpoint, with
+    their resulting sources checked before execution and again before return;
+    configuration and role patterns keep ordinary index-glob semantics.
     Query visitors prove embedded lookup/document sources, including base64
     wrapper queries and rendered templates. Stored scripts are frozen to inspected
     inline definitions; only Painless/expression execution and Mustache rendering

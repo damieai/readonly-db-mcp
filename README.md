@@ -215,11 +215,18 @@ external-plugin inventory; custom plugin profiles remain pending.
 `render_search_template`, `eql.search`, `sql.query`, `sql.translate` and `esql.query`. IDs use the structured `id` field. Native JSON and
 large integer values remain intact. Wildcards use ES `*` / `?` semantics, with containment
 checked for future index names; aliases and data streams are resolved for each
-call. Date math, custom plugins, cross-cluster and finer ENRICH isolation profiles still
-need their respective proof implementations. Missing capabilities are reported
+call. Native date math index sources are supported in metadata, search and the
+read-only languages: the server resolves the expression on the pinned endpoint,
+checks every resulting index and logical source against the configured scope,
+and rechecks before returning results. For example, `indices: ["<reports-{now/d{yyyy.MM.dd|+08:00}}>"]`
+keeps the expression intact for Elasticsearch to evaluate. Custom plugins,
+cross-cluster and finer ENRICH isolation profiles still need their respective
+proof implementations. Missing capabilities are reported
 by `inspect_target`, separately from mutation denial. See the
 [native query qualification record](docs/qualification/2026-09-22-elasticsearch-native-queries.md)
 for setup, tests and remaining gates.
+See [date math qualification](docs/qualification/2026-09-23-elasticsearch-date-math.md)
+for syntax, scope and live-test details.
 
 ```json
 {"target":"search-reporting","operation":"search","body":{"size":0,"runtime_mappings":{"taxed":{"type":"double","script":{"source":"emit(doc['amount'].value * params.factor)","params":{"factor":1.1}}}},"aggs":{"total":{"sum":{"field":"taxed"}}}}}

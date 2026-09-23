@@ -3,6 +3,7 @@ package elasticsearch
 import (
 	"context"
 	"encoding/json"
+	"net/http"
 	"net/url"
 	"strings"
 
@@ -115,11 +116,11 @@ func validateResolution(ctx context.Context, raw []byte, cfg *config.Elasticsear
 
 func (t *Target) resolve(ctx context.Context, endpoint int, indices []string) ([]byte, map[string]bool, error) {
 	for _, name := range indices {
-		if err := scopePattern(ctx, name, t.cfg.Elasticsearch); err != nil {
+		if err := requestSourcePattern(ctx, name, t.cfg.Elasticsearch); err != nil {
 			return nil, nil, err
 		}
 	}
-	data, err := t.wire.get(ctx, endpoint, "/_resolve/index/"+strings.Join(indices, ","), url.Values{"expand_wildcards": {"all"}}, t.limits.MaxResultBytes)
+	data, err := t.wire.request(ctx, endpoint, http.MethodGet, "/_resolve/index/"+escapedIndexTargets(indices), url.Values{"expand_wildcards": {"all"}}, nil, "application/json", t.limits.MaxResultBytes, false)
 	if err != nil {
 		return nil, nil, err
 	}

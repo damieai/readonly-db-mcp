@@ -75,6 +75,7 @@ func capabilities(version string) map[string]string {
 	result["msearch"] = "implemented_via_es_batch"
 	result["msearch_template"] = "implemented_via_es_batch"
 	result["search_templates"] = "implemented_native_render_controls_frozen_batches"
+	result["date_math_sources"] = "implemented_native_resolution_rechecked"
 	result["get_script"] = "internal_proof_requires_script_get_privilege"
 	return result
 }

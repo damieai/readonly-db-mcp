@@ -8,7 +8,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"errors"
-	"strings"
+	"net/http"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -137,7 +137,7 @@ func (t *Target) Info() core.TargetInfo {
 		features["esql_enrich"] = "implemented_native_cluster_snapshot_scope"
 		features["enrich_data_scope"] = config.ElasticsearchEnrichScope
 	}
-	return core.TargetInfo{Name: t.cfg.Name, Engine: config.EngineElasticsearch, Environment: t.cfg.Environment, Consistency: config.ConsistencyEventual, Healthy: t.ready() == nil, ReadOnlyUser: t.ready() == nil, ServerReadOnly: false, ServerVersion: t.cfg.Elasticsearch.Version, DeploymentMode: "elasticsearch-phase-8-templates", AllowedIndices: append([]string(nil), t.cfg.Elasticsearch.AllowedIndices...), PolicyRevision: "es-native-templates-v8", ProofCheckedAt: time.Unix(0, t.checked.Load()).UTC().Format(time.RFC3339), Capabilities: features}
+	return core.TargetInfo{Name: t.cfg.Name, Engine: config.EngineElasticsearch, Environment: t.cfg.Environment, Consistency: config.ConsistencyEventual, Healthy: t.ready() == nil, ReadOnlyUser: t.ready() == nil, ServerReadOnly: false, ServerVersion: t.cfg.Elasticsearch.Version, DeploymentMode: "elasticsearch-phase-9-date-math", AllowedIndices: append([]string(nil), t.cfg.Elasticsearch.AllowedIndices...), PolicyRevision: "es-native-date-math-v9", ProofCheckedAt: time.Unix(0, t.checked.Load()).UTC().Format(time.RFC3339), Capabilities: features}
 }
 
 func (t *Target) ElasticsearchMetadata(ctx context.Context, request core.ElasticsearchMetadataRequest) (result *core.ElasticsearchResult, err error) {
@@ -226,7 +226,7 @@ func (t *Target) ElasticsearchMetadata(ctx context.Context, request core.Elastic
 		}
 		// Preserve alias/data-stream expressions in the request. Validate actual
 		// response names as well, so an alias race cannot disclose new mappings.
-		data, err = t.wire.get(ctx, endpoint, "/"+strings.Join(indices, ",")+"/_mapping", nil, t.limits.MaxResultBytes)
+		data, err = t.wire.request(ctx, endpoint, http.MethodGet, "/"+escapedIndexTargets(indices)+"/_mapping", nil, nil, "application/json", t.limits.MaxResultBytes, false)
 		if err != nil {
 			return nil, err
 		}

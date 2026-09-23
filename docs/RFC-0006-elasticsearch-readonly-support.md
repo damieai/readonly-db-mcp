@@ -1,11 +1,20 @@
 # RFC-0006: Elasticsearch Read-Only Query Support
 
-- Status: Metadata, native query/batch, owned PIT/scroll/SQL, synchronous EQL/SQL/ES|QL and explicit cluster snapshot ENRICH scope implemented; finer isolation, other advanced profiles and live qualification pending
+- Status: Metadata, native query/batch, owned PIT/scroll/SQL, synchronous EQL/SQL/ES|QL, date math index sources and explicit cluster snapshot ENRICH scope implemented; finer isolation, other advanced profiles and live qualification pending
 - Authors: readonly-db-mcp maintainers
 - Created: 2026-09-12
 - Depends on: RFC-0001 resource governance and the common architecture contract
 - Target release: staged; advanced query acceptance is a completion gate
 - Scope: Elasticsearch over HTTPS through the existing stdio MCP transport
+
+Implementation update (2026-09-23, date math): native `<...{now/...}>` index
+sources now pass unchanged through metadata, search, EQL, SQL, ES|QL and
+embedded read-only lookups. Each expression is URI-escaped as one path element;
+the pinned endpoint resolves it, and all returned indices, aliases and data
+streams are checked against configured scope. The query result is withheld if
+the resolved inventory changes during the call. An optional read-only live
+test is supplied; real-server qualification remains pending. See
+[date math evidence](qualification/2026-09-23-elasticsearch-date-math.md).
 
 Implementation update (2026-09-21): the first rollout stage now includes
 configuration/registry wiring, fixed metadata tools, the official Go transport,

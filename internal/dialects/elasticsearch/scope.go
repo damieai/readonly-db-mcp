@@ -3,8 +3,10 @@ package elasticsearch
 import (
 	"context"
 	"encoding/binary"
+	"net/url"
 	"sort"
 	"strings"
+	"unicode"
 
 	"github.com/your-org/readonly-db-mcp/internal/config"
 )
@@ -172,6 +174,78 @@ func scopePattern(ctx context.Context, pattern string, cfg *config.Elasticsearch
 		return failure("scope_denied", "index expression can reach denied or system indices")
 	}
 	return nil
+}
+
+// Date math is an index selector, not an authorization glob. Let the pinned
+// server resolve its complete native syntax; prove the returned concrete names
+// under the ordinary scope before dispatch, then re-resolve after execution.
+// This guard only keeps an expression in one URL path/index-list element.
+func dateMathSource(value string) bool {
+	if len(value) < 5 || len(value) > 4096 || value[0] != '<' || value[len(value)-1] != '>' {
+		return false
+	}
+	depth, dateFields := 0, 0
+	inner := []rune(value[1 : len(value)-1])
+	for i := 0; i < len(inner); i++ {
+		r := inner[i]
+		if unicode.IsSpace(r) || unicode.IsControl(r) || strings.ContainsRune(`<>#%&=,`, r) {
+			return false
+		}
+		if r == '\\' {
+			if i+1 == len(inner) {
+				return false
+			}
+			next := inner[i+1]
+			// Escaping static braces is native syntax. Escaping a route or
+			// list delimiter must not create another request target.
+			if strings.ContainsRune(`<>#%&=,/:?`, next) || unicode.IsSpace(next) || unicode.IsControl(next) {
+				return false
+			}
+			i++
+			continue
+		}
+		switch r {
+		case '{':
+			depth++
+			if depth > 2 {
+				return false
+			}
+			if depth == 1 {
+				dateFields++
+			}
+		case '}':
+			depth--
+			if depth < 0 {
+				return false
+			}
+		case '/', ':', '?':
+			if depth == 0 {
+				return false
+			}
+		}
+	}
+	return depth == 0 && dateFields > 0
+}
+
+func requestSourcePattern(ctx context.Context, pattern string, cfg *config.ElasticsearchConfig) error {
+	if dateMathSource(pattern) {
+		return nil
+	}
+	return scopePattern(ctx, pattern, cfg)
+}
+
+func escapedIndexTargets(indices []string) string {
+	parts := make([]string, len(indices))
+	for i, name := range indices {
+		part := url.PathEscape(name)
+		if dateMathSource(name) {
+			// PathEscape leaves '+' and ':' unescaped; both are date-math
+			// delimiters that the native REST convention requires encoded.
+			part = strings.NewReplacer("+", "%2B", ":", "%3A").Replace(part)
+		}
+		parts[i] = part
+	}
+	return strings.Join(parts, ",")
 }
 
 func concreteName(name string) bool {

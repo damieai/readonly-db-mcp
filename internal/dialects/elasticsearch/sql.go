@@ -73,7 +73,7 @@ func (p *queryProof) prepareSQL(q *preparedQuery, body map[string]any) error {
 			return failure("capability_unavailable", "SQL source selector needs a backing-index authority profile")
 		}
 		if len(q.request.Indices) > 0 {
-			allowed, err := globRelation(p.ctx, []string{name}, q.request.Indices, false)
+			allowed, err := p.requestedSource(name, q.request.Indices)
 			if err != nil {
 				return err
 			}

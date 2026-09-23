@@ -49,9 +49,21 @@ func TestElasticsearchThroughRegistryAndMCP(t *testing.T) {
 			fmt.Fprint(w, `{"policies":[{"config":{"match":{"name":"customers","indices":["private-source-*"],"match_field":"id","enrich_fields":["label"]}}}]}`)
 		case "/_resolve/index/reports-*":
 			fmt.Fprint(w, `{"indices":[{"name":"reports-2026","attributes":["open"]}],"aliases":[],"data_streams":[]}`)
+		case "/_resolve/index/<reports-{now/d}>":
+			if !strings.Contains(r.RequestURI, "%2F") {
+				t.Error("date math resolve slash was not encoded")
+			}
+			fmt.Fprint(w, `{"indices":[{"name":"reports-2026","attributes":["open"]}],"aliases":[],"data_streams":[]}`)
 		case "/reports-*/_mapping":
 			fmt.Fprint(w, `{"reports-2026":{"mappings":{"_meta":{"number":9007199254740993}}}}`)
+		case "/<reports-{now/d}>/_mapping":
+			fmt.Fprint(w, `{"reports-2026":{"mappings":{"_meta":{"number":9007199254740993}}}}`)
 		case "/reports-*/_search":
+			fmt.Fprint(w, `{"timed_out":false,"_shards":{"total":1,"failed":0,"successful":1},"hits":{"hits":[{"_index":"reports-2026","_id":"a","_source":{"number":9007199254740993}}]}}`)
+		case "/<reports-{now/d}>/_search":
+			if !strings.Contains(r.RequestURI, "%2F") {
+				t.Error("date math path slash was not encoded")
+			}
 			fmt.Fprint(w, `{"timed_out":false,"_shards":{"total":1,"failed":0,"successful":1},"hits":{"hits":[{"_index":"reports-2026","_id":"a","_source":{"number":9007199254740993}}]}}`)
 		case "/_render/template":
 			fmt.Fprint(w, `{"template_output":{"query":{"match_all":{}},"profile":false,"explain":false}}`)
@@ -207,6 +219,9 @@ targets:
 		{"es_query", json.RawMessage(`{"target":"es_test","operation":"search","body":{"query":{"script_score":{"query":{"match_all":{}},"script":{"source":"params.x","params":{"x":9007199254740993}}}}}}`)},
 		{"es_batch", json.RawMessage(`{"target":"es_test","requests":[{"operation":"search","body":{"query":{"match_all":{}}}}]}`)},
 		{"es_query", json.RawMessage(`{"target":"es_test","operation":"search_template","body":{"source":{"query":{"match_all":{}}},"profile":true,"explain":true}}`)},
+		{"es_query", json.RawMessage(`{"target":"es_test","operation":"search","indices":["<reports-{now/d}>"],"body":{"query":{"match_all":{}}}}`)},
+		{"es_metadata", json.RawMessage(`{"target":"es_test","operation":"resolve","indices":["<reports-{now/d}>"]}`)},
+		{"es_query", json.RawMessage(`{"target":"es_test","operation":"esql.query","body":{"query":"FROM <reports-{now/d}> | LIMIT 1"}}`)},
 		{"es_batch", json.RawMessage(`{"target":"es_test","requests":[{"operation":"search_template","body":{"source":{"query":{"match_all":{}}},"profile":true}},{"operation":"search_template","body":{"source":{"query":{"match_all":{}}},"explain":true}}]}`)},
 		{"es_query", json.RawMessage(`{"target":"es_test","operation":"eql.search","body":{"query":"any where value == 9007199254740993"}}`)},
 		{"es_query", json.RawMessage(`{"target":"es_test","operation":"sql.query","body":{"query":"SELECT ? FROM \"reports-*\"","params":[9007199254740993]}}`)},
@@ -224,7 +239,7 @@ targets:
 			t.Fatalf("%s: %v %#v", call.name, err, r)
 		}
 		raw, _ := json.Marshal(r)
-		if !strings.Contains(string(raw), "9007199254740993") {
+		if call.name != "es_metadata" && !strings.Contains(string(raw), "9007199254740993") {
 			t.Fatal("query result lost precision")
 		}
 	}
@@ -235,6 +250,7 @@ targets:
 		{"es_query", json.RawMessage(`{"target":"es_test","operation":"search","body":{"size":1,"size":2}}`)},
 		{"es_query", json.RawMessage(`{"target":"es_test","operation":"search_template","body":{"source":"{}","profile":"true"}}`)},
 		{"es_query", json.RawMessage(`{"target":"es_test","operation":"msearch_template","body":{"source":"{}"}}`)},
+		{"es_query", json.RawMessage(`{"target":"es_test","operation":"search","indices":["<remote:private-{now/d}>"],"body":{"query":{"match_all":{}}}}`)},
 		{"es_query", json.RawMessage(`{"target":"es_test","operation":"eql.search","body":{"query":"any where true","wait_for_completion_timeout":"1s"}}`)},
 		{"es_query", json.RawMessage(`{"target":"es_test","operation":"eql.search","body":{"query":"any where true","query":"any where false"}}`)},
 		{"es_query", json.RawMessage(`{"target":"es_test","operation":"eql.search","body":{"query":"any where true; any where false"}}`)},

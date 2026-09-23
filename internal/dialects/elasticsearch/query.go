@@ -302,7 +302,7 @@ func (p *queryProof) sources(indices []string) (map[string]bool, error) {
 		return nil, failure("resource_limit", "invalid number of index expressions")
 	}
 	for _, name := range indices {
-		if err := scopePattern(p.ctx, name, p.t.cfg.Elasticsearch); err != nil {
+		if err := requestSourcePattern(p.ctx, name, p.t.cfg.Elasticsearch); err != nil {
 			return nil, err
 		}
 	}
@@ -395,7 +395,7 @@ func (p *queryProof) prepare(request core.ElasticsearchQueryRequest) (*preparedQ
 	p.activeIndices = indices
 	// Validate syntactic scope before any body-driven upstream proof.
 	for _, name := range indices {
-		if err := scopePattern(p.ctx, name, p.t.cfg.Elasticsearch); err != nil {
+		if err := requestSourcePattern(p.ctx, name, p.t.cfg.Elasticsearch); err != nil {
 			return nil, err
 		}
 	}
@@ -421,7 +421,7 @@ func (p *queryProof) prepare(request core.ElasticsearchQueryRequest) (*preparedQ
 	if err != nil {
 		return nil, err
 	}
-	base := "/" + url.PathEscape(strings.Join(indices, ","))
+	base := "/" + escapedIndexTargets(indices)
 	q := &preparedQuery{request: request, options: options, method: http.MethodPost, rows: rows, buckets: p.t.cfg.Elasticsearch.MaxAggregationBuckets}
 	q.request.Indices = append([]string(nil), indices...)
 	switch request.Operation {
