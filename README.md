@@ -209,11 +209,12 @@ Stored script/template inspection additionally accepts the narrowly scoped
 Query preflight checks all nodes against the pinned build and requires an empty
 external-plugin inventory; custom plugin profiles remain pending.
 
-`es_metadata` supports `resolve`, `mappings`, `aliases` and `settings`. Alias and
-settings reads accept `names` to select native alias or setting names (including
-wildcards), and pinned native options in `options`, such as `flat_settings` and
-`include_defaults`; returned index and alias names are checked against configured
-scope. `es_query` supports `search`,
+`es_metadata` supports `resolve`, `mappings`, `field_mappings`, `aliases` and
+`settings`. `field_mappings` requires `fields` and reads selected native field
+definitions, including wildcards. Alias and settings reads accept `names` to
+select native alias or setting names. Mapping, alias and settings reads accept
+pinned native `options`, such as `flat_settings` and `include_defaults`; returned
+index and alias names are checked against configured scope. `es_query` supports `search`,
 `count`, `get`, `mget`, `termvectors`, `mtermvectors`, `explain`, `field_caps`,
 `search_shards`, `indices.validate_query`, `search_template` and
 `render_search_template`, `eql.search`, `sql.query`, `sql.translate` and `esql.query`. IDs use the structured `id` field. Native JSON and
@@ -233,6 +234,8 @@ See [date math qualification](docs/qualification/2026-09-23-elasticsearch-date-m
 for syntax, scope and live-test details.
 See [alias/settings qualification](docs/qualification/2026-09-23-elasticsearch-metadata.md)
 for native options and response checks.
+See [field mapping qualification](docs/qualification/2026-09-23-elasticsearch-field-mappings.md)
+for selected field paths and validation.
 
 ```json
 {"target":"search-reporting","operation":"search","body":{"size":0,"runtime_mappings":{"taxed":{"type":"double","script":{"source":"emit(doc['amount'].value * params.factor)","params":{"factor":1.1}}}},"aggs":{"total":{"sum":{"field":"taxed"}}}}}
@@ -471,7 +474,7 @@ Use target inventory-test. Inspect the schema and verify whether transaction
 | `query_select` | Runs one validated SELECT. |
 | `query_batch` | Runs several SELECTs in one read-only transaction snapshot. |
 | `query_explain` | Returns an engine-native non-executing plan for a validated SELECT. |
-| `es_metadata` | Resolves scoped Elasticsearch indices, aliases and data streams, or reads their mappings. |
+| `es_metadata` | Resolves scoped Elasticsearch indices, aliases and data streams, or reads full/selected mappings, aliases and settings. |
 | `es_query` | Executes scoped native Elasticsearch reads, advanced DSL, scripts, aggregations, supplied vectors, templates and synchronous EQL/SQL/ES|QL, including SQL translation. |
 | `es_batch` | Executes preflighted independent reads or compatible searches in one owned PIT, with a shared deadline and output budget. |
 | `es_cursor` | Opens, advances and closes session-owned PIT/scroll/SQL handles with bounded lifetimes and cleanup. |

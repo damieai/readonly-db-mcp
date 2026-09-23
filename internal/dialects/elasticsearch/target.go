@@ -137,7 +137,7 @@ func (t *Target) Info() core.TargetInfo {
 		features["esql_enrich"] = "implemented_native_cluster_snapshot_scope"
 		features["enrich_data_scope"] = config.ElasticsearchEnrichScope
 	}
-	return core.TargetInfo{Name: t.cfg.Name, Engine: config.EngineElasticsearch, Environment: t.cfg.Environment, Consistency: config.ConsistencyEventual, Healthy: t.ready() == nil, ReadOnlyUser: t.ready() == nil, ServerReadOnly: false, ServerVersion: t.cfg.Elasticsearch.Version, DeploymentMode: "elasticsearch-phase-11-metadata-selectors", AllowedIndices: append([]string(nil), t.cfg.Elasticsearch.AllowedIndices...), PolicyRevision: "es-native-metadata-v11", ProofCheckedAt: time.Unix(0, t.checked.Load()).UTC().Format(time.RFC3339), Capabilities: features}
+	return core.TargetInfo{Name: t.cfg.Name, Engine: config.EngineElasticsearch, Environment: t.cfg.Environment, Consistency: config.ConsistencyEventual, Healthy: t.ready() == nil, ReadOnlyUser: t.ready() == nil, ServerReadOnly: false, ServerVersion: t.cfg.Elasticsearch.Version, DeploymentMode: "elasticsearch-phase-12-field-mappings", AllowedIndices: append([]string(nil), t.cfg.Elasticsearch.AllowedIndices...), PolicyRevision: "es-native-metadata-v12", ProofCheckedAt: time.Unix(0, t.checked.Load()).UTC().Format(time.RFC3339), Capabilities: features}
 }
 
 func (t *Target) ElasticsearchMetadata(ctx context.Context, request core.ElasticsearchMetadataRequest) (result *core.ElasticsearchResult, err error) {
@@ -171,6 +171,10 @@ func (t *Target) ElasticsearchMetadata(ctx context.Context, request core.Elastic
 				_, _ = mac.Write([]byte{1})
 				_, _ = mac.Write([]byte(name))
 			}
+			for _, field := range request.Fields {
+				_, _ = mac.Write([]byte{2})
+				_, _ = mac.Write([]byte(field))
+			}
 			options, _ := json.Marshal(request.Options)
 			_, _ = mac.Write([]byte{0})
 			_, _ = mac.Write(options)
@@ -194,13 +198,23 @@ func (t *Target) ElasticsearchMetadata(ctx context.Context, request core.Elastic
 	if err := metadataOperation(t.cfg.Elasticsearch.Version, request.Operation); err != nil {
 		return nil, err
 	}
-	if len(request.Options) != 0 && request.Operation != "aliases" && request.Operation != "settings" {
-		return nil, failure("invalid_request", "metadata options are available for aliases and settings")
+	if len(request.Options) != 0 && request.Operation == "resolve" {
+		return nil, failure("invalid_request", "metadata options are unavailable for resolve")
 	}
 	if len(request.Names) != 0 && request.Operation != "aliases" && request.Operation != "settings" {
 		return nil, failure("invalid_request", "metadata names are available for aliases and settings")
 	}
 	if err := validateMetadataNames(request.Names); err != nil {
+		return nil, err
+	}
+	if request.Operation == "field_mappings" {
+		if len(request.Fields) == 0 {
+			return nil, failure("invalid_request", "field_mappings requires fields")
+		}
+	} else if len(request.Fields) != 0 {
+		return nil, failure("invalid_request", "metadata fields are available for field_mappings")
+	}
+	if err := validateMetadataNames(request.Fields); err != nil {
 		return nil, err
 	}
 	options, err := queryOptions(t.cfg.Elasticsearch.Version, request.Operation, request.Options)
@@ -220,6 +234,9 @@ func (t *Target) ElasticsearchMetadata(ctx context.Context, request core.Elastic
 	}
 	for _, name := range request.Names {
 		bytes += int64(len(name)) + 4
+	}
+	for _, field := range request.Fields {
+		bytes += int64(len(field)) + 4
 	}
 	optionBytes, err := json.Marshal(request.Options)
 	if err != nil {
@@ -249,18 +266,35 @@ func (t *Target) ElasticsearchMetadata(ctx context.Context, request core.Elastic
 		return nil, err
 	}
 	resolutionRaw := data
-	if request.Operation == "mappings" {
+	if request.Operation == "mappings" || request.Operation == "field_mappings" {
 		if err := t.ready(); err != nil {
 			return nil, err
 		}
 		// Preserve alias/data-stream expressions in the request. Validate actual
 		// response names as well, so an alias race cannot disclose new mappings.
-		data, err = t.wire.request(ctx, endpoint, http.MethodGet, "/"+escapedIndexTargets(indices)+"/_mapping", nil, nil, "application/json", t.limits.MaxResultBytes, false)
+		path := "/" + escapedIndexTargets(indices) + "/_mapping"
+		if request.Operation == "field_mappings" {
+			path += "/field/" + escapedMetadataNames(request.Fields)
+		}
+		data, err = t.wire.request(ctx, endpoint, http.MethodGet, path, options, nil, "application/json", t.limits.MaxResultBytes, false)
 		if err != nil {
 			return nil, err
 		}
-		if err := validateMappings(data, physical); err != nil {
-			return nil, err
+		if request.Operation == "field_mappings" {
+			if err := validateFieldMappings(data, physical); err != nil {
+				return nil, err
+			}
+			_, after, err := t.resolve(ctx, endpoint, indices)
+			if err != nil {
+				return nil, err
+			}
+			if !sameResolvedInventory(physical, after) {
+				return nil, failure("scope_denied", "metadata source inventory changed during request; retry explicitly")
+			}
+		} else {
+			if err := validateMappings(data, physical); err != nil {
+				return nil, err
+			}
 		}
 	} else if request.Operation == "aliases" || request.Operation == "settings" {
 		if err := t.ready(); err != nil {

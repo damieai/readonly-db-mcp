@@ -165,7 +165,7 @@ func TestResolvedBudgetCountsUniquePhysicalSources(t *testing.T) {
 }
 func TestOperationEffectsDoNotFollowHTTPMethods(t *testing.T) {
 	for _, version := range []string{"8.19.21", "9.1.10"} {
-		for _, name := range []string{"resolve", "mappings"} {
+		for _, name := range []string{"resolve", "mappings", "field_mappings"} {
 			op := catalog[version][name]
 			if !op.Implemented || op.Effect != "read" || len(op.SHA256) != 64 {
 				t.Fatal("unreviewed metadata route")

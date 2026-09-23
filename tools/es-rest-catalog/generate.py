@@ -19,6 +19,7 @@ PROFILES = {
 OPERATIONS = {
     "resolve": ("indices.resolve_index", "read", True),
     "mappings": ("indices.get_mapping", "read", True),
+    "field_mappings": ("indices.get_field_mapping", "read", True),
     "aliases": ("indices.get_alias", "read", True),
     "settings": ("indices.get_settings", "read", True),
     **{name: (name, "read", True) for name in (

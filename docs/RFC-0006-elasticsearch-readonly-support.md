@@ -1,6 +1,6 @@
 # RFC-0006: Elasticsearch Read-Only Query Support
 
-- Status: Scoped resolve/mappings/aliases/settings metadata, native query/batch, owned PIT/scroll/SQL, synchronous EQL/SQL/ES|QL, date math index sources and explicit cluster snapshot ENRICH scope implemented; finer isolation, other advanced profiles and live qualification pending
+- Status: Scoped resolve/mappings/field-mappings/aliases/settings metadata, native query/batch, owned PIT/scroll/SQL, synchronous EQL/SQL/ES|QL, date math index sources and explicit cluster snapshot ENRICH scope implemented; finer isolation, other advanced profiles and live qualification pending
 - Authors: readonly-db-mcp maintainers
 - Created: 2026-09-12
 - Depends on: RFC-0001 resource governance and the common architecture contract
@@ -17,6 +17,14 @@ still pending: both pinned REST implementations do not bind its internal search
 task to HTTP channel closure, so cancellation and server-work accounting need
 a specific lifecycle design. See
 [metadata evidence](qualification/2026-09-23-elasticsearch-metadata.md).
+
+Implementation update (2026-09-23, selected field metadata):
+`es_metadata.operation=field_mappings` reads native mappings for requested field
+names or wildcard expressions through the pinned read-only REST route. It retains
+native response structure and query options, verifies physical response indices,
+and re-resolves the source inventory before returning. Full `mappings` reads also
+accept their pinned native query options. See
+[field-mapping evidence](qualification/2026-09-23-elasticsearch-field-mappings.md).
 
 Implementation update (2026-09-23, date math): native `<...{now/...}>` index
 sources now pass unchanged through metadata, search, EQL, SQL, ES|QL and
@@ -222,7 +230,7 @@ mutation-keyword lists.
 | --- | --- |
 | `es_query` | `{target, operation, indices?, body?, options?, timeout_ms?, max_rows?, purpose?}`; native JSON query body |
 | `es_batch` | `{target, requests, consistency, timeout_ms?}`; typed operations, one shared deadline |
-| `es_metadata` | `{target, operation, indices?, names?, options?, timeout_ms?}`; scoped resolve/mappings and native alias/settings metadata; `names` applies to aliases/settings |
+| `es_metadata` | `{target, operation, indices?, fields?, names?, options?, timeout_ms?}`; scoped resolve/mappings/field_mappings and native alias/settings metadata; `fields` applies to field_mappings and `names` to aliases/settings |
 | `es_cursor` | `{target, action, handle?, indices?, body?, keep_alive_ms?, timeout_ms?}`; open/next/close a service-owned context |
 
 `operation` is a semantic enum, not an HTTP path. `options` is validated against

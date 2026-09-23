@@ -56,6 +56,8 @@ func TestElasticsearchThroughRegistryAndMCP(t *testing.T) {
 			fmt.Fprint(w, `{"indices":[{"name":"reports-2026","attributes":["open"]}],"aliases":[],"data_streams":[]}`)
 		case "/reports-*/_mapping":
 			fmt.Fprint(w, `{"reports-2026":{"mappings":{"_meta":{"number":9007199254740993}}}}`)
+		case "/reports-*/_mapping/field/title*":
+			fmt.Fprint(w, `{"reports-2026":{"mappings":{"title":{"full_name":"title","mapping":{"title":{"type":"text"}}}}}}`)
 		case "/reports-*/_alias":
 			fmt.Fprint(w, `{"reports-2026":{"aliases":{"reports-date":{"search_routing":"tenant-a"}}}}`)
 		case "/reports-*/_alias/reports-*":
@@ -228,6 +230,7 @@ targets:
 		json.RawMessage(`{"target":"es_test","operation":"settings","options":{"flat_settings":true}}`),
 		json.RawMessage(`{"target":"es_test","operation":"aliases","names":["reports-*"]}`),
 		json.RawMessage(`{"target":"es_test","operation":"settings","names":["index.number_of_*"]}`),
+		json.RawMessage(`{"target":"es_test","operation":"field_mappings","fields":["title*"]}`),
 	} {
 		out, err := cs.CallTool(ctx, &mcp.CallToolParams{Name: "es_metadata", Arguments: call})
 		if err != nil || out.IsError {

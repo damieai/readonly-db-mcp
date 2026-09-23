@@ -139,7 +139,7 @@ func TestAliasSettingsMetadataScopeAndDrift(t *testing.T) {
 			t.Fatal("invalid settings option was accepted")
 		}
 	}
-	for _, names := range [][]string{{""}, {"index.number_of_shards/../private"}, {"index.number_of_shards,private"}, {"index.%2Fprivate"}, {"index.refresh_interval\nprivate"}} {
+	for _, names := range [][]string{{""}, {"index.number_of_shards/../private"}, {"index.number_of_shards,private"}, {"index.refresh_interval\nprivate"}} {
 		if out, err := target.ElasticsearchMetadata(context.Background(), core.ElasticsearchMetadataRequest{Operation: "settings", Names: names}); err == nil || out != nil {
 			t.Fatal("invalid setting name selector was accepted", names)
 		}

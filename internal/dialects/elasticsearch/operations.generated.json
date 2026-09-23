@@ -451,6 +451,34 @@
       "sha256": "40b4aa357556f0a65cf69d226c169da62c9628c3d67ae62fad8db56e5c6c49b5",
       "source": "https://raw.githubusercontent.com/elastic/elasticsearch/4fe44c255c3d0da06779b921e132cdc555ed9aff/rest-api-spec/src/main/resources/rest-api-spec/api/field_caps.json"
     },
+    "field_mappings": {
+      "api": "indices.get_field_mapping",
+      "effect": "read",
+      "implemented": true,
+      "parameters": [
+        "allow_no_indices",
+        "expand_wildcards",
+        "ignore_unavailable",
+        "include_defaults",
+        "local"
+      ],
+      "routes": [
+        {
+          "methods": [
+            "GET"
+          ],
+          "path": "/_mapping/field/{fields}"
+        },
+        {
+          "methods": [
+            "GET"
+          ],
+          "path": "/{index}/_mapping/field/{fields}"
+        }
+      ],
+      "sha256": "7a4f848717fd250bd93dcc40177307fa335cad605be5782ae3255c78945ce516",
+      "source": "https://raw.githubusercontent.com/elastic/elasticsearch/4fe44c255c3d0da06779b921e132cdc555ed9aff/rest-api-spec/src/main/resources/rest-api-spec/api/indices.get_field_mapping.json"
+    },
     "get": {
       "api": "get",
       "effect": "read",
@@ -1749,6 +1777,33 @@
       ],
       "sha256": "ef64844ca7393b463c02872be85c670fb305448493ffe6ab3cc32b0612c2aa5d",
       "source": "https://raw.githubusercontent.com/elastic/elasticsearch/f2e019bd8110088070638ca779ec1543188c0f43/rest-api-spec/src/main/resources/rest-api-spec/api/field_caps.json"
+    },
+    "field_mappings": {
+      "api": "indices.get_field_mapping",
+      "effect": "read",
+      "implemented": true,
+      "parameters": [
+        "allow_no_indices",
+        "expand_wildcards",
+        "ignore_unavailable",
+        "include_defaults"
+      ],
+      "routes": [
+        {
+          "methods": [
+            "GET"
+          ],
+          "path": "/_mapping/field/{fields}"
+        },
+        {
+          "methods": [
+            "GET"
+          ],
+          "path": "/{index}/_mapping/field/{fields}"
+        }
+      ],
+      "sha256": "0ca6ed9460335359db4a791651e251b5de5d52bb23cd3a32d3c9f39b03cbf4c9",
+      "source": "https://raw.githubusercontent.com/elastic/elasticsearch/f2e019bd8110088070638ca779ec1543188c0f43/rest-api-spec/src/main/resources/rest-api-spec/api/indices.get_field_mapping.json"
     },
     "get": {
       "api": "get",

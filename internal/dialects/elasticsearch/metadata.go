@@ -20,7 +20,7 @@ func validateMetadataNames(names []string) error {
 			return failure("invalid_request", "invalid metadata name selector")
 		}
 		for _, r := range name {
-			if unicode.IsSpace(r) || unicode.IsControl(r) || strings.ContainsRune(`/\\,%#`, r) {
+			if unicode.IsControl(r) || strings.ContainsRune(`/\\,`, r) {
 				return failure("invalid_request", "invalid metadata name selector")
 			}
 		}
@@ -162,6 +162,40 @@ func validateMappings(raw []byte, physical map[string]bool) error {
 	for name := range result {
 		if !physical[name] {
 			return failure("scope_denied", "mapping response escaped the attested index inventory")
+		}
+	}
+	return nil
+}
+
+func validateFieldMappings(raw []byte, physical map[string]bool) error {
+	result, err := decodeObject(raw)
+	if err != nil {
+		return failure("invalid_response", "expected native field mappings object")
+	}
+	for index, value := range result {
+		if !physical[index] {
+			return failure("scope_denied", "field mappings escaped the attested index inventory")
+		}
+		entry, err := object(value)
+		if err != nil {
+			return failure("invalid_response", "invalid field mappings index entry")
+		}
+		mappings, err := object(entry["mappings"])
+		if err != nil {
+			return failure("invalid_response", "field mappings are missing")
+		}
+		for _, value := range mappings {
+			field, err := object(value)
+			if err != nil {
+				return failure("invalid_response", "invalid field mapping entry")
+			}
+			name, ok := field["full_name"].(string)
+			if !ok || name == "" {
+				return failure("invalid_response", "field mapping name is missing")
+			}
+			if _, err := object(field["mapping"]); err != nil {
+				return failure("invalid_response", "field mapping definition is missing")
+			}
 		}
 	}
 	return nil
