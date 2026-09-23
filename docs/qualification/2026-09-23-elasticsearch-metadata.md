@@ -9,10 +9,13 @@ deployment in this environment.
 native index, alias, data-stream and date-math expressions. The pinned REST
 operation catalog supplies each version's query options, including
 `ignore_unavailable`, `allow_no_indices`, `expand_wildcards`, `flat_settings`
-and `include_defaults` where supported. For example:
+and `include_defaults` where supported. `names` selects one or more native
+alias names or setting names, including wildcards, through
+`GET /<indices>/_alias/<names>` or `GET /<indices>/_settings/<names>`.
+For example:
 
 ```json
-{"target":"search-reporting","operation":"settings","indices":["reports-*"],"options":{"flat_settings":true,"include_defaults":true}}
+{"target":"search-reporting","operation":"settings","indices":["reports-*"],"names":["index.number_of_*","index.refresh_interval"],"options":{"flat_settings":true,"include_defaults":true}}
 ```
 
 Before the native metadata call, `_resolve/index` checks every resulting
@@ -29,9 +32,10 @@ needs `view_index_metadata`, already required for mappings.
 Native route, option and authorization behavior was checked against the pinned
 REST specifications and the [Get aliases API](https://www.elastic.co/docs/api/doc/elasticsearch/operation/operation-indices-get-alias)
 and [Get index settings API](https://www.elastic.co/docs/api/doc/elasticsearch/operation/operation-indices-get-settings).
-Fixtures cover both pins, option forwarding, date-math paths, data-stream alias
-and settings keys, scope and alias escape, malformed or duplicate responses,
-inventory drift, whole-response denial and MCP calls.
+Fixtures cover both pins, option forwarding, native name/wildcard paths,
+date-math paths, data-stream alias and settings keys, scope and alias escape,
+malformed or duplicate responses, inventory drift, whole-response denial and
+MCP calls.
 Fixtures do not run a native Elasticsearch server.
 
 For live acceptance, provision an existing `mcp-es-acceptance-*` index with an
@@ -40,7 +44,7 @@ with an `environment: test` Elasticsearch target, `READONLY_DB_MCP_ES_TARGET`
 to that target name, `READONLY_DB_MCP_ES_METADATA_INDEX` to the index and
 `READONLY_DB_MCP_ES_METADATA_ALIAS` to the alias. Run
 `go test ./internal/dialects/elasticsearch -run TestElasticsearchLiveAliasSettingsMetadata -v`.
-The test reads alias definitions and settings (including defaults); it creates
+The test reads a named alias and selected settings (including defaults); it creates
 or changes nothing. Missing settings cause an explicit skip. Real-server
 multi-node, alias-filter and concurrent-rollover checks remain outstanding.
 

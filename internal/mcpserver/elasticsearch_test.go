@@ -58,10 +58,14 @@ func TestElasticsearchThroughRegistryAndMCP(t *testing.T) {
 			fmt.Fprint(w, `{"reports-2026":{"mappings":{"_meta":{"number":9007199254740993}}}}`)
 		case "/reports-*/_alias":
 			fmt.Fprint(w, `{"reports-2026":{"aliases":{"reports-date":{"search_routing":"tenant-a"}}}}`)
+		case "/reports-*/_alias/reports-*":
+			fmt.Fprint(w, `{"reports-2026":{"aliases":{"reports-date":{"search_routing":"tenant-a"}}}}`)
 		case "/reports-*/_settings":
 			if r.URL.Query().Get("flat_settings") != "true" {
 				t.Error("MCP metadata option was not forwarded")
 			}
+			fmt.Fprint(w, `{"reports-2026":{"settings":{"index.number_of_docs":"9007199254740993"}}}`)
+		case "/reports-*/_settings/index.number_of_*":
 			fmt.Fprint(w, `{"reports-2026":{"settings":{"index.number_of_docs":"9007199254740993"}}}`)
 		case "/<reports-{now/d}>/_mapping":
 			fmt.Fprint(w, `{"reports-2026":{"mappings":{"_meta":{"number":9007199254740993}}}}`)
@@ -222,6 +226,8 @@ targets:
 	for _, call := range []json.RawMessage{
 		json.RawMessage(`{"target":"es_test","operation":"aliases"}`),
 		json.RawMessage(`{"target":"es_test","operation":"settings","options":{"flat_settings":true}}`),
+		json.RawMessage(`{"target":"es_test","operation":"aliases","names":["reports-*"]}`),
+		json.RawMessage(`{"target":"es_test","operation":"settings","names":["index.number_of_*"]}`),
 	} {
 		out, err := cs.CallTool(ctx, &mcp.CallToolParams{Name: "es_metadata", Arguments: call})
 		if err != nil || out.IsError {

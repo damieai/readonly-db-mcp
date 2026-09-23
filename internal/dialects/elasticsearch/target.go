@@ -137,7 +137,7 @@ func (t *Target) Info() core.TargetInfo {
 		features["esql_enrich"] = "implemented_native_cluster_snapshot_scope"
 		features["enrich_data_scope"] = config.ElasticsearchEnrichScope
 	}
-	return core.TargetInfo{Name: t.cfg.Name, Engine: config.EngineElasticsearch, Environment: t.cfg.Environment, Consistency: config.ConsistencyEventual, Healthy: t.ready() == nil, ReadOnlyUser: t.ready() == nil, ServerReadOnly: false, ServerVersion: t.cfg.Elasticsearch.Version, DeploymentMode: "elasticsearch-phase-10-metadata", AllowedIndices: append([]string(nil), t.cfg.Elasticsearch.AllowedIndices...), PolicyRevision: "es-native-metadata-v10", ProofCheckedAt: time.Unix(0, t.checked.Load()).UTC().Format(time.RFC3339), Capabilities: features}
+	return core.TargetInfo{Name: t.cfg.Name, Engine: config.EngineElasticsearch, Environment: t.cfg.Environment, Consistency: config.ConsistencyEventual, Healthy: t.ready() == nil, ReadOnlyUser: t.ready() == nil, ServerReadOnly: false, ServerVersion: t.cfg.Elasticsearch.Version, DeploymentMode: "elasticsearch-phase-11-metadata-selectors", AllowedIndices: append([]string(nil), t.cfg.Elasticsearch.AllowedIndices...), PolicyRevision: "es-native-metadata-v11", ProofCheckedAt: time.Unix(0, t.checked.Load()).UTC().Format(time.RFC3339), Capabilities: features}
 }
 
 func (t *Target) ElasticsearchMetadata(ctx context.Context, request core.ElasticsearchMetadataRequest) (result *core.ElasticsearchResult, err error) {
@@ -167,6 +167,10 @@ func (t *Target) ElasticsearchMetadata(ctx context.Context, request core.Elastic
 				_, _ = mac.Write([]byte{0})
 				_, _ = mac.Write([]byte(index))
 			}
+			for _, name := range request.Names {
+				_, _ = mac.Write([]byte{1})
+				_, _ = mac.Write([]byte(name))
+			}
 			options, _ := json.Marshal(request.Options)
 			_, _ = mac.Write([]byte{0})
 			_, _ = mac.Write(options)
@@ -193,6 +197,12 @@ func (t *Target) ElasticsearchMetadata(ctx context.Context, request core.Elastic
 	if len(request.Options) != 0 && request.Operation != "aliases" && request.Operation != "settings" {
 		return nil, failure("invalid_request", "metadata options are available for aliases and settings")
 	}
+	if len(request.Names) != 0 && request.Operation != "aliases" && request.Operation != "settings" {
+		return nil, failure("invalid_request", "metadata names are available for aliases and settings")
+	}
+	if err := validateMetadataNames(request.Names); err != nil {
+		return nil, err
+	}
 	options, err := queryOptions(t.cfg.Elasticsearch.Version, request.Operation, request.Options)
 	if err != nil {
 		return nil, err
@@ -207,6 +217,9 @@ func (t *Target) ElasticsearchMetadata(ctx context.Context, request core.Elastic
 	bytes := int64(0)
 	for _, i := range indices {
 		bytes += int64(len(i)) + 4
+	}
+	for _, name := range request.Names {
+		bytes += int64(len(name)) + 4
 	}
 	optionBytes, err := json.Marshal(request.Options)
 	if err != nil {
@@ -256,6 +269,9 @@ func (t *Target) ElasticsearchMetadata(ctx context.Context, request core.Elastic
 		path := "/" + escapedIndexTargets(indices) + "/_alias"
 		if request.Operation == "settings" {
 			path = "/" + escapedIndexTargets(indices) + "/_settings"
+		}
+		if len(request.Names) != 0 {
+			path += "/" + escapedMetadataNames(request.Names)
 		}
 		data, err = t.wire.request(ctx, endpoint, http.MethodGet, path, options, nil, "application/json", t.limits.MaxResultBytes, false)
 		if err != nil {

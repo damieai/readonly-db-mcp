@@ -15,6 +15,7 @@ type ElasticsearchMetadataInput struct {
 	Target    string                     `json:"target" jsonschema:"Exact Elasticsearch target alias returned by list_targets"`
 	Operation string                     `json:"operation" jsonschema:"Metadata operation: resolve, mappings, aliases or settings"`
 	Indices   []string                   `json:"indices,omitempty" jsonschema:"Scoped index, alias or data-stream expressions; omitted uses configured scope"`
+	Names     []string                   `json:"names,omitempty" jsonschema:"Alias names or index setting names for aliases and settings; native wildcards are supported"`
 	Options   map[string]json.RawMessage `json:"options,omitempty" jsonschema:"Native options for aliases and settings metadata"`
 	TimeoutMS int                        `json:"timeout_ms,omitempty" jsonschema:"Optional timeout in milliseconds, including admission and source resolution"`
 }
@@ -32,7 +33,7 @@ func (v *ElasticsearchMetadataInput) UnmarshalJSON(data []byte) error {
 	}
 	for name, value := range fields {
 		switch name {
-		case "target", "operation", "indices", "options", "timeout_ms":
+		case "target", "operation", "indices", "names", "options", "timeout_ms":
 		default:
 			return fmt.Errorf("invalid_request: unknown metadata envelope field")
 		}
@@ -46,7 +47,7 @@ func (v *ElasticsearchMetadataInput) UnmarshalJSON(data []byte) error {
 	if err := d.Decode((*plain)(v)); err != nil {
 		return fmt.Errorf("invalid_request: malformed metadata envelope")
 	}
-	if v.Target == "" || len(v.Target) > 64 || v.Operation == "" || len(v.Operation) > 64 || len(v.Indices) > 10000 {
+	if v.Target == "" || len(v.Target) > 64 || v.Operation == "" || len(v.Operation) > 64 || len(v.Indices) > 10000 || len(v.Names) > 10000 {
 		return fmt.Errorf("invalid_request: target and operation are required and envelope limits apply")
 	}
 	return nil
@@ -60,6 +61,7 @@ func (s *Server) registerElasticsearchTools() {
 		"target":     map[string]any{"type": "string", "minLength": 1, "maxLength": 64},
 		"operation":  map[string]any{"type": "string", "enum": []string{"resolve", "mappings", "aliases", "settings"}},
 		"indices":    map[string]any{"type": "array", "maxItems": 10000, "items": map[string]any{"type": "string", "maxLength": 4096}},
+		"names":      map[string]any{"type": "array", "maxItems": 10000, "items": map[string]any{"type": "string", "minLength": 1, "maxLength": 4096}},
 		"options":    map[string]any{"type": "object", "additionalProperties": true},
 		"timeout_ms": map[string]any{"type": "integer", "minimum": 0, "maximum": 900000},
 	}}
@@ -98,7 +100,7 @@ func (s *Server) elasticsearchMetadata(ctx context.Context, _ *mcp.CallToolReque
 	if err != nil {
 		return nil, core.ElasticsearchResult{}, err
 	}
-	result, err := target.ElasticsearchMetadata(ctx, core.ElasticsearchMetadataRequest{Operation: input.Operation, Indices: input.Indices, Options: input.Options, Timeout: timeout})
+	result, err := target.ElasticsearchMetadata(ctx, core.ElasticsearchMetadataRequest{Operation: input.Operation, Indices: input.Indices, Names: input.Names, Options: input.Options, Timeout: timeout})
 	if err != nil {
 		return nil, core.ElasticsearchResult{}, err
 	}

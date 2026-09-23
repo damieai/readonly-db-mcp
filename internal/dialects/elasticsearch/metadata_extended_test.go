@@ -38,12 +38,24 @@ func TestNativeAliasAndSettingsMetadata(t *testing.T) {
 						t.Error("native alias route/options changed")
 					}
 					fmt.Fprint(w, `{"reports-2026":{"aliases":{"reports-date":{"filter":{"term":{"tenant":"a"}},"search_routing":"tenant-a"}}}}`)
+				case "/reports-*/_alias/reports-date,reports-*":
+					reads.Add(1)
+					fmt.Fprint(w, `{"reports-2026":{"aliases":{"reports-date":{"filter":{"term":{"tenant":"a"}}}}}}`)
 				case "/reports-*/_settings":
 					reads.Add(1)
 					if r.Method != http.MethodGet || r.URL.Query().Get("flat_settings") != "true" || r.URL.Query().Get("include_defaults") != "true" {
 						t.Error("native settings route/options changed")
 					}
 					fmt.Fprint(w, `{"reports-2026":{"settings":{"index.number_of_docs":"9007199254740993"},"defaults":{"index.number_of_shards":"1"}}}`)
+				case "/reports-*/_settings/index.number_of_*,index.refresh_interval":
+					reads.Add(1)
+					fmt.Fprint(w, `{"reports-2026":{"settings":{"index.number_of_shards":"1"}}}`)
+				case "/reports-*/_settings/index.number_of_?hards":
+					reads.Add(1)
+					if !strings.Contains(r.RequestURI, "%3F") {
+						t.Error("metadata name wildcard entered URL query")
+					}
+					fmt.Fprint(w, `{"reports-2026":{"settings":{"index.number_of_shards":"1"}}}`)
 				case "/" + daySource + "/_settings":
 					reads.Add(1)
 					if !strings.Contains(r.RequestURI, "%2F") || !strings.Contains(r.RequestURI, "%2B08%3A00") {
@@ -59,6 +71,9 @@ func TestNativeAliasAndSettingsMetadata(t *testing.T) {
 				{Operation: "aliases", Options: map[string]json.RawMessage{"ignore_unavailable": json.RawMessage(`false`)}},
 				{Operation: "settings", Options: map[string]json.RawMessage{"flat_settings": json.RawMessage(`true`), "include_defaults": json.RawMessage(`true`)}},
 				{Operation: "settings", Indices: []string{daySource}},
+				{Operation: "aliases", Names: []string{"reports-date", "reports-*"}},
+				{Operation: "settings", Names: []string{"index.number_of_*", "index.refresh_interval"}},
+				{Operation: "settings", Names: []string{"index.number_of_?hards"}},
 			} {
 				out, err := target.ElasticsearchMetadata(context.Background(), request)
 				if err != nil {
@@ -68,7 +83,7 @@ func TestNativeAliasAndSettingsMetadata(t *testing.T) {
 					t.Fatal("native metadata result was changed")
 				}
 			}
-			if reads.Load() != 3 || controller.Stats().Active != 0 || target.Info().Capabilities["aliases"] != "implemented" || target.Info().Capabilities["settings"] != "implemented" {
+			if reads.Load() != 6 || controller.Stats().Active != 0 || target.Info().Capabilities["aliases"] != "implemented" || target.Info().Capabilities["settings"] != "implemented" {
 				t.Fatal("native metadata capability, execution or admission mismatch")
 			}
 		})
@@ -82,7 +97,7 @@ func TestAliasSettingsMetadataScopeAndDrift(t *testing.T) {
 	response := `{"reports-2026":{"aliases":{"reports-date":{}}}}`
 	drift := false
 	interceptQuery(f, func(w http.ResponseWriter, r *http.Request) bool {
-		if !strings.HasSuffix(r.URL.Path, "/_alias") && !strings.HasSuffix(r.URL.Path, "/_settings") {
+		if !strings.Contains(r.URL.Path, "/_alias") && !strings.Contains(r.URL.Path, "/_settings") {
 			return false
 		}
 		reads.Add(1)
@@ -103,7 +118,11 @@ func TestAliasSettingsMetadataScopeAndDrift(t *testing.T) {
 		{"settings", `{"reports-2026":{"settings":null}}`},
 	} {
 		response = tc.raw
-		if out, err := target.ElasticsearchMetadata(context.Background(), core.ElasticsearchMetadataRequest{Operation: tc.operation}); err == nil || out != nil {
+		names := []string{"*"}
+		if tc.operation == "settings" {
+			names = []string{"index.*"}
+		}
+		if out, err := target.ElasticsearchMetadata(context.Background(), core.ElasticsearchMetadataRequest{Operation: tc.operation, Names: names}); err == nil || out != nil {
 			t.Fatal("unsafe metadata response returned", tc)
 		}
 	}
@@ -119,6 +138,14 @@ func TestAliasSettingsMetadataScopeAndDrift(t *testing.T) {
 		if out, err := target.ElasticsearchMetadata(context.Background(), core.ElasticsearchMetadataRequest{Operation: "settings", Options: options}); err == nil || out != nil {
 			t.Fatal("invalid settings option was accepted")
 		}
+	}
+	for _, names := range [][]string{{""}, {"index.number_of_shards/../private"}, {"index.number_of_shards,private"}, {"index.%2Fprivate"}, {"index.refresh_interval\nprivate"}} {
+		if out, err := target.ElasticsearchMetadata(context.Background(), core.ElasticsearchMetadataRequest{Operation: "settings", Names: names}); err == nil || out != nil {
+			t.Fatal("invalid setting name selector was accepted", names)
+		}
+	}
+	if out, err := target.ElasticsearchMetadata(context.Background(), core.ElasticsearchMetadataRequest{Operation: "resolve", Names: []string{"reports-*"}}); err == nil || out != nil {
+		t.Fatal("metadata name selector was accepted by resolve")
 	}
 }
 

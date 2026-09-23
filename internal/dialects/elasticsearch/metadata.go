@@ -6,9 +6,35 @@ import (
 	"net/http"
 	"net/url"
 	"strings"
+	"unicode"
 
 	"github.com/your-org/readonly-db-mcp/internal/config"
 )
+
+func validateMetadataNames(names []string) error {
+	if len(names) > 10000 {
+		return failure("resource_limit", "too many metadata names")
+	}
+	for _, name := range names {
+		if name == "" || len(name) > 4096 || name == "." || name == ".." {
+			return failure("invalid_request", "invalid metadata name selector")
+		}
+		for _, r := range name {
+			if unicode.IsSpace(r) || unicode.IsControl(r) || strings.ContainsRune(`/\\,%#`, r) {
+				return failure("invalid_request", "invalid metadata name selector")
+			}
+		}
+	}
+	return nil
+}
+
+func escapedMetadataNames(names []string) string {
+	parts := make([]string, len(names))
+	for i, name := range names {
+		parts[i] = url.PathEscape(name)
+	}
+	return strings.Join(parts, ",")
+}
 
 type resolvedIndex struct {
 	Name       string   `json:"name"`

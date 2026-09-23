@@ -9,8 +9,9 @@
 
 Implementation update (2026-09-23, index metadata): `es_metadata` now reads
 native alias definitions and index settings for scoped sources, including pinned
-native query options. Responses are checked for unexpected index names and
-out-of-scope aliases, then source inventory is re-resolved before return. An
+native query options and optional alias/setting name selectors. Responses are
+checked for unexpected index names and out-of-scope aliases, then source
+inventory is re-resolved before return. An
 optional read-only live test is supplied. The separate `_rank_eval` handler is
 still pending: both pinned REST implementations do not bind its internal search
 task to HTTP channel closure, so cancellation and server-work accounting need
@@ -221,7 +222,7 @@ mutation-keyword lists.
 | --- | --- |
 | `es_query` | `{target, operation, indices?, body?, options?, timeout_ms?, max_rows?, purpose?}`; native JSON query body |
 | `es_batch` | `{target, requests, consistency, timeout_ms?}`; typed operations, one shared deadline |
-| `es_metadata` | `{target, operation, indices?, fields?, fresh?}`; scoped resolve, mappings, aliases, data streams and field capabilities |
+| `es_metadata` | `{target, operation, indices?, names?, options?, timeout_ms?}`; scoped resolve/mappings and native alias/settings metadata; `names` applies to aliases/settings |
 | `es_cursor` | `{target, action, handle?, indices?, body?, keep_alive_ms?, timeout_ms?}`; open/next/close a service-owned context |
 
 `operation` is a semantic enum, not an HTTP path. `options` is validated against

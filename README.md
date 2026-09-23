@@ -210,9 +210,10 @@ Query preflight checks all nodes against the pinned build and requires an empty
 external-plugin inventory; custom plugin profiles remain pending.
 
 `es_metadata` supports `resolve`, `mappings`, `aliases` and `settings`. Alias and
-settings reads accept the pinned native options in `options`, such as
-`flat_settings` and `include_defaults`; returned index and alias names are
-checked against configured scope. `es_query` supports `search`,
+settings reads accept `names` to select native alias or setting names (including
+wildcards), and pinned native options in `options`, such as `flat_settings` and
+`include_defaults`; returned index and alias names are checked against configured
+scope. `es_query` supports `search`,
 `count`, `get`, `mget`, `termvectors`, `mtermvectors`, `explain`, `field_caps`,
 `search_shards`, `indices.validate_query`, `search_template` and
 `render_search_template`, `eql.search`, `sql.query`, `sql.translate` and `esql.query`. IDs use the structured `id` field. Native JSON and

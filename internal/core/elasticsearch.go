@@ -9,6 +9,7 @@ import (
 type ElasticsearchMetadataRequest struct {
 	Operation string                     `json:"operation"`
 	Indices   []string                   `json:"indices,omitempty"`
+	Names     []string                   `json:"names,omitempty"`
 	Options   map[string]json.RawMessage `json:"options,omitempty"`
 	Timeout   time.Duration              `json:"-"`
 }

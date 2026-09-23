@@ -36,8 +36,8 @@ func TestElasticsearchLiveAliasSettingsMetadata(t *testing.T) {
 	}
 	defer target.Close()
 	for _, request := range []core.ElasticsearchMetadataRequest{
-		{Operation: "aliases", Indices: []string{index}},
-		{Operation: "settings", Indices: []string{index}, Options: map[string]json.RawMessage{"flat_settings": json.RawMessage(`true`), "include_defaults": json.RawMessage(`true`)}},
+		{Operation: "aliases", Indices: []string{index}, Names: []string{alias}},
+		{Operation: "settings", Indices: []string{index}, Names: []string{"index.number_of_*"}, Options: map[string]json.RawMessage{"flat_settings": json.RawMessage(`true`), "include_defaults": json.RawMessage(`true`)}},
 	} {
 		result, err := target.ElasticsearchMetadata(ctx, request)
 		if err != nil {
