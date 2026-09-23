@@ -869,8 +869,10 @@ func (p *queryProof) suggest(v any, rows, depth int) error {
 			if err != nil {
 				return err
 			}
-			if _, ok := phrase["collate"]; ok {
-				return failure("capability_unavailable", "per-suggestion collate templates require source proof after substitution")
+			if value, ok := phrase["collate"]; ok {
+				if err := p.prepareCollate(phrase, value, rows, depth+1); err != nil {
+					return err
+				}
 			}
 		}
 		// Ordinary term/phrase/completion suggestions have no external sources.

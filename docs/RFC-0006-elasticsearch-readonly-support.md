@@ -59,6 +59,13 @@ scope; their native intersection cannot add authority. Key revocation and
 descriptor changes invalidate the proof. See
 [API-key evidence and live gate](qualification/2026-09-23-elasticsearch-api-key.md).
 
+Implementation update (2026-09-23, collate): phrase suggester collate accepts
+inline and readable stored Mustache queries. Fixed parameters are rendered and
+source-proved before search; per-candidate text is left only in a JSON-safe
+scalar position in a frozen query. Candidate-dependent query structure and
+external source names still require a separate proof. See
+[collate evidence](qualification/2026-09-23-elasticsearch-collate.md).
+
 Implementation update (2026-09-23, date math): native `<...{now/...}>` index
 sources now pass unchanged through metadata, search, EQL, SQL, ES|QL and
 embedded read-only lookups. Each expression is URI-escaped as one path element;
