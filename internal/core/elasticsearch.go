@@ -7,9 +7,10 @@ import (
 )
 
 type ElasticsearchMetadataRequest struct {
-	Operation string        `json:"operation"`
-	Indices   []string      `json:"indices,omitempty"`
-	Timeout   time.Duration `json:"-"`
+	Operation string                     `json:"operation"`
+	Indices   []string                   `json:"indices,omitempty"`
+	Options   map[string]json.RawMessage `json:"options,omitempty"`
+	Timeout   time.Duration              `json:"-"`
 }
 
 // Native bodies and option values must not pass through float64 decoding.

@@ -137,7 +137,7 @@ func (t *Target) Info() core.TargetInfo {
 		features["esql_enrich"] = "implemented_native_cluster_snapshot_scope"
 		features["enrich_data_scope"] = config.ElasticsearchEnrichScope
 	}
-	return core.TargetInfo{Name: t.cfg.Name, Engine: config.EngineElasticsearch, Environment: t.cfg.Environment, Consistency: config.ConsistencyEventual, Healthy: t.ready() == nil, ReadOnlyUser: t.ready() == nil, ServerReadOnly: false, ServerVersion: t.cfg.Elasticsearch.Version, DeploymentMode: "elasticsearch-phase-9-date-math", AllowedIndices: append([]string(nil), t.cfg.Elasticsearch.AllowedIndices...), PolicyRevision: "es-native-date-math-v9", ProofCheckedAt: time.Unix(0, t.checked.Load()).UTC().Format(time.RFC3339), Capabilities: features}
+	return core.TargetInfo{Name: t.cfg.Name, Engine: config.EngineElasticsearch, Environment: t.cfg.Environment, Consistency: config.ConsistencyEventual, Healthy: t.ready() == nil, ReadOnlyUser: t.ready() == nil, ServerReadOnly: false, ServerVersion: t.cfg.Elasticsearch.Version, DeploymentMode: "elasticsearch-phase-10-metadata", AllowedIndices: append([]string(nil), t.cfg.Elasticsearch.AllowedIndices...), PolicyRevision: "es-native-metadata-v10", ProofCheckedAt: time.Unix(0, t.checked.Load()).UTC().Format(time.RFC3339), Capabilities: features}
 }
 
 func (t *Target) ElasticsearchMetadata(ctx context.Context, request core.ElasticsearchMetadataRequest) (result *core.ElasticsearchResult, err error) {
@@ -167,6 +167,9 @@ func (t *Target) ElasticsearchMetadata(ctx context.Context, request core.Elastic
 				_, _ = mac.Write([]byte{0})
 				_, _ = mac.Write([]byte(index))
 			}
+			options, _ := json.Marshal(request.Options)
+			_, _ = mac.Write([]byte{0})
+			_, _ = mac.Write(options)
 			t.auditor.Record(ctx, audit.Event{QueryID: id, Target: t.cfg.Name, Operation: "es_metadata", Fingerprint: hex.EncodeToString(mac.Sum(nil)[:12]), Decision: outcome, Reason: code, Duration: time.Since(started)})
 		}
 	}()
@@ -187,6 +190,13 @@ func (t *Target) ElasticsearchMetadata(ctx context.Context, request core.Elastic
 	if err := metadataOperation(t.cfg.Elasticsearch.Version, request.Operation); err != nil {
 		return nil, err
 	}
+	if len(request.Options) != 0 && request.Operation != "aliases" && request.Operation != "settings" {
+		return nil, failure("invalid_request", "metadata options are available for aliases and settings")
+	}
+	options, err := queryOptions(t.cfg.Elasticsearch.Version, request.Operation, request.Options)
+	if err != nil {
+		return nil, err
+	}
 	indices := request.Indices
 	if len(indices) == 0 {
 		indices = t.cfg.Elasticsearch.AllowedIndices
@@ -198,6 +208,11 @@ func (t *Target) ElasticsearchMetadata(ctx context.Context, request core.Elastic
 	for _, i := range indices {
 		bytes += int64(len(i)) + 4
 	}
+	optionBytes, err := json.Marshal(request.Options)
+	if err != nil {
+		return nil, failure("invalid_request", "metadata options cannot be encoded")
+	}
+	bytes += int64(len(optionBytes))
 	if bytes > int64(t.cfg.Elasticsearch.MaxRequestBytes) || !queuedMemory.TryAcquire(bytes) {
 		return nil, failure("resource_limit", "queued Elasticsearch request budget is exhausted")
 	}
@@ -220,6 +235,7 @@ func (t *Target) ElasticsearchMetadata(ctx context.Context, request core.Elastic
 	if err != nil {
 		return nil, err
 	}
+	resolutionRaw := data
 	if request.Operation == "mappings" {
 		if err := t.ready(); err != nil {
 			return nil, err
@@ -232,6 +248,28 @@ func (t *Target) ElasticsearchMetadata(ctx context.Context, request core.Elastic
 		}
 		if err := validateMappings(data, physical); err != nil {
 			return nil, err
+		}
+	} else if request.Operation == "aliases" || request.Operation == "settings" {
+		if err := t.ready(); err != nil {
+			return nil, err
+		}
+		path := "/" + escapedIndexTargets(indices) + "/_alias"
+		if request.Operation == "settings" {
+			path = "/" + escapedIndexTargets(indices) + "/_settings"
+		}
+		data, err = t.wire.request(ctx, endpoint, http.MethodGet, path, options, nil, "application/json", t.limits.MaxResultBytes, false)
+		if err != nil {
+			return nil, err
+		}
+		if err := validateIndexMetadata(ctx, data, resolutionRaw, physical, request.Operation, t.cfg.Elasticsearch); err != nil {
+			return nil, err
+		}
+		_, after, err := t.resolve(ctx, endpoint, indices)
+		if err != nil {
+			return nil, err
+		}
+		if !sameResolvedInventory(physical, after) {
+			return nil, failure("scope_denied", "metadata source inventory changed during request; retry explicitly")
 		}
 	}
 	result = &core.ElasticsearchResult{QueryID: id, Target: t.cfg.Name, Engine: config.EngineElasticsearch, Consistency: config.ConsistencyEventual, Operation: request.Operation, Data: json.RawMessage(data), DurationMS: time.Since(started).Milliseconds()}

@@ -1,11 +1,21 @@
 # RFC-0006: Elasticsearch Read-Only Query Support
 
-- Status: Metadata, native query/batch, owned PIT/scroll/SQL, synchronous EQL/SQL/ES|QL, date math index sources and explicit cluster snapshot ENRICH scope implemented; finer isolation, other advanced profiles and live qualification pending
+- Status: Scoped resolve/mappings/aliases/settings metadata, native query/batch, owned PIT/scroll/SQL, synchronous EQL/SQL/ES|QL, date math index sources and explicit cluster snapshot ENRICH scope implemented; finer isolation, other advanced profiles and live qualification pending
 - Authors: readonly-db-mcp maintainers
 - Created: 2026-09-12
 - Depends on: RFC-0001 resource governance and the common architecture contract
 - Target release: staged; advanced query acceptance is a completion gate
 - Scope: Elasticsearch over HTTPS through the existing stdio MCP transport
+
+Implementation update (2026-09-23, index metadata): `es_metadata` now reads
+native alias definitions and index settings for scoped sources, including pinned
+native query options. Responses are checked for unexpected index names and
+out-of-scope aliases, then source inventory is re-resolved before return. An
+optional read-only live test is supplied. The separate `_rank_eval` handler is
+still pending: both pinned REST implementations do not bind its internal search
+task to HTTP channel closure, so cancellation and server-work accounting need
+a specific lifecycle design. See
+[metadata evidence](qualification/2026-09-23-elasticsearch-metadata.md).
 
 Implementation update (2026-09-23, date math): native `<...{now/...}>` index
 sources now pass unchanged through metadata, search, EQL, SQL, ES|QL and

@@ -49,6 +49,7 @@ dedicated SELECT-only SQL identity / read-key-only Redis ACL
   HTTP/1.1 TLS/socket leases and periodic re-attestation. Native query, batch,
   owned cursor and language handlers preserve read-only syntax; date math index
   sources use native resolution with scope checks before execution and return.
+  Metadata exposes scoped mappings, alias definitions and index settings.
 - `tools/es-rest-catalog`: reproducible REST catalog extraction from immutable
   upstream commits, with reviewed endpoint effects and source hashes.
 - `internal/config`: strict YAML decoding, hard ceilings and secret resolution.

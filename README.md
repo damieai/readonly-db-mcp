@@ -209,7 +209,10 @@ Stored script/template inspection additionally accepts the narrowly scoped
 Query preflight checks all nodes against the pinned build and requires an empty
 external-plugin inventory; custom plugin profiles remain pending.
 
-`es_metadata` supports `resolve` and `mappings`. `es_query` supports `search`,
+`es_metadata` supports `resolve`, `mappings`, `aliases` and `settings`. Alias and
+settings reads accept the pinned native options in `options`, such as
+`flat_settings` and `include_defaults`; returned index and alias names are
+checked against configured scope. `es_query` supports `search`,
 `count`, `get`, `mget`, `termvectors`, `mtermvectors`, `explain`, `field_caps`,
 `search_shards`, `indices.validate_query`, `search_template` and
 `render_search_template`, `eql.search`, `sql.query`, `sql.translate` and `esql.query`. IDs use the structured `id` field. Native JSON and
@@ -227,6 +230,8 @@ by `inspect_target`, separately from mutation denial. See the
 for setup, tests and remaining gates.
 See [date math qualification](docs/qualification/2026-09-23-elasticsearch-date-math.md)
 for syntax, scope and live-test details.
+See [alias/settings qualification](docs/qualification/2026-09-23-elasticsearch-metadata.md)
+for native options and response checks.
 
 ```json
 {"target":"search-reporting","operation":"search","body":{"size":0,"runtime_mappings":{"taxed":{"type":"double","script":{"source":"emit(doc['amount'].value * params.factor)","params":{"factor":1.1}}}},"aggs":{"total":{"sum":{"field":"taxed"}}}}}

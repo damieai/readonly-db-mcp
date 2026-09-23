@@ -12,10 +12,11 @@ import (
 )
 
 type ElasticsearchMetadataInput struct {
-	Target    string   `json:"target" jsonschema:"Exact Elasticsearch target alias returned by list_targets"`
-	Operation string   `json:"operation" jsonschema:"Metadata operation: resolve or mappings"`
-	Indices   []string `json:"indices,omitempty" jsonschema:"Scoped index, alias or data-stream expressions; omitted uses configured scope"`
-	TimeoutMS int      `json:"timeout_ms,omitempty" jsonschema:"Optional timeout in milliseconds, including admission and source resolution"`
+	Target    string                     `json:"target" jsonschema:"Exact Elasticsearch target alias returned by list_targets"`
+	Operation string                     `json:"operation" jsonschema:"Metadata operation: resolve, mappings, aliases or settings"`
+	Indices   []string                   `json:"indices,omitempty" jsonschema:"Scoped index, alias or data-stream expressions; omitted uses configured scope"`
+	Options   map[string]json.RawMessage `json:"options,omitempty" jsonschema:"Native options for aliases and settings metadata"`
+	TimeoutMS int                        `json:"timeout_ms,omitempty" jsonschema:"Optional timeout in milliseconds, including admission and source resolution"`
 }
 
 func (v *ElasticsearchMetadataInput) UnmarshalJSON(data []byte) error {
@@ -31,7 +32,7 @@ func (v *ElasticsearchMetadataInput) UnmarshalJSON(data []byte) error {
 	}
 	for name, value := range fields {
 		switch name {
-		case "target", "operation", "indices", "timeout_ms":
+		case "target", "operation", "indices", "options", "timeout_ms":
 		default:
 			return fmt.Errorf("invalid_request: unknown metadata envelope field")
 		}
@@ -54,11 +55,12 @@ func (v *ElasticsearchMetadataInput) UnmarshalJSON(data []byte) error {
 func (s *Server) registerElasticsearchTools() {
 	s.registerElasticsearchQueryTools()
 	s.registerElasticsearchCursorTool()
-	t := tool("es_metadata", "Resolve scoped Elasticsearch indices, aliases and data streams, or read their mappings. Query capabilities are reported by inspect_target.")
+	t := tool("es_metadata", "Resolve scoped Elasticsearch indices, aliases and data streams, or read mappings, alias definitions and index settings. Query capabilities are reported by inspect_target.")
 	t.InputSchema = map[string]any{"type": "object", "additionalProperties": false, "required": []string{"target", "operation"}, "properties": map[string]any{
 		"target":     map[string]any{"type": "string", "minLength": 1, "maxLength": 64},
-		"operation":  map[string]any{"type": "string", "enum": []string{"resolve", "mappings"}},
-		"indices":    map[string]any{"type": "array", "maxItems": 10000, "items": map[string]any{"type": "string", "maxLength": 255}},
+		"operation":  map[string]any{"type": "string", "enum": []string{"resolve", "mappings", "aliases", "settings"}},
+		"indices":    map[string]any{"type": "array", "maxItems": 10000, "items": map[string]any{"type": "string", "maxLength": 4096}},
+		"options":    map[string]any{"type": "object", "additionalProperties": true},
 		"timeout_ms": map[string]any{"type": "integer", "minimum": 0, "maximum": 900000},
 	}}
 	t.OutputSchema = map[string]any{"type": "object", "properties": map[string]any{"data": map[string]any{"type": "object"}}}
@@ -96,7 +98,7 @@ func (s *Server) elasticsearchMetadata(ctx context.Context, _ *mcp.CallToolReque
 	if err != nil {
 		return nil, core.ElasticsearchResult{}, err
 	}
-	result, err := target.ElasticsearchMetadata(ctx, core.ElasticsearchMetadataRequest{Operation: input.Operation, Indices: input.Indices, Timeout: timeout})
+	result, err := target.ElasticsearchMetadata(ctx, core.ElasticsearchMetadataRequest{Operation: input.Operation, Indices: input.Indices, Options: input.Options, Timeout: timeout})
 	if err != nil {
 		return nil, core.ElasticsearchResult{}, err
 	}

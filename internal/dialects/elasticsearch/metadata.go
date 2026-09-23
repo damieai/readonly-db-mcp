@@ -140,3 +140,71 @@ func validateMappings(raw []byte, physical map[string]bool) error {
 	}
 	return nil
 }
+
+func validateIndexMetadata(ctx context.Context, raw, resolved []byte, physical map[string]bool, operation string, cfg *config.ElasticsearchConfig) error {
+	if err := strictJSONContext(ctx, raw, cfg.MaxJSONDepth, cfg.MaxJSONNodes, 0); err != nil {
+		return err
+	}
+	allowed := make(map[string]bool, len(physical))
+	for name := range physical {
+		allowed[name] = true
+	}
+	if operation == "aliases" {
+		var inventory resolution
+		if err := decodeProof(resolved, &inventory); err != nil {
+			return err
+		}
+		// Native data-stream alias metadata is keyed by the logical stream,
+		// while settings for a stream are keyed by its backing indices.
+		for _, stream := range inventory.DataStreams {
+			allowed[stream.Name] = true
+		}
+	}
+	result, err := decodeObject(raw)
+	if err != nil {
+		return failure("invalid_response", "expected native index metadata object")
+	}
+	for index, value := range result {
+		if !allowed[index] {
+			return failure("scope_denied", "metadata response escaped the resolved index inventory")
+		}
+		entry, err := object(value)
+		if err != nil {
+			return failure("invalid_response", "invalid index metadata entry")
+		}
+		if operation == "settings" {
+			if _, err := object(entry["settings"]); err != nil {
+				return failure("invalid_response", "index settings are missing")
+			}
+			continue
+		}
+		aliases, err := object(entry["aliases"])
+		if err != nil {
+			return failure("invalid_response", "index aliases are missing")
+		}
+		for name, value := range aliases {
+			if !concreteName(name) {
+				return failure("scope_denied", "invalid resolved alias name")
+			}
+			if err := scopePattern(ctx, name, cfg); err != nil {
+				return err
+			}
+			if _, err := object(value); err != nil {
+				return failure("invalid_response", "invalid alias definition")
+			}
+		}
+	}
+	return nil
+}
+
+func sameResolvedInventory(a, b map[string]bool) bool {
+	if len(a) != len(b) {
+		return false
+	}
+	for name := range a {
+		if !b[name] {
+			return false
+		}
+	}
+	return true
+}

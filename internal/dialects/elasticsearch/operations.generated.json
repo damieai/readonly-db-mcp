@@ -1,5 +1,44 @@
 {
   "8.19.21": {
+    "aliases": {
+      "api": "indices.get_alias",
+      "effect": "read",
+      "implemented": true,
+      "parameters": [
+        "allow_no_indices",
+        "expand_wildcards",
+        "ignore_unavailable",
+        "local"
+      ],
+      "routes": [
+        {
+          "methods": [
+            "GET"
+          ],
+          "path": "/_alias"
+        },
+        {
+          "methods": [
+            "GET"
+          ],
+          "path": "/_alias/{name}"
+        },
+        {
+          "methods": [
+            "GET"
+          ],
+          "path": "/{index}/_alias/{name}"
+        },
+        {
+          "methods": [
+            "GET"
+          ],
+          "path": "/{index}/_alias"
+        }
+      ],
+      "sha256": "437c4884ad18ccfa73a8c842f1832b76243431952df9dad60bd9dbff41b73a22",
+      "source": "https://raw.githubusercontent.com/elastic/elasticsearch/4fe44c255c3d0da06779b921e132cdc555ed9aff/rest-api-spec/src/main/resources/rest-api-spec/api/indices.get_alias.json"
+    },
     "bulk": {
       "api": "bulk",
       "effect": "mutation",
@@ -1050,6 +1089,48 @@
       "sha256": "2f778b72b623fdf3025d91109abd86633b12245ccc189bc767cc56f1fadc89fa",
       "source": "https://raw.githubusercontent.com/elastic/elasticsearch/4fe44c255c3d0da06779b921e132cdc555ed9aff/rest-api-spec/src/main/resources/rest-api-spec/api/search_template.json"
     },
+    "settings": {
+      "api": "indices.get_settings",
+      "effect": "read",
+      "implemented": true,
+      "parameters": [
+        "allow_no_indices",
+        "expand_wildcards",
+        "flat_settings",
+        "ignore_unavailable",
+        "include_defaults",
+        "local",
+        "master_timeout"
+      ],
+      "routes": [
+        {
+          "methods": [
+            "GET"
+          ],
+          "path": "/_settings"
+        },
+        {
+          "methods": [
+            "GET"
+          ],
+          "path": "/{index}/_settings"
+        },
+        {
+          "methods": [
+            "GET"
+          ],
+          "path": "/{index}/_settings/{name}"
+        },
+        {
+          "methods": [
+            "GET"
+          ],
+          "path": "/_settings/{name}"
+        }
+      ],
+      "sha256": "0bbf6806d3719eb13870b2fd5f9ba707d45deac922bbee1b710675552c205686",
+      "source": "https://raw.githubusercontent.com/elastic/elasticsearch/4fe44c255c3d0da06779b921e132cdc555ed9aff/rest-api-spec/src/main/resources/rest-api-spec/api/indices.get_settings.json"
+    },
     "sql.clear_cursor": {
       "api": "sql.clear_cursor",
       "effect": "owned_context",
@@ -1218,6 +1299,45 @@
     }
   },
   "9.1.10": {
+    "aliases": {
+      "api": "indices.get_alias",
+      "effect": "read",
+      "implemented": true,
+      "parameters": [
+        "allow_no_indices",
+        "expand_wildcards",
+        "ignore_unavailable",
+        "master_timeout"
+      ],
+      "routes": [
+        {
+          "methods": [
+            "GET"
+          ],
+          "path": "/_alias"
+        },
+        {
+          "methods": [
+            "GET"
+          ],
+          "path": "/_alias/{name}"
+        },
+        {
+          "methods": [
+            "GET"
+          ],
+          "path": "/{index}/_alias/{name}"
+        },
+        {
+          "methods": [
+            "GET"
+          ],
+          "path": "/{index}/_alias"
+        }
+      ],
+      "sha256": "304a8bf82806ef52d67088d39d31a16c8a74d7b2eec7f8d0102e5e251499ecb7",
+      "source": "https://raw.githubusercontent.com/elastic/elasticsearch/f2e019bd8110088070638ca779ec1543188c0f43/rest-api-spec/src/main/resources/rest-api-spec/api/indices.get_alias.json"
+    },
     "bulk": {
       "api": "bulk",
       "effect": "mutation",
@@ -2266,6 +2386,48 @@
       ],
       "sha256": "fbdab250aa06491e433d7582edb6162c14d1c6203f4d59a7fea909649152119b",
       "source": "https://raw.githubusercontent.com/elastic/elasticsearch/f2e019bd8110088070638ca779ec1543188c0f43/rest-api-spec/src/main/resources/rest-api-spec/api/search_template.json"
+    },
+    "settings": {
+      "api": "indices.get_settings",
+      "effect": "read",
+      "implemented": true,
+      "parameters": [
+        "allow_no_indices",
+        "expand_wildcards",
+        "flat_settings",
+        "ignore_unavailable",
+        "include_defaults",
+        "local",
+        "master_timeout"
+      ],
+      "routes": [
+        {
+          "methods": [
+            "GET"
+          ],
+          "path": "/_settings"
+        },
+        {
+          "methods": [
+            "GET"
+          ],
+          "path": "/{index}/_settings"
+        },
+        {
+          "methods": [
+            "GET"
+          ],
+          "path": "/{index}/_settings/{name}"
+        },
+        {
+          "methods": [
+            "GET"
+          ],
+          "path": "/_settings/{name}"
+        }
+      ],
+      "sha256": "08db3c564f402161cb55f722d7c2e692dac5a3c302fda1e8c20df408dcd20103",
+      "source": "https://raw.githubusercontent.com/elastic/elasticsearch/f2e019bd8110088070638ca779ec1543188c0f43/rest-api-spec/src/main/resources/rest-api-spec/api/indices.get_settings.json"
     },
     "sql.clear_cursor": {
       "api": "sql.clear_cursor",

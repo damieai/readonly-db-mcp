@@ -73,6 +73,8 @@ Untrusted:
     Native date math index selectors are resolved on the pinned endpoint, with
     their resulting sources checked before execution and again before return;
     configuration and role patterns keep ordinary index-glob semantics.
+    Alias and settings metadata use scoped native index paths and verify every
+    returned index; alias names are checked against the configured scope.
     Query visitors prove embedded lookup/document sources, including base64
     wrapper queries and rendered templates. Stored scripts are frozen to inspected
     inline definitions; only Painless/expression execution and Mustache rendering
