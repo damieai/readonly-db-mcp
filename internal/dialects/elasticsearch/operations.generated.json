@@ -724,7 +724,7 @@
     "msearch_template": {
       "api": "msearch_template",
       "effect": "read",
-      "implemented": false,
+      "implemented": true,
       "parameters": [
         "ccs_minimize_roundtrips",
         "max_concurrent_searches",
@@ -1942,7 +1942,7 @@
     "msearch_template": {
       "api": "msearch_template",
       "effect": "read",
-      "implemented": false,
+      "implemented": true,
       "parameters": [
         "ccs_minimize_roundtrips",
         "max_concurrent_searches",

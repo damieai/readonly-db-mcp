@@ -48,7 +48,7 @@ func queryOperation(version, name string) error {
 	if exists && op.Effect == "mutation" {
 		return failure("mutation_forbidden", "operation modifies persistent data or administrative state")
 	}
-	if !exists || !op.Implemented || op.Effect != "read" || name == "resolve" || name == "mappings" || name == "msearch" || name == "get_script" {
+	if !exists || !op.Implemented || op.Effect != "read" || name == "resolve" || name == "mappings" || name == "msearch" || name == "msearch_template" || name == "get_script" {
 		return failure("capability_unavailable", "operation has no public query handler; inspect target capabilities")
 	}
 	return nil
@@ -73,6 +73,8 @@ func capabilities(version string) map[string]string {
 	}
 	result["sql.clear_cursor"] = "implemented_via_es_cursor"
 	result["msearch"] = "implemented_via_es_batch"
+	result["msearch_template"] = "implemented_via_es_batch"
+	result["search_templates"] = "implemented_native_render_controls_frozen_batches"
 	result["get_script"] = "internal_proof_requires_script_get_privilege"
 	return result
 }

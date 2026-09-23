@@ -39,6 +39,10 @@ func searchTimeout(q *preparedQuery, left int64) error {
 // Homogeneous compatible searches use service-constructed NDJSON. Options
 // without an msearch-header equivalent keep their semantics via sequential
 // execution under the same batch lease; they are never silently discarded.
+// Template members are already natively rendered and proved. Execute these
+// frozen bodies through cancellable _msearch, not _msearch/template: the pinned
+// template route does not bind its task lifetime to the HTTP channel. Never
+// render again after proof, even when rendered data contains Mustache markers.
 func (t *Target) multiSearch(ctx context.Context, endpoint int, queries []*preparedQuery) ([][]byte, bool, error) {
 	headers := map[string]bool{"routing": true, "preference": true, "search_type": true, "request_cache": true, "allow_no_indices": true, "ignore_unavailable": true, "expand_wildcards": true, "allow_partial_search_results": true}
 	typed := ""

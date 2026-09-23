@@ -24,7 +24,7 @@ OPERATIONS = {
         "mtermvectors", "search_template", "render_search_template", "get_script",
         "explain", "field_caps", "search_shards", "indices.validate_query",
     )},
-    "msearch_template": ("msearch_template", "read", False),
+    "msearch_template": ("msearch_template", "read", True),
     "eql.search": ("eql.search", "read", True),
     "esql.query": ("esql.query", "read", True),
     "cluster.state": ("cluster.state", "internal_proof", True),

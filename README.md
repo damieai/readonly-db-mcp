@@ -225,6 +225,19 @@ for setup, tests and remaining gates.
 {"target":"search-reporting","operation":"search","body":{"size":0,"runtime_mappings":{"taxed":{"type":"double","script":{"source":"emit(doc['amount'].value * params.factor)","params":{"factor":1.1}}}},"aggs":{"total":{"sum":{"field":"taxed"}}}}}
 ```
 
+Search templates accept native `source` or stored `id`, `params`, `explain` and
+`profile`. Envelope `explain/profile` flags default to false and override the
+rendered search's same-named fields, matching native template execution. The
+native `options.explain` override remains available. `render_search_template`
+returns the validated rendered body without applying these execution flags.
+
+Multi-search templates use `es_batch` with `search_template` members; each member
+can use its own template, parameters, index scope, routing and diagnostic flags.
+All templates render and pass source/effect checks before any search executes.
+Frozen results go through `_msearch` or individual searches when native options
+require them, preserving cancellation and avoiding a second template expansion.
+See [template qualification](docs/qualification/2026-09-23-elasticsearch-templates.md).
+
 Use `es_batch` with `requests: [{"operation":"search","body":{...}}, ...]` and
 `consistency: "independent"`. All members are proved before execution and share
 one deadline and one encoded result budget. Compatible searches use generated

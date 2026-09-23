@@ -169,6 +169,20 @@ share one deadline, one admission permit and one combined encoded response cap.
 Retained mapping/script proof bytes are bounded together; rendered member bodies
 are bounded together. Whole-envelope JSON node/depth limits cover batch input.
 
+Template `source`/stored `id` and parameters are rendered through the pinned
+native Mustache engine. The template envelope's `explain` and `profile` flags
+override the rendered search fields for execution, including the native false
+defaults; render-only requests retain the rendered fields. Stored definitions,
+rendered JSON and nested sources/scripts are proved before search. Compatible
+`search_template` batch members use the same frozen `_msearch` frames as ordinary
+searches. Options without a compatible batch header keep per-member search
+execution. The original template is not executed or expanded after preflight,
+including when rendered data contains Mustache syntax. Both pinned native
+template execution REST routes lack HTTP task cancellation binding, whereas the
+selected search and msearch routes bind execution to the caller's HTTP channel.
+`msearch_template` is advertised as available through `es_batch`, with no raw
+caller-supplied NDJSON dispatch.
+
 Effect dispatch uses the pinned REST catalog. Contextual native DSL visitors
 preserve literals and script parameters while resolving executable source
 positions. Mtermvectors defaults are materialized in original input order before

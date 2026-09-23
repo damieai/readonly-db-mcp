@@ -447,9 +447,17 @@ func (p *queryProof) prepare(request core.ElasticsearchQueryRequest) (*preparedQ
 		q.path = base + "/_eql/search"
 	case "search", "search_template", "render_search_template":
 		if request.Operation != "search" {
+			// TransportSearchTemplateAction.convert applies the envelope flags
+			// after rendering, including their native false defaults. Simulation
+			// returns the rendered source before applying either flag.
+			explain, _ := body["explain"].(bool)
+			profile, _ := body["profile"].(bool)
 			body, err = p.render(body)
 			if err != nil {
 				return nil, err
+			}
+			if request.Operation == "search_template" {
+				body["explain"], body["profile"] = explain, profile
 			}
 		}
 		for _, key := range []string{"size", "from", "timeout"} {

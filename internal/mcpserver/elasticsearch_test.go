@@ -53,6 +53,8 @@ func TestElasticsearchThroughRegistryAndMCP(t *testing.T) {
 			fmt.Fprint(w, `{"reports-2026":{"mappings":{"_meta":{"number":9007199254740993}}}}`)
 		case "/reports-*/_search":
 			fmt.Fprint(w, `{"timed_out":false,"_shards":{"total":1,"failed":0,"successful":1},"hits":{"hits":[{"_index":"reports-2026","_id":"a","_source":{"number":9007199254740993}}]}}`)
+		case "/_render/template":
+			fmt.Fprint(w, `{"template_output":{"query":{"match_all":{}},"profile":false,"explain":false}}`)
 		case "/_sql":
 			var body map[string]json.RawMessage
 			_ = json.NewDecoder(r.Body).Decode(&body)
@@ -82,7 +84,21 @@ func TestElasticsearchThroughRegistryAndMCP(t *testing.T) {
 			cleared.Add(1)
 			fmt.Fprint(w, `{"succeeded":true,"num_freed":1}`)
 		case "/_msearch":
-			fmt.Fprint(w, `{"responses":[{"timed_out":false,"_shards":{"total":1,"failed":0,"successful":1},"hits":{"hits":[{"_index":"reports-2026","_id":"a","_source":{"number":9007199254740993}}]}}]}`)
+			var lines []json.RawMessage
+			decoder := json.NewDecoder(r.Body)
+			for decoder.More() {
+				var line json.RawMessage
+				if decoder.Decode(&line) != nil {
+					t.Error("invalid batch frame")
+					break
+				}
+				lines = append(lines, line)
+			}
+			responses := make([]json.RawMessage, len(lines)/2)
+			for i := range responses {
+				responses[i] = json.RawMessage(`{"timed_out":false,"_shards":{"total":1,"failed":0,"successful":1},"hits":{"hits":[{"_index":"reports-2026","_id":"a","_source":{"number":9007199254740993}}]}}`)
+			}
+			json.NewEncoder(w).Encode(map[string]any{"responses": responses})
 		default:
 			t.Errorf("unexpected MCP upstream path %q", r.URL.Path)
 			w.WriteHeader(404)
@@ -190,6 +206,8 @@ targets:
 	}{
 		{"es_query", json.RawMessage(`{"target":"es_test","operation":"search","body":{"query":{"script_score":{"query":{"match_all":{}},"script":{"source":"params.x","params":{"x":9007199254740993}}}}}}`)},
 		{"es_batch", json.RawMessage(`{"target":"es_test","requests":[{"operation":"search","body":{"query":{"match_all":{}}}}]}`)},
+		{"es_query", json.RawMessage(`{"target":"es_test","operation":"search_template","body":{"source":{"query":{"match_all":{}}},"profile":true,"explain":true}}`)},
+		{"es_batch", json.RawMessage(`{"target":"es_test","requests":[{"operation":"search_template","body":{"source":{"query":{"match_all":{}}},"profile":true}},{"operation":"search_template","body":{"source":{"query":{"match_all":{}}},"explain":true}}]}`)},
 		{"es_query", json.RawMessage(`{"target":"es_test","operation":"eql.search","body":{"query":"any where value == 9007199254740993"}}`)},
 		{"es_query", json.RawMessage(`{"target":"es_test","operation":"sql.query","body":{"query":"SELECT ? FROM \"reports-*\"","params":[9007199254740993]}}`)},
 		{"es_query", json.RawMessage(`{"target":"es_test","operation":"sql.translate","body":{"query":"SELECT ? FROM \"reports-*\"","params":[9007199254740993]}}`)},
@@ -215,6 +233,8 @@ targets:
 		args json.RawMessage
 	}{
 		{"es_query", json.RawMessage(`{"target":"es_test","operation":"search","body":{"size":1,"size":2}}`)},
+		{"es_query", json.RawMessage(`{"target":"es_test","operation":"search_template","body":{"source":"{}","profile":"true"}}`)},
+		{"es_query", json.RawMessage(`{"target":"es_test","operation":"msearch_template","body":{"source":"{}"}}`)},
 		{"es_query", json.RawMessage(`{"target":"es_test","operation":"eql.search","body":{"query":"any where true","wait_for_completion_timeout":"1s"}}`)},
 		{"es_query", json.RawMessage(`{"target":"es_test","operation":"eql.search","body":{"query":"any where true","query":"any where false"}}`)},
 		{"es_query", json.RawMessage(`{"target":"es_test","operation":"eql.search","body":{"query":"any where true; any where false"}}`)},

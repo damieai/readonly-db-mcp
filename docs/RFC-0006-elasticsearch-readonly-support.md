@@ -87,6 +87,16 @@ controlled native provisioning remains required. Finer confidentiality boundarie
 require a separately provisioned cluster. Real-server certification remains open.
 See [ENRICH evidence and live gates](qualification/2026-09-22-elasticsearch-enrich.md).
 
+Implementation update (2026-09-23, template diagnostics/batches): template
+`explain/profile` controls and false-default precedence now match native
+execution, while render-only requests preserve rendered values. Multi-template
+capability is exposed through `es_batch` with individually scoped template
+members. Existing native rendering and full DSL proof precede frozen search/
+msearch execution; the original template is never rendered again after proof.
+The pinned template execution REST routes lack HTTP task-cancellation binding,
+so the cancellable search routes carry execution. See
+[template evidence and live gates](qualification/2026-09-23-elasticsearch-templates.md).
+
 ## Summary
 
 Add `engine: elasticsearch`, an independent Elasticsearch adapter, and native

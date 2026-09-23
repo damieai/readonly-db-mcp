@@ -73,7 +73,13 @@ Untrusted:
     Query visitors prove embedded lookup/document sources, including base64
     wrapper queries and rendered templates. Stored scripts are frozen to inspected
     inline definitions; only Painless/expression execution and Mustache rendering
-    are admitted. Query node inventories must match the pinned stock build without
+    are admitted. Template envelope diagnostic flags follow native defaults and
+    precedence; simulation keeps the rendered values. Multi-template reads use
+    `es_batch`: every member is rendered/proved before execution, and literal
+    Mustache markers in rendered data are never expanded again. Frozen searches
+    use the cancellable search/msearch execution routes; the pinned native
+    template execution routes do not bind tasks to HTTP channel cancellation.
+    Query node inventories must match the pinned stock build without
     external plugins. Implicit semantic-text inference needs its own profile.
 12. Elasticsearch ignores environment proxies, node advertisements and HTTP
     redirects. The official transport disables SDK retries and shares a bounded

@@ -660,8 +660,15 @@ func (p *queryProof) storedScript(id string) (map[string]any, error) {
 }
 
 func (p *queryProof) render(body map[string]any) (map[string]any, error) {
-	if err := fieldsOnly(body, "source id params"); err != nil {
+	if err := fieldsOnly(body, "source id params explain profile"); err != nil {
 		return nil, err
+	}
+	for _, key := range []string{"explain", "profile"} {
+		if value, exists := body[key]; exists {
+			if _, ok := value.(bool); !ok {
+				return nil, failure("invalid_request", "template explain/profile controls must be boolean")
+			}
+		}
 	}
 	if id, ok := body["id"]; ok {
 		if _, ok := body["source"]; ok {
