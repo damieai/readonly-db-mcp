@@ -21,6 +21,8 @@ targets:
     consistency: eventual
     username: search_mcp_ro
     password_env: READONLY_ES_PASSWORD
+    # To use an API key instead, remove username/password_env and configure
+    # elasticsearch.api_key as shown in the API-key qualification record.
     elasticsearch:
       endpoints: [https://es-reporting.example.invalid:9200]
       version: 8.19.21

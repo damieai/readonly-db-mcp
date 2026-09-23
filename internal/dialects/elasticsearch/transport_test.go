@@ -21,19 +21,25 @@ import (
 )
 
 type esFixture struct {
-	mu                                               sync.Mutex
-	version, cluster, privilege, mapping, resolution string
-	requests                                         []string
-	intercept                                        func(http.ResponseWriter, *http.Request) bool
-	server                                           *httptest.Server
+	mu                                                                          sync.Mutex
+	version, cluster, privilege, mapping, resolution                            string
+	apiKeyHeader, apiKeyInfo, attestorName, attestorPassword, attestorPrivilege string
+	requests                                                                    []string
+	intercept                                                                   func(http.ResponseWriter, *http.Request) bool
+	server                                                                      *httptest.Server
 }
 
 func newESFixture(t *testing.T) *esFixture {
 	t.Helper()
 	f := &esFixture{version: "8.19.21", cluster: "abcdefghijklmnopqrstuv", privilege: string(readonlyProof()), mapping: `{"reports-2026":{"mappings":{"_meta":{"precise":9007199254740993},"properties":{"title":{"type":"text"}}}}}`, resolution: `{"indices":[{"name":"reports-2026","attributes":["open"],"aliases":[]}],"aliases":[],"data_streams":[]}`}
 	f.server = httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		f.mu.Lock()
+		apiKeyHeader, apiKeyInfo, attestorName, attestorPassword, attestorPrivilege := f.apiKeyHeader, f.apiKeyInfo, f.attestorName, f.attestorPassword, f.attestorPrivilege
+		f.mu.Unlock()
 		user, password, ok := r.BasicAuth()
-		if !ok || user != "fixture_reader" || password != "fixture-only-password" {
+		isKey := apiKeyHeader != "" && r.Header.Get("Authorization") == "APIKey "+apiKeyHeader
+		isAttestor := apiKeyHeader != "" && ok && user == attestorName && password == attestorPassword
+		if apiKeyHeader == "" && (!ok || user != "fixture_reader" || password != "fixture-only-password") || apiKeyHeader != "" && !isKey && !isAttestor {
 			w.WriteHeader(401)
 			return
 		}
@@ -43,6 +49,33 @@ func newESFixture(t *testing.T) *esFixture {
 		f.mu.Unlock()
 		w.Header().Set("X-Elastic-Product", "Elasticsearch")
 		w.Header().Set("Content-Type", "application/json")
+		if isAttestor {
+			switch r.URL.Path {
+			case "/_security/_authenticate":
+				fmt.Fprintf(w, `{"username":%q,"enabled":true,"authentication_type":"realm"}`, attestorName)
+			case "/_security/user/_privileges":
+				fmt.Fprint(w, attestorPrivilege)
+			case "/_security/api_key":
+				if r.Method != http.MethodGet || r.URL.Query().Get("id") != "fixture-key" || r.URL.Query().Get("with_limited_by") != "true" {
+					t.Error("attestor did not request the pinned key and limiting descriptors")
+				}
+				fmt.Fprint(w, apiKeyInfo)
+			default:
+				t.Errorf("attestor credential reached non-proof route %s", r.URL.Path)
+				w.WriteHeader(403)
+			}
+			return
+		}
+		if isKey && r.URL.Path == "/_security/api_key" {
+			t.Error("query API key attempted self-descriptor inspection")
+			w.WriteHeader(403)
+			return
+		}
+		if isKey && r.URL.Path == "/_security/user/_privileges" {
+			t.Error("query API key attempted to replace descriptor proof with self privileges")
+			w.WriteHeader(403)
+			return
+		}
 		if intercept != nil && intercept(w, r) {
 			return
 		}
@@ -55,7 +88,11 @@ func newESFixture(t *testing.T) *esFixture {
 		case r.URL.Path == "/":
 			fmt.Fprintf(w, `{"cluster_name":"fixture-cluster","cluster_uuid":%q,"version":{"number":%q,"build_hash":%q,"build_flavor":"default","build_snapshot":false}}`, cluster, version, config.ElasticsearchBuilds[version])
 		case r.URL.Path == "/_security/_authenticate":
-			fmt.Fprint(w, `{"username":"fixture_reader","enabled":true,"authentication_type":"realm"}`)
+			if isKey {
+				fmt.Fprint(w, `{"username":"fixture_owner","enabled":true,"authentication_type":"api_key","api_key":{"id":"fixture-key"}}`)
+			} else {
+				fmt.Fprint(w, `{"username":"fixture_reader","enabled":true,"authentication_type":"realm"}`)
+			}
 		case r.URL.Path == "/_nodes/plugins":
 			fmt.Fprintf(w, `{"_nodes":{"total":1,"successful":1,"failed":0},"nodes":{"node":{"version":%q,"build_hash":%q,"plugins":[]}}}`, version, config.ElasticsearchBuilds[version])
 		case r.URL.Path == "/_security/user/_privileges":

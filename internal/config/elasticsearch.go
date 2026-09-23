@@ -16,6 +16,7 @@ var ElasticsearchBuilds = map[string]string{
 }
 
 type ElasticsearchConfig struct {
+	APIKey                *ElasticsearchAPIKeyConfig     `yaml:"api_key"`
 	Enrich                *ElasticsearchEnrichConfig     `yaml:"enrich"`
 	ESQLPragmas           *ElasticsearchESQLPragmaConfig `yaml:"esql_pragmas"`
 	Endpoints             []string                       `yaml:"endpoints"`
@@ -38,6 +39,28 @@ type ElasticsearchConfig struct {
 	MaxLanguageTokens     int                            `yaml:"max_language_tokens"`
 	MaxLanguageDepth      int                            `yaml:"max_language_depth"`
 	MaxEQLFetchSize       int                            `yaml:"max_eql_fetch_size"`
+}
+
+type ElasticsearchAPIKeyConfig struct {
+	ID            string                      `yaml:"id"`
+	OwnerUsername string                      `yaml:"owner_username"`
+	KeyFile       string                      `yaml:"key_file"`
+	KeyEnv        string                      `yaml:"key_env"`
+	Attestor      ElasticsearchAttestorConfig `yaml:"attestor"`
+}
+
+type ElasticsearchAttestorConfig struct {
+	Username     string `yaml:"username"`
+	PasswordFile string `yaml:"password_file"`
+	PasswordEnv  string `yaml:"password_env"`
+}
+
+func (k *ElasticsearchAPIKeyConfig) Secret() (string, error) {
+	return readSecret(k.KeyFile, k.KeyEnv)
+}
+
+func (a *ElasticsearchAttestorConfig) Password() (string, error) {
+	return readSecret(a.PasswordFile, a.PasswordEnv)
 }
 
 // A non-nil profile explicitly opts a deployment into experimental native
@@ -147,14 +170,34 @@ func validateElasticsearch(t *TargetConfig, limits Limits) []string {
 	if t.MySQL != (MySQLConfig{}) || t.PostgreSQL != (PostgreSQLConfig{}) || t.SQLServer != (SQLServerConfig{}) || !redisConfigEmpty(t.Redis) {
 		add("Elasticsearch rejects SQL/Redis settings")
 	}
-	if strings.TrimSpace(t.Username) == "" || strings.ContainsAny(t.Username, ":\r\n") {
-		add("Elasticsearch requires a dedicated username without colon or line breaks")
-	}
-	if (t.PasswordFile == "") == (t.PasswordEnv == "") {
-		add("configure exactly one of password_file or password_env")
-	}
-	if t.PasswordEnv != "" && !regexp.MustCompile(`^[A-Z][A-Z0-9_]{2,127}$`).MatchString(t.PasswordEnv) {
-		add("password_env must name an uppercase environment variable")
+	if t.Elasticsearch != nil && t.Elasticsearch.APIKey != nil {
+		k := t.Elasticsearch.APIKey
+		if t.Username != "" || t.PasswordFile != "" || t.PasswordEnv != "" {
+			add("Elasticsearch API key and realm-user query credentials are mutually exclusive")
+		}
+		if !safeName.MatchString(k.ID) || strings.TrimSpace(k.OwnerUsername) == "" || strings.ContainsAny(k.OwnerUsername, ":\r\n") {
+			add("Elasticsearch API key requires a pinned ID and owner username")
+		}
+		if (k.KeyFile == "") == (k.KeyEnv == "") || k.KeyEnv != "" && !regexp.MustCompile(`^[A-Z][A-Z0-9_]{2,127}$`).MatchString(k.KeyEnv) {
+			add("Elasticsearch API key requires exactly one protected key_file or key_env")
+		}
+		a := k.Attestor
+		if strings.TrimSpace(a.Username) == "" || strings.ContainsAny(a.Username, ":\r\n") || a.Username == k.OwnerUsername {
+			add("Elasticsearch API key requires a separate dedicated attestor username")
+		}
+		if (a.PasswordFile == "") == (a.PasswordEnv == "") || a.PasswordEnv != "" && !regexp.MustCompile(`^[A-Z][A-Z0-9_]{2,127}$`).MatchString(a.PasswordEnv) {
+			add("Elasticsearch attestor requires exactly one protected password_file or password_env")
+		}
+	} else {
+		if strings.TrimSpace(t.Username) == "" || strings.ContainsAny(t.Username, ":\r\n") {
+			add("Elasticsearch requires a dedicated username without colon or line breaks")
+		}
+		if (t.PasswordFile == "") == (t.PasswordEnv == "") {
+			add("configure exactly one of password_file or password_env")
+		}
+		if t.PasswordEnv != "" && !regexp.MustCompile(`^[A-Z][A-Z0-9_]{2,127}$`).MatchString(t.PasswordEnv) {
+			add("password_env must name an uppercase environment variable")
+		}
 	}
 	if t.Connection.MaxOpen < limits.PerTargetConcurrency || t.Connection.MaxOpen > 64 || t.Connection.MaxOpen < 1 || t.Connection.MaxIdle < 0 || t.Connection.MaxIdle > t.Connection.MaxOpen {
 		add("Elasticsearch pool must cover per-target concurrency, with 1-64 open and at most max_open idle sockets")

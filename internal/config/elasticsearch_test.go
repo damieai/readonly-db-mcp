@@ -112,6 +112,17 @@ func TestElasticsearchRejectsConflictingOrUnboundedConfiguration(t *testing.T) {
 		{"pragma fold percentage", func(t *TargetConfig) {
 			t.Elasticsearch.ESQLPragmas = &ElasticsearchESQLPragmaConfig{MaxFoldPercent: 101}
 		}},
+		{"API key with realm query credential", func(t *TargetConfig) {
+			t.Elasticsearch.APIKey = &ElasticsearchAPIKeyConfig{ID: "key-id", OwnerUsername: "owner", KeyEnv: "ES_QUERY_KEY", Attestor: ElasticsearchAttestorConfig{Username: "auditor", PasswordEnv: "ES_AUDITOR_PASSWORD"}}
+		}},
+		{"API key missing attestor", func(t *TargetConfig) {
+			t.Username, t.PasswordFile, t.PasswordEnv = "", "", ""
+			t.Elasticsearch.APIKey = &ElasticsearchAPIKeyConfig{ID: "key-id", OwnerUsername: "owner", KeyEnv: "ES_QUERY_KEY"}
+		}},
+		{"API key same owner and attestor", func(t *TargetConfig) {
+			t.Username, t.PasswordFile, t.PasswordEnv = "", "", ""
+			t.Elasticsearch.APIKey = &ElasticsearchAPIKeyConfig{ID: "key-id", OwnerUsername: "owner", KeyEnv: "ES_QUERY_KEY", Attestor: ElasticsearchAttestorConfig{Username: "owner", PasswordEnv: "ES_AUDITOR_PASSWORD"}}
+		}},
 		{"duplicate readable script", func(t *TargetConfig) {
 			t.Elasticsearch.ReadableScriptIDs = []string{"report", "report"}
 		}},
@@ -126,6 +137,21 @@ func TestElasticsearchRejectsConflictingOrUnboundedConfiguration(t *testing.T) {
 				t.Fatal("invalid ES configuration accepted")
 			}
 		})
+	}
+	keyCfg := validESConfig()
+	keyTarget := keyCfg.Targets["test"]
+	keyTarget.Username, keyTarget.PasswordFile, keyTarget.PasswordEnv = "", "", ""
+	keyTarget.Elasticsearch.APIKey = &ElasticsearchAPIKeyConfig{ID: "key-id", OwnerUsername: "owner", KeyEnv: "ES_QUERY_KEY", Attestor: ElasticsearchAttestorConfig{Username: "auditor", PasswordEnv: "ES_AUDITOR_PASSWORD"}}
+	if err := keyCfg.Validate(); err != nil {
+		t.Fatal("valid ES API key and attestor configuration rejected", err)
+	}
+	keyTarget.Elasticsearch.APIKey.KeyEnv = ""
+	keyTarget.Elasticsearch.APIKey.KeyFile = "query.key"
+	keyTarget.Elasticsearch.APIKey.Attestor.PasswordEnv = ""
+	keyTarget.Elasticsearch.APIKey.Attestor.PasswordFile = "attestor.password"
+	resolveRelativePaths(keyTarget, "/etc/readonly-db-mcp")
+	if keyTarget.Elasticsearch.APIKey.KeyFile != "/etc/readonly-db-mcp/query.key" || keyTarget.Elasticsearch.APIKey.Attestor.PasswordFile != "/etc/readonly-db-mcp/attestor.password" {
+		t.Fatal("API key or attestor secret path did not resolve relative to the config")
 	}
 	c := validConfig()
 	c.Targets["test"].Elasticsearch = &ElasticsearchConfig{}

@@ -50,6 +50,15 @@ uses the same narrow `cluster:admin/script/get` action already required for
 stored-script query proof, without granting script management. See
 [stored-script metadata evidence](qualification/2026-09-23-elasticsearch-script-metadata.md).
 
+Implementation update (2026-09-23, API-key authority): query targets may now
+use a pinned REST API key with a separate realm attestor whose only effective
+privilege is `read_security`. The attestor inspects current key status, owner,
+assigned descriptors and `limited_by` descriptors on every authority check.
+The query side or its limiting side must independently prove read-only index
+scope; their native intersection cannot add authority. Key revocation and
+descriptor changes invalidate the proof. See
+[API-key evidence and live gate](qualification/2026-09-23-elasticsearch-api-key.md).
+
 Implementation update (2026-09-23, date math): native `<...{now/...}>` index
 sources now pass unchanged through metadata, search, EQL, SQL, ES|QL and
 embedded read-only lookups. Each expression is URI-escaped as one path element;

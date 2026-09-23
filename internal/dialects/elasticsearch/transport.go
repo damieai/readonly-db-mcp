@@ -5,12 +5,14 @@ import (
 	"context"
 	"crypto/tls"
 	"crypto/x509"
+	"encoding/base64"
 	"io"
 	"net"
 	"net/http"
 	"net/http/httptrace"
 	"net/url"
 	"os"
+	"strings"
 	"sync"
 	"time"
 
@@ -19,11 +21,12 @@ import (
 )
 
 type wire struct {
-	pool    *http.Transport
-	clients []elastictransport.Interface
-	slots   chan struct{}
-	cfg     *config.TargetConfig
-	maxCell int
+	pool      *http.Transport
+	clients   []elastictransport.Interface
+	attestors []elastictransport.Interface
+	slots     chan struct{}
+	cfg       *config.TargetConfig
+	maxCell   int
 }
 type leasedConn struct {
 	net.Conn
@@ -57,9 +60,33 @@ func (c *leasedConn) setActive(active bool) {
 }
 
 func newWire(cfg *config.TargetConfig) (*wire, error) {
-	secret, err := cfg.Password()
-	if err != nil {
-		return nil, failure("configuration_error", "cannot read Elasticsearch credentials")
+	var queryAuth elastictransport.Option
+	var attestorAuth elastictransport.Option
+	if key := cfg.Elasticsearch.APIKey; key != nil {
+		encoded, err := key.Secret()
+		if err != nil {
+			return nil, failure("configuration_error", "cannot read Elasticsearch API key")
+		}
+		encoded = strings.TrimSpace(encoded)
+		if len(encoded) > 128<<10 {
+			return nil, failure("configuration_error", "Elasticsearch API key exceeds secret size limit")
+		}
+		decoded, err := base64.StdEncoding.DecodeString(encoded)
+		if err != nil || !strings.HasPrefix(string(decoded), key.ID+":") || len(decoded) <= len(key.ID)+1 || len(decoded) > 64<<10 {
+			return nil, failure("configuration_error", "Elasticsearch API key does not match its pinned ID")
+		}
+		queryAuth = elastictransport.WithAPIKey(encoded)
+		secret, err := key.Attestor.Password()
+		if err != nil {
+			return nil, failure("configuration_error", "cannot read Elasticsearch attestor credentials")
+		}
+		attestorAuth = elastictransport.WithBasicAuth(key.Attestor.Username, secret)
+	} else {
+		secret, err := cfg.Password()
+		if err != nil {
+			return nil, failure("configuration_error", "cannot read Elasticsearch credentials")
+		}
+		queryAuth = elastictransport.WithBasicAuth(cfg.Username, secret)
 	}
 	ca, err := os.ReadFile(cfg.TLS.CAFile)
 	if err != nil {
@@ -137,12 +164,20 @@ func newWire(cfg *config.TargetConfig) (*wire, error) {
 			w.close()
 			return nil, failure("configuration_error", "invalid Elasticsearch endpoint")
 		}
-		client, err := elastictransport.NewClient(elastictransport.WithURLs(u), elastictransport.WithBasicAuth(cfg.Username, secret), elastictransport.WithDisableRetry(), elastictransport.WithTransport(w.pool), elastictransport.WithUserAgent("readonly-db-mcp"))
+		client, err := elastictransport.NewClient(elastictransport.WithURLs(u), queryAuth, elastictransport.WithDisableRetry(), elastictransport.WithTransport(w.pool), elastictransport.WithUserAgent("readonly-db-mcp"))
 		if err != nil {
 			w.close()
 			return nil, failure("configuration_error", "cannot initialize Elasticsearch transport")
 		}
 		w.clients = append(w.clients, client)
+		if cfg.Elasticsearch.APIKey != nil {
+			attestor, err := elastictransport.NewClient(elastictransport.WithURLs(u), attestorAuth, elastictransport.WithDisableRetry(), elastictransport.WithTransport(w.pool), elastictransport.WithUserAgent("readonly-db-mcp-attestor"))
+			if err != nil {
+				w.close()
+				return nil, failure("configuration_error", "cannot initialize Elasticsearch attestor transport")
+			}
+			w.attestors = append(w.attestors, attestor)
+		}
 	}
 	return w, nil
 }
@@ -152,6 +187,14 @@ func (w *wire) get(ctx context.Context, endpoint int, path string, query url.Val
 }
 
 func (w *wire) request(ctx context.Context, endpoint int, method, path string, query url.Values, body []byte, contentType string, maxBytes int, documentMissing bool) ([]byte, error) {
+	return w.requestWith(ctx, w.clients[endpoint], method, path, query, body, contentType, maxBytes, documentMissing)
+}
+
+func (w *wire) attestorGet(ctx context.Context, endpoint int, path string, query url.Values, maxBytes int) ([]byte, error) {
+	return w.requestWith(ctx, w.attestors[endpoint], http.MethodGet, path, query, nil, "application/json", maxBytes, false)
+}
+
+func (w *wire) requestWith(ctx context.Context, client elastictransport.Interface, method, path string, query url.Values, body []byte, contentType string, maxBytes int, documentMissing bool) ([]byte, error) {
 	// No public method/path/host/header entry point. The wire stays package-private.
 	u, err := url.Parse(path)
 	if err != nil || u.IsAbs() || u.Host != "" || u.RawQuery != "" || u.Fragment != "" {
@@ -188,7 +231,7 @@ func (w *wire) request(ctx context.Context, endpoint int, method, path string, q
 		},
 	}
 	req = req.WithContext(httptrace.WithClientTrace(ctx, trace))
-	response, err := w.clients[endpoint].Perform(req)
+	response, err := client.Perform(req)
 	if err != nil {
 		if response != nil && response.Body != nil {
 			response.Body.Close()

@@ -157,6 +157,9 @@ These are conservative adapter reservations, not a measured process RSS promise;
 MCP delivery backlog and live-server saturation measurements remain release gates.
 
 One shared transport enforces total open/idle sockets across explicit endpoints.
+An API-key target's query and read-only attestor clients share this transport
+and the same socket ceiling; the attestor can call only fixed security-proof
+routes and is never selected by a query request.
 It retires expired idle sockets and lets active requests finish before retirement.
 Connect/TLS and writes have their own phase budgets; the request context bounds
 execution and collection. No runtime credential can be selected by a caller.

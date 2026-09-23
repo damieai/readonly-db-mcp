@@ -10,11 +10,11 @@ import (
 )
 
 type indexPrivilege struct {
-	Names           []string          `json:"names"`
-	Privileges      []string          `json:"privileges"`
-	FieldSecurity   []json.RawMessage `json:"field_security,omitempty"`
-	Query           []json.RawMessage `json:"query,omitempty"`
-	AllowRestricted *bool             `json:"allow_restricted_indices"`
+	Names           []string        `json:"names"`
+	Privileges      []string        `json:"privileges"`
+	FieldSecurity   json.RawMessage `json:"field_security,omitempty"`
+	Query           json.RawMessage `json:"query,omitempty"`
+	AllowRestricted *bool           `json:"allow_restricted_indices"`
 }
 type privileges struct {
 	Cluster       []string          `json:"cluster"`
@@ -96,6 +96,23 @@ func (t *Target) attest(ctx context.Context) error {
 		data, err = t.wire.get(ctx, i, "/_security/_authenticate", nil, t.limits.MaxResultBytes)
 		if err != nil {
 			return err
+		}
+		if t.cfg.Elasticsearch.APIKey != nil {
+			proof, err := t.attestAPIKey(ctx, i, data)
+			if err != nil {
+				return err
+			}
+			_, _ = digest.Write(proof)
+			_, _ = digest.Write([]byte{0})
+			if t.cfg.Elasticsearch.EnrichEnabled() {
+				inventory, err := t.readEnrichInventory(ctx, i)
+				if err != nil {
+					return err
+				}
+				_, _ = digest.Write([]byte(config.ElasticsearchEnrichScope))
+				_, _ = digest.Write(inventory.digest[:])
+			}
+			continue
 		}
 		var user struct {
 			Username           string `json:"username"`

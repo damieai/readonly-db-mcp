@@ -194,14 +194,16 @@ node before publishing a client generation. Unknown redirect endpoints are
 refused. See [RFC-0004](docs/RFC-0004-redis-sentinel-cluster-modules.md) for the
 configuration and signed module-profile format.
 
-For Elasticsearch, configure explicit HTTPS origins, the cluster UUID,
-one of the pinned build versions, and a dedicated realm user. Give that user
-cluster `monitor` and only `read` / `view_index_metadata` on the configured
-index patterns. Startup inspects effective privileges on **every** endpoint;
-write, delegation, remote, unknown and out-of-scope authority fails closed.
-The current profile uses username/password; API-key proofs and a separate
-attestor remain future work. Do not grant security-management privileges to
-work around missing introspection.
+For Elasticsearch, configure explicit HTTPS origins, the cluster UUID and one
+of the pinned build versions. The query identity may be a dedicated realm user
+or an API key with a pinned ID. Give a realm query user cluster `monitor` and
+only `read` / `view_index_metadata` on the configured index patterns. Startup
+inspects authority on **every** endpoint; write, delegation, remote, unknown
+and out-of-scope grants fail closed.
+API-key mode requires a separate realm attestor whose only effective cluster
+privilege is `read_security`; its credentials are used solely for key descriptor
+proof. See [API-key qualification](docs/qualification/2026-09-23-elasticsearch-api-key.md).
+Do not grant the query key security-management privileges.
 
 Stored script/template inspection additionally accepts the narrowly scoped
 `cluster:admin/script/get` action grant. Do not replace it with `manage` or

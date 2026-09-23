@@ -522,6 +522,9 @@ func resolveRelativePaths(target *TargetConfig, configDir string) {
 	if target.SQLServer.Attestor != nil {
 		paths = append(paths, &target.SQLServer.Attestor.PasswordFile)
 	}
+	if target.Elasticsearch != nil && target.Elasticsearch.APIKey != nil {
+		paths = append(paths, &target.Elasticsearch.APIKey.KeyFile, &target.Elasticsearch.APIKey.Attestor.PasswordFile)
+	}
 	for _, path := range paths {
 		if *path != "" && !filepath.IsAbs(*path) {
 			*path = filepath.Join(configDir, *path)
