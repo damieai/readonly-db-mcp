@@ -110,6 +110,17 @@ func TestElasticsearchThroughRegistryAndMCP(t *testing.T) {
 		case "/_sql/translate":
 			fmt.Fprint(w, `{"query":{"term":{"n":9007199254740993}}}`)
 		case "/_query":
+			var body map[string]json.RawMessage
+			if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+				t.Error("invalid MCP ES|QL body", err)
+			}
+			if _, hasPragma := body["pragma"]; hasPragma {
+				if string(body["accept_pragma_risks"]) != "true" {
+					t.Error("reviewed ES|QL pragma did not receive native release opt-in")
+				}
+			} else if _, hasRiskFlag := body["accept_pragma_risks"]; hasRiskFlag {
+				t.Error("ordinary ES|QL request received experimental risk flag")
+			}
 			fmt.Fprint(w, `{"took":1,"is_partial":false,"columns":[{"name":"n","type":"long"}],"values":[[9007199254740993]]}`)
 		case "/_sql/close":
 			sqlCleared.Add(1)
@@ -170,6 +181,8 @@ targets:
       version: 8.19.21
       cluster_uuid: abcdefghijklmnopqrstuv
       allowed_indices: [reports-*]
+      esql_pragmas:
+        max_task_concurrency: 8
       enrich:
         scope: all_cluster_snapshots
 `, upstream.URL)
@@ -267,6 +280,7 @@ targets:
 		{"es_query", json.RawMessage(`{"target":"es_test","operation":"sql.query","body":{"query":"SELECT ? FROM \"reports-*\"","params":[9007199254740993]}}`)},
 		{"es_query", json.RawMessage(`{"target":"es_test","operation":"sql.translate","body":{"query":"SELECT ? FROM \"reports-*\"","params":[9007199254740993]}}`)},
 		{"es_query", json.RawMessage(`{"target":"es_test","operation":"esql.query","body":{"query":"FROM reports-* | EVAL n=? | LIMIT 1","params":[9007199254740993]}}`)},
+		{"es_query", json.RawMessage(`{"target":"es_test","operation":"esql.query","body":{"query":"ROW x=1","pragma":{"task_concurrency":2}}}`)},
 		{"es_query", json.RawMessage(`{"target":"es_test","operation":"esql.query","body":{"query":"ROW id=? | ENRICH customers ON id WITH label","params":[9007199254740993]}}`)},
 		{"es_batch", json.RawMessage(`{"target":"es_test","requests":[{"operation":"esql.query","body":{"query":"FROM reports-* | ENRICH customers WITH name=label"}},{"operation":"sql.query","body":{"query":"SELECT 1"}}]}`)},
 		{"es_batch", json.RawMessage(`{"target":"es_test","requests":[{"operation":"esql.query","body":{"query":"FROM reports-* | STATS n=COUNT(*)"}},{"operation":"sql.query","body":{"query":"SELECT 1"}}]}`)},

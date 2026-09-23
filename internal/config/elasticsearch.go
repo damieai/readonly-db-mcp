@@ -16,26 +16,44 @@ var ElasticsearchBuilds = map[string]string{
 }
 
 type ElasticsearchConfig struct {
-	Enrich                *ElasticsearchEnrichConfig `yaml:"enrich"`
-	Endpoints             []string                   `yaml:"endpoints"`
-	Version               string                     `yaml:"version"`
-	ClusterUUID           string                     `yaml:"cluster_uuid"`
-	AllowedIndices        []string                   `yaml:"allowed_indices"`
-	DeniedIndices         []string                   `yaml:"denied_indices"`
-	PrivilegeRecheck      time.Duration              `yaml:"privilege_recheck_interval"`
-	MaxRequestBytes       int                        `yaml:"max_request_bytes"`
-	MaxJSONDepth          int                        `yaml:"max_json_depth"`
-	MaxJSONNodes          int                        `yaml:"max_json_nodes"`
-	MaxResolvedIndices    int                        `yaml:"max_resolved_indices"`
-	MaxAggregationBuckets int                        `yaml:"max_aggregation_buckets"`
-	MaxOpenContexts       int                        `yaml:"max_open_contexts"`
-	ContextKeepAlive      time.Duration              `yaml:"context_keep_alive"`
-	MaxContextLifetime    time.Duration              `yaml:"max_context_lifetime"`
-	MaxContextIDBytes     int                        `yaml:"max_context_id_bytes"`
-	MaxLanguageBytes      int                        `yaml:"max_language_bytes"`
-	MaxLanguageTokens     int                        `yaml:"max_language_tokens"`
-	MaxLanguageDepth      int                        `yaml:"max_language_depth"`
-	MaxEQLFetchSize       int                        `yaml:"max_eql_fetch_size"`
+	Enrich                *ElasticsearchEnrichConfig     `yaml:"enrich"`
+	ESQLPragmas           *ElasticsearchESQLPragmaConfig `yaml:"esql_pragmas"`
+	Endpoints             []string                       `yaml:"endpoints"`
+	Version               string                         `yaml:"version"`
+	ClusterUUID           string                         `yaml:"cluster_uuid"`
+	AllowedIndices        []string                       `yaml:"allowed_indices"`
+	DeniedIndices         []string                       `yaml:"denied_indices"`
+	PrivilegeRecheck      time.Duration                  `yaml:"privilege_recheck_interval"`
+	MaxRequestBytes       int                            `yaml:"max_request_bytes"`
+	MaxJSONDepth          int                            `yaml:"max_json_depth"`
+	MaxJSONNodes          int                            `yaml:"max_json_nodes"`
+	MaxResolvedIndices    int                            `yaml:"max_resolved_indices"`
+	MaxAggregationBuckets int                            `yaml:"max_aggregation_buckets"`
+	MaxOpenContexts       int                            `yaml:"max_open_contexts"`
+	ContextKeepAlive      time.Duration                  `yaml:"context_keep_alive"`
+	MaxContextLifetime    time.Duration                  `yaml:"max_context_lifetime"`
+	MaxContextIDBytes     int                            `yaml:"max_context_id_bytes"`
+	MaxLanguageBytes      int                            `yaml:"max_language_bytes"`
+	MaxLanguageTokens     int                            `yaml:"max_language_tokens"`
+	MaxLanguageDepth      int                            `yaml:"max_language_depth"`
+	MaxEQLFetchSize       int                            `yaml:"max_eql_fetch_size"`
+}
+
+// A non-nil profile explicitly opts a deployment into experimental native
+// ES|QL pragmas. Zero ceilings leave the corresponding cost control unavailable.
+type ElasticsearchESQLPragmaConfig struct {
+	MaxExchangeBufferSize        int           `yaml:"max_exchange_buffer_size"`
+	MaxExchangeConcurrentClients int           `yaml:"max_exchange_concurrent_clients"`
+	MaxEnrichWorkers             int           `yaml:"max_enrich_workers"`
+	MaxTaskConcurrency           int           `yaml:"max_task_concurrency"`
+	MaxPageSize                  int           `yaml:"max_page_size"`
+	MaxConcurrentNodesPerCluster int           `yaml:"max_concurrent_nodes_per_cluster"`
+	MaxConcurrentShardsPerNode   int           `yaml:"max_concurrent_shards_per_node"`
+	MaxShardResolutionAttempts   int           `yaml:"max_shard_resolution_attempts"`
+	AllowUnlimitedShardRetries   bool          `yaml:"allow_unlimited_shard_retries"`
+	MaxFoldBytes                 int64         `yaml:"max_fold_bytes"`
+	MaxFoldPercent               int           `yaml:"max_fold_percent"`
+	MinStatusInterval            time.Duration `yaml:"min_status_interval"`
 }
 
 // ENRICH has a separate, cluster-wide data scope: native monitor_enrich cannot
@@ -161,6 +179,17 @@ func validateElasticsearch(t *TargetConfig, limits Limits) []string {
 	}
 	if e.Enrich != nil && !e.EnrichEnabled() {
 		add("elasticsearch.enrich.scope must explicitly authorize all_cluster_snapshots; per-policy or source-index isolation is unavailable")
+	}
+	if p := e.ESQLPragmas; p != nil {
+		for _, n := range []int{p.MaxExchangeBufferSize, p.MaxExchangeConcurrentClients, p.MaxEnrichWorkers, p.MaxTaskConcurrency, p.MaxPageSize, p.MaxConcurrentNodesPerCluster, p.MaxConcurrentShardsPerNode, p.MaxShardResolutionAttempts} {
+			if n < 0 || n > 1<<31-1 {
+				add("elasticsearch.esql_pragmas integer ceilings must fit native positive integers")
+				break
+			}
+		}
+		if p.MaxConcurrentShardsPerNode > 100 || p.MaxFoldBytes < 0 || p.MaxFoldPercent < 0 || p.MaxFoldPercent > 100 || p.MinStatusInterval < 0 {
+			add("elasticsearch.esql_pragmas resource ceilings are invalid")
+		}
 	}
 	if _, ok := ElasticsearchBuilds[e.Version]; !ok {
 		add("Elasticsearch version has no pinned implementation profile")

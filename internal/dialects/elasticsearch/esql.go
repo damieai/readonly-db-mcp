@@ -13,7 +13,7 @@ type esqlProfile struct{ columnar bool }
 
 func (p *queryProof) prepareESQL(q *preparedQuery, body map[string]any) error {
 	// RequestXContent's synchronous parser has no persisted-result controls.
-	if err := fieldsOnly(body, "query params columnar filter locale profile include_ccs_metadata"); err != nil {
+	if err := fieldsOnly(body, "query params columnar filter locale profile include_ccs_metadata pragma"); err != nil {
 		return err
 	}
 	text, ok := body["query"].(string)
@@ -31,6 +31,14 @@ func (p *queryProof) prepareESQL(q *preparedQuery, body map[string]any) error {
 		return failure("resource_limit", "ES|QL parameter count exceeds the configured limit")
 	}
 	cfg := p.t.cfg.Elasticsearch
+	if pragma, exists := body["pragma"]; exists {
+		if err := validateESQLPragmas(pragma, cfg.Version, cfg.ESQLPragmas); err != nil {
+			return err
+		}
+		// Both pinned release builds require this flag for non-empty pragmas.
+		// The caller cannot set it independently of the operator profile.
+		body["accept_pragma_risks"] = true
+	}
 	a, err := esqlparser.Analyze(p.ctx, cfg.Version, text, params, esqlparser.Limits{Bytes: cfg.MaxLanguageBytes, Tokens: cfg.MaxLanguageTokens, Depth: cfg.MaxLanguageDepth})
 	if err != nil {
 		var e *esqlparser.Error

@@ -325,8 +325,9 @@ policy creation, execution and deletion are classified as writes.
 
 ES|QL routes only to synchronous `POST /_query`, with JSON format and complete
 results. Locale, profiling, columnar output and null-column dropping remain native
-controls. Async retention controls, caller transport options and experimental
-resource pragmas are not part of this profile. Returned rows/columnar heights
+controls. Async retention controls and caller transport options remain outside
+this profile. Experimental native pragmas require an explicit operator resource
+profile and are checked per setting before release-build opt-in. Returned rows/columnar heights
 and widths are validated without flattening multivalue cells. `max_rows` bounds
 the whole result and fails on overflow; queries are never rewritten with an
 implicit adapter LIMIT. Fully dropped columnar output cannot prove row count

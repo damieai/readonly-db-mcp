@@ -1,5 +1,6 @@
 # Native metadata/query/batch/PIT/scroll/SQL/synchronous-EQL/ES|QL profile. Replace endpoint, UUID and secret/CA locations.
 # ENRICH requires a separate explicit cluster snapshot data grant (disabled below).
+# Experimental ES|QL pragmas require an explicit per-target resource profile (disabled below).
 # API keys, finer ENRICH isolation and attestors remain later stages.
 server:
   transport: stdio
@@ -31,6 +32,14 @@ targets:
       # Use a separate cluster if snapshots need finer isolation.
       # enrich:
       #   scope: all_cluster_snapshots
+      # Optional ES|QL pragma opt-in. Unspecified numeric ceilings leave that
+      # individual resource control unavailable; ordinary ES|QL still works.
+      # esql_pragmas:
+      #   max_task_concurrency: 8
+      #   max_page_size: 2048
+      #   max_fold_bytes: 67108864
+      #   max_fold_percent: 5
+      #   min_status_interval: 100ms
       privilege_recheck_interval: 1m
       max_request_bytes: 1048576
       max_json_depth: 128

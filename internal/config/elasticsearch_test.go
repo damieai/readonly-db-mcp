@@ -32,6 +32,9 @@ func TestElasticsearchDefaultsAndForecast(t *testing.T) {
 	if v.Elasticsearch.Enrich != nil || v.Elasticsearch.EnrichEnabled() {
 		t.Fatal("ENRICH data scope was implicitly authorized")
 	}
+	if v.Elasticsearch.ESQLPragmas != nil {
+		t.Fatal("experimental ES|QL pragmas were implicitly enabled")
+	}
 	if v.Port != 0 || v.Database != "" || v.Consistency != ConsistencyEventual || v.Elasticsearch.PrivilegeRecheck != time.Minute {
 		t.Fatal("ES acquired SQL defaults")
 	}
@@ -100,6 +103,15 @@ func TestElasticsearchRejectsConflictingOrUnboundedConfiguration(t *testing.T) {
 		{"EQL fetch ceiling", func(t *TargetConfig) { t.Elasticsearch.MaxEQLFetchSize = 100001 }},
 		{"EQL native default fetch", func(t *TargetConfig) { t.Elasticsearch.MaxEQLFetchSize = 999 }},
 		{"bucket ceiling", func(t *TargetConfig) { t.Elasticsearch.MaxAggregationBuckets = 65537 }},
+		{"pragma negative ceiling", func(t *TargetConfig) {
+			t.Elasticsearch.ESQLPragmas = &ElasticsearchESQLPragmaConfig{MaxTaskConcurrency: -1}
+		}},
+		{"pragma native shard ceiling", func(t *TargetConfig) {
+			t.Elasticsearch.ESQLPragmas = &ElasticsearchESQLPragmaConfig{MaxConcurrentShardsPerNode: 101}
+		}},
+		{"pragma fold percentage", func(t *TargetConfig) {
+			t.Elasticsearch.ESQLPragmas = &ElasticsearchESQLPragmaConfig{MaxFoldPercent: 101}
+		}},
 	} {
 		t.Run(test.name, func(t *testing.T) {
 			c := validESConfig()

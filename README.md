@@ -238,6 +238,9 @@ See [field mapping qualification](docs/qualification/2026-09-23-elasticsearch-fi
 for selected field paths and validation.
 See [document read qualification](docs/qualification/2026-09-23-elasticsearch-document-reads.md)
 for native source and existence operations.
+ES|QL `pragma` is available when an operator configures `esql_pragmas` ceilings;
+the adapter checks each recognized native setting and supplies the release-build
+risk flag only after validation. See [pragma qualification](docs/qualification/2026-09-23-elasticsearch-esql-pragmas.md).
 
 ```json
 {"target":"search-reporting","operation":"search","body":{"size":0,"runtime_mappings":{"taxed":{"type":"double","script":{"source":"emit(doc['amount'].value * params.factor)","params":{"factor":1.1}}}},"aggs":{"total":{"sum":{"field":"taxed"}}}}}

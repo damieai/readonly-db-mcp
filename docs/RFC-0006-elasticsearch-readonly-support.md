@@ -34,6 +34,14 @@ GET source retains the original document body and treats ordinary fields such as
 deadline and authority checks used by `get` apply. See
 [document-read evidence](qualification/2026-09-23-elasticsearch-document-reads.md).
 
+Implementation update (2026-09-23, ES|QL pragmas): an optional per-target
+`esql_pragmas` profile now enables the pinned native `pragma` request object.
+Cost controls are checked against operator ceilings; planner switches retain
+native representation under the same explicit opt-in. The adapter, rather than the caller, supplies
+`accept_pragma_risks` only after validation. Snapshot-only request tables remain
+unavailable on the pinned release builds. See
+[pragma evidence](qualification/2026-09-23-elasticsearch-esql-pragmas.md).
+
 Implementation update (2026-09-23, date math): native `<...{now/...}>` index
 sources now pass unchanged through metadata, search, EQL, SQL, ES|QL and
 embedded read-only lookups. Each expression is URI-escaped as one path element;
