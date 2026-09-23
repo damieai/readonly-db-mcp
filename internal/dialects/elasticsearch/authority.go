@@ -34,8 +34,11 @@ func validatePrivileges(ctx context.Context, raw []byte, cfg *config.Elasticsear
 	if p.Cluster == nil || p.Indices == nil || p.Applications == nil || p.RunAs == nil || p.Global == nil {
 		return failure("authority_unproven", "effective privilege response is incomplete")
 	}
-	if len(p.Applications)+len(p.RunAs)+len(p.Global)+len(p.RemoteIndices)+len(p.RemoteCluster) > 0 {
-		return failure("authority_unproven", "application, delegation, global or remote authority is outside this profile")
+	if len(p.Applications)+len(p.RunAs)+len(p.Global) > 0 {
+		return failure("authority_unproven", "application, delegation or global authority is outside this profile")
+	}
+	if err := validateRemotePrivileges(p.RemoteIndices, p.RemoteCluster); err != nil {
+		return err
 	}
 	hasEnrich := false
 	for _, name := range p.Cluster {

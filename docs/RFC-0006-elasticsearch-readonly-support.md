@@ -59,6 +59,13 @@ scope; their native intersection cannot add authority. Key revocation and
 descriptor changes invalidate the proof. See
 [API-key evidence and live gate](qualification/2026-09-23-elasticsearch-api-key.md).
 
+Implementation update (2026-09-23, remote grants): local query identities may
+now carry native read-only `remote_indices` and `remote_cluster` grants. Their
+effective realm-user or API-key descriptors are validated field by field;
+remote query expressions remain unavailable until the remote key, alias and
+index-scope evidence can be bound to execution. See
+[remote grant evidence](qualification/2026-09-23-elasticsearch-remote-grants.md).
+
 Implementation update (2026-09-23, collate): phrase suggester collate accepts
 inline and readable stored Mustache queries. Fixed parameters are rendered and
 source-proved before search; per-candidate text is left only in a JSON-safe

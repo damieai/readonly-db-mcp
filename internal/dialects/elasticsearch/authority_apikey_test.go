@@ -43,6 +43,7 @@ func TestAPIKeyAttestationAcceptsReadOnlyIntersection(t *testing.T) {
 			{"split-limiting-roles", `{"query":` + broadKeyRole + `}`, `{"monitor":{"cluster":["monitor"]}},{"read":{"indices":[{"names":["reports-*"],"privileges":["read","view_index_metadata"]}]}}`},
 			{"empty-assigned", `{}`, `{"owner":` + safeKeyRole + `}`},
 			{"dls-fls", `{"query":{"cluster":["monitor"],"indices":[{"names":["reports-*"],"privileges":["read","view_index_metadata"],"field_security":{"grant":["title"]},"query":"{\"term\":{\"tenant\":\"a\"}}"}]}}`, `{"owner":` + broadKeyRole + `}`},
+			{"remote-read-grants", `{"query":{"cluster":["monitor"],"indices":[{"names":["reports-*"],"privileges":["read","view_index_metadata"]}],"remote_indices":[{"clusters":"archive","names":"logs-*","privileges":["read","read_cross_cluster"]}],"remote_cluster":[{"clusters":["archive"],"privileges":["monitor_stats"]}]}}`, `{"owner":` + broadKeyRole + `}`},
 		} {
 			t.Run(fmt.Sprintf("%s/%s", version, tc.name), func(t *testing.T) {
 				f := newESFixture(t)
@@ -78,7 +79,7 @@ func TestAPIKeyAttestationRejectsMissingOrElevatedProof(t *testing.T) {
 		{"missing limiting descriptors", `{"api_keys":[{"id":"fixture-key","username":"fixture_owner","type":"rest","invalidated":false,"expiration":null,"role_descriptors":{"query":` + safeKeyRole + `}}]}`, readSecurityProof},
 		{"empty assigned with broad owner", keyInfo(`{}`, `{"owner":`+broadKeyRole+`}`), readSecurityProof},
 		{"elevated intersection", keyInfo(`{"query":`+broadKeyRole+`}`, `{"owner":`+broadKeyRole+`}`), readSecurityProof},
-		{"remote grant on both sides", keyInfo(`{"query":{"cluster":["monitor"],"indices":[{"names":["reports-*"],"privileges":["read"]}],"remote_cluster":[{"clusters":["remote"],"privileges":["monitor_enrich"]}]}}`, `{"owner":{"cluster":["monitor"],"indices":[{"names":["reports-*"],"privileges":["read"]}],"remote_cluster":[{"clusters":["remote"],"privileges":["monitor_enrich"]}]}}`), readSecurityProof},
+		{"remote write on both sides", keyInfo(`{"query":{"cluster":["monitor"],"indices":[{"names":["reports-*"],"privileges":["read"]}],"remote_indices":[{"clusters":["remote"],"names":["logs-*"],"privileges":["write"]}]}}`, `{"owner":{"cluster":["monitor"],"indices":[{"names":["reports-*"],"privileges":["read"]}],"remote_indices":[{"clusters":["remote"],"names":["logs-*"],"privileges":["write"]}]}}`), readSecurityProof},
 		{"cross-cluster key", `{"api_keys":[{"id":"fixture-key","username":"fixture_owner","type":"cross_cluster","invalidated":false,"expiration":null,"role_descriptors":{"query":` + safeKeyRole + `},"limited_by":[{"owner":` + broadKeyRole + `}]}]}`, readSecurityProof},
 		{"elevated attestor", keyInfo(`{"query":`+safeKeyRole+`}`, `{"owner":`+broadKeyRole+`}`), `{"cluster":["manage_api_key"],"indices":[],"applications":[],"run_as":[],"global":[]}`},
 	} {
