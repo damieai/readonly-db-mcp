@@ -26,6 +26,9 @@ targets:
       version: 8.19.21
       cluster_uuid: REPLACE_WITH_CLUSTER_ID
       allowed_indices: [reports-*]
+      # Optional exact IDs exposed by es_metadata.operation=get_script.
+      # Script/template query execution remains independently available.
+      # readable_script_ids: [report-template]
       # Optional broad data grant: ALL past/current/future enrichment snapshots
       # in this cluster, independently of allowed_indices/denied_indices/DLS/FLS.
       # Also requires explicit monitor_enrich; never grant manage_enrich.

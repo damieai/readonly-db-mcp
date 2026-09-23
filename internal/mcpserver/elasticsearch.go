@@ -13,11 +13,11 @@ import (
 
 type ElasticsearchMetadataInput struct {
 	Target    string                     `json:"target" jsonschema:"Exact Elasticsearch target alias returned by list_targets"`
-	Operation string                     `json:"operation" jsonschema:"Metadata operation: resolve, mappings, field_mappings, aliases or settings"`
+	Operation string                     `json:"operation" jsonschema:"Metadata operation: resolve, mappings, field_mappings, aliases, settings or get_script"`
 	Indices   []string                   `json:"indices,omitempty" jsonschema:"Scoped index, alias or data-stream expressions; omitted uses configured scope"`
-	Names     []string                   `json:"names,omitempty" jsonschema:"Alias names or index setting names for aliases and settings; native wildcards are supported"`
+	Names     []string                   `json:"names,omitempty" jsonschema:"Alias or setting selectors, or one allowlisted stored script ID for get_script"`
 	Fields    []string                   `json:"fields,omitempty" jsonschema:"Field names or wildcards required for field_mappings"`
-	Options   map[string]json.RawMessage `json:"options,omitempty" jsonschema:"Versioned native options for mappings, field_mappings, aliases and settings"`
+	Options   map[string]json.RawMessage `json:"options,omitempty" jsonschema:"Versioned native metadata options, including bounded get_script master_timeout"`
 	TimeoutMS int                        `json:"timeout_ms,omitempty" jsonschema:"Optional timeout in milliseconds, including admission and source resolution"`
 }
 
@@ -57,10 +57,10 @@ func (v *ElasticsearchMetadataInput) UnmarshalJSON(data []byte) error {
 func (s *Server) registerElasticsearchTools() {
 	s.registerElasticsearchQueryTools()
 	s.registerElasticsearchCursorTool()
-	t := tool("es_metadata", "Resolve scoped Elasticsearch indices, aliases and data streams, or read complete or selected field mappings, alias definitions and index settings. Query capabilities are reported by inspect_target.")
+	t := tool("es_metadata", "Resolve scoped Elasticsearch sources; read mappings, alias definitions, index settings or operator-allowlisted stored script definitions. Query capabilities are reported by inspect_target.")
 	t.InputSchema = map[string]any{"type": "object", "additionalProperties": false, "required": []string{"target", "operation"}, "properties": map[string]any{
 		"target":     map[string]any{"type": "string", "minLength": 1, "maxLength": 64},
-		"operation":  map[string]any{"type": "string", "enum": []string{"resolve", "mappings", "field_mappings", "aliases", "settings"}},
+		"operation":  map[string]any{"type": "string", "enum": []string{"resolve", "mappings", "field_mappings", "aliases", "settings", "get_script"}},
 		"indices":    map[string]any{"type": "array", "maxItems": 10000, "items": map[string]any{"type": "string", "maxLength": 4096}},
 		"names":      map[string]any{"type": "array", "maxItems": 10000, "items": map[string]any{"type": "string", "minLength": 1, "maxLength": 4096}},
 		"fields":     map[string]any{"type": "array", "maxItems": 10000, "items": map[string]any{"type": "string", "minLength": 1, "maxLength": 4096}},

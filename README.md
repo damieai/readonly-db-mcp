@@ -209,8 +209,11 @@ Stored script/template inspection additionally accepts the narrowly scoped
 Query preflight checks all nodes against the pinned build and requires an empty
 external-plugin inventory; custom plugin profiles remain pending.
 
-`es_metadata` supports `resolve`, `mappings`, `field_mappings`, `aliases` and
-`settings`. `field_mappings` requires `fields` and reads selected native field
+`es_metadata` supports `resolve`, `mappings`, `field_mappings`, `aliases`,
+`settings` and allowlisted `get_script`. The latter requires one exact script ID
+in `names` and an operator `readable_script_ids` entry; see the
+[stored-script qualification](docs/qualification/2026-09-23-elasticsearch-script-metadata.md).
+`field_mappings` requires `fields` and reads selected native field
 definitions, including wildcards. Alias and settings reads accept `names` to
 select native alias or setting names. Mapping, alias and settings reads accept
 pinned native `options`, such as `flat_settings` and `include_defaults`; returned
@@ -479,7 +482,7 @@ Use target inventory-test. Inspect the schema and verify whether transaction
 | `query_select` | Runs one validated SELECT. |
 | `query_batch` | Runs several SELECTs in one read-only transaction snapshot. |
 | `query_explain` | Returns an engine-native non-executing plan for a validated SELECT. |
-| `es_metadata` | Resolves scoped Elasticsearch indices, aliases and data streams, or reads full/selected mappings, aliases and settings. |
+| `es_metadata` | Resolves scoped Elasticsearch indices, aliases and data streams, or reads full/selected mappings, aliases, settings and allowlisted stored scripts. |
 | `es_query` | Executes scoped native Elasticsearch reads, advanced DSL, scripts, aggregations, supplied vectors, templates and synchronous EQL/SQL/ES|QL, including SQL translation. |
 | `es_batch` | Executes preflighted independent reads or compatible searches in one owned PIT, with a shared deadline and output budget. |
 | `es_cursor` | Opens, advances and closes session-owned PIT/scroll/SQL handles with bounded lifetimes and cleanup. |

@@ -37,7 +37,7 @@ func metadataOperation(version, name string) error {
 	if op.Effect == "mutation" {
 		return failure("mutation_forbidden", "operation modifies persistent data or administrative state")
 	}
-	if !op.Implemented || (name != "resolve" && name != "mappings" && name != "field_mappings" && name != "aliases" && name != "settings") {
+	if !op.Implemented || (name != "resolve" && name != "mappings" && name != "field_mappings" && name != "aliases" && name != "settings" && name != "get_script") {
 		return failure("capability_unavailable", "read or owned-context operation awaits its query/lifecycle implementation")
 	}
 	return nil

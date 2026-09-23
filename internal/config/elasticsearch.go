@@ -23,6 +23,7 @@ type ElasticsearchConfig struct {
 	ClusterUUID           string                         `yaml:"cluster_uuid"`
 	AllowedIndices        []string                       `yaml:"allowed_indices"`
 	DeniedIndices         []string                       `yaml:"denied_indices"`
+	ReadableScriptIDs     []string                       `yaml:"readable_script_ids"`
 	PrivilegeRecheck      time.Duration                  `yaml:"privilege_recheck_interval"`
 	MaxRequestBytes       int                            `yaml:"max_request_bytes"`
 	MaxJSONDepth          int                            `yaml:"max_json_depth"`
@@ -190,6 +191,17 @@ func validateElasticsearch(t *TargetConfig, limits Limits) []string {
 		if p.MaxConcurrentShardsPerNode > 100 || p.MaxFoldBytes < 0 || p.MaxFoldPercent < 0 || p.MaxFoldPercent > 100 || p.MinStatusInterval < 0 {
 			add("elasticsearch.esql_pragmas resource ceilings are invalid")
 		}
+	}
+	if len(e.ReadableScriptIDs) > 128 {
+		add("elasticsearch.readable_script_ids exceeds 128 entries")
+	}
+	seenScripts := map[string]bool{}
+	for _, id := range e.ReadableScriptIDs {
+		if id == "" || len(id) > 1024 || seenScripts[id] || strings.ContainsFunc(id, unicode.IsControl) {
+			add("elasticsearch.readable_script_ids contains an empty, duplicate or invalid identifier")
+			break
+		}
+		seenScripts[id] = true
 	}
 	if _, ok := ElasticsearchBuilds[e.Version]; !ok {
 		add("Elasticsearch version has no pinned implementation profile")

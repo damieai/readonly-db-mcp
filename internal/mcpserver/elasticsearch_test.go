@@ -71,6 +71,11 @@ func TestElasticsearchThroughRegistryAndMCP(t *testing.T) {
 			fmt.Fprint(w, `{"reports-2026":{"settings":{"index.number_of_docs":"9007199254740993"}}}`)
 		case "/reports-*/_settings/index.number_of_*":
 			fmt.Fprint(w, `{"reports-2026":{"settings":{"index.number_of_docs":"9007199254740993"}}}`)
+		case "/_scripts/report":
+			if r.URL.Query().Get("master_timeout") == "" {
+				t.Error("MCP stored script metadata lost native deadline")
+			}
+			fmt.Fprint(w, `{"_id":"report","found":true,"script":{"lang":"mustache","source":{"size":9007199254740993}}}`)
 		case "/<reports-{now/d}>/_mapping":
 			fmt.Fprint(w, `{"reports-2026":{"mappings":{"_meta":{"number":9007199254740993}}}}`)
 		case "/reports-*/_search":
@@ -181,6 +186,7 @@ targets:
       version: 8.19.21
       cluster_uuid: abcdefghijklmnopqrstuv
       allowed_indices: [reports-*]
+      readable_script_ids: [report]
       esql_pragmas:
         max_task_concurrency: 8
       enrich:
@@ -259,6 +265,7 @@ targets:
 		json.RawMessage(`{"target":"es_test","operation":"aliases","names":["reports-*"]}`),
 		json.RawMessage(`{"target":"es_test","operation":"settings","names":["index.number_of_*"]}`),
 		json.RawMessage(`{"target":"es_test","operation":"field_mappings","fields":["title*"]}`),
+		json.RawMessage(`{"target":"es_test","operation":"get_script","names":["report"]}`),
 	} {
 		out, err := cs.CallTool(ctx, &mcp.CallToolParams{Name: "es_metadata", Arguments: call})
 		if err != nil || out.IsError {

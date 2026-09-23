@@ -162,6 +162,9 @@ Connect/TLS and writes have their own phase budgets; the request context bounds
 execution and collection. No runtime credential can be selected by a caller.
 Metadata responses fail on oversized native JSON or encoded MCP envelopes, with
 no silent truncation. Target-level metadata caches are not used for ES proofs.
+Stored-script metadata uses an exact operator ID allowlist rather than index
+resolution; it shares metadata admission and output bounds, and caps native
+`master_timeout` to the request deadline.
 
 Native query/batch calls reuse these budgets and reserve an additional six times
 their serialized request bytes for decoded DSL, rendered templates, frozen

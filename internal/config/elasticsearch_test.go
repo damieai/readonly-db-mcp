@@ -112,6 +112,12 @@ func TestElasticsearchRejectsConflictingOrUnboundedConfiguration(t *testing.T) {
 		{"pragma fold percentage", func(t *TargetConfig) {
 			t.Elasticsearch.ESQLPragmas = &ElasticsearchESQLPragmaConfig{MaxFoldPercent: 101}
 		}},
+		{"duplicate readable script", func(t *TargetConfig) {
+			t.Elasticsearch.ReadableScriptIDs = []string{"report", "report"}
+		}},
+		{"invalid readable script", func(t *TargetConfig) {
+			t.Elasticsearch.ReadableScriptIDs = []string{"report\nsecret"}
+		}},
 	} {
 		t.Run(test.name, func(t *testing.T) {
 			c := validESConfig()

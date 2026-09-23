@@ -42,6 +42,14 @@ native representation under the same explicit opt-in. The adapter, rather than t
 unavailable on the pinned release builds. See
 [pragma evidence](qualification/2026-09-23-elasticsearch-esql-pragmas.md).
 
+Implementation update (2026-09-23, stored script metadata):
+`es_metadata.operation=get_script` now reads the native definition of one exact
+operator-allowlisted script/template ID. The native request has a bounded
+`master_timeout`; response identity and shape are checked before release. This
+uses the same narrow `cluster:admin/script/get` action already required for
+stored-script query proof, without granting script management. See
+[stored-script metadata evidence](qualification/2026-09-23-elasticsearch-script-metadata.md).
+
 Implementation update (2026-09-23, date math): native `<...{now/...}>` index
 sources now pass unchanged through metadata, search, EQL, SQL, ES|QL and
 embedded read-only lookups. Each expression is URI-escaped as one path element;
@@ -518,6 +526,11 @@ identity, use a separately configured read-only attestor with only required
 security metadata access, never a query fallback credential. Do not grant
 `manage_own_api_key` just to make inspection convenient. Metadata/errors from
 the attestor are not exposed to callers. Missing proof fails startup.
+The pinned API-key information API does not disclose `limited_by` descriptors
+to an API key without key-management authority. A verified proof path
+compatible with read-only attestation remains a prerequisite; do not silently substitute
+`manage_own_api_key` or `manage_api_key` for proof. See the
+[API-key information authorization rule](https://www.elastic.co/docs/api/doc/elasticsearch/operation/operation-security-query-api-keys).
 See [self privilege inspection](https://www.elastic.co/docs/api/doc/elasticsearch/operation/operation-security-get-user-privileges)
 and [API-key descriptor inspection](https://www.elastic.co/docs/api/doc/elasticsearch/operation/operation-security-get-api-key).
 
