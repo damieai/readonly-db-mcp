@@ -22,6 +22,9 @@ repository.
 > [RFC-0006](docs/RFC-0006-elasticsearch-readonly-support.md); ES is not yet
 > advertised as a complete or live-server-certified query adapter.
 
+For agent application use cases and the next connector priorities, see the
+[data connector roadmap](docs/AGENT-APPLICATION-DATA-ROADMAP.md).
+
 ## What it provides
 
 - Multiple named database targets, selected explicitly on every tool call.
