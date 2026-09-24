@@ -26,6 +26,11 @@ checkpointers for production and SQLite checkpointers for local development
 | P3 | SQLite connector | Useful for local/offline demos, evaluation datasets and desktop agents. It adds less production coverage than MongoDB or Qdrant to this repository. | Open existing files with `mode=ro`, confine file paths to configured roots, verify schema and read-only SQL policy, bound results and cancellation, and reject ATTACH/external access and mutation paths. Do not use `immutable=1` for files that may change. |
 | Conditional | Neo4j, Snowflake/BigQuery, ClickHouse, Milvus/Weaviate, OpenSearch | Add one only when a target role or real workload needs graph traversal, warehouse analytics, another vector engine, or an OpenSearch-specific estate. | A named workload, pinned deployment and a read-only authority model precede an RFC. Protocol similarity to an existing adapter does not establish safety or compatibility. |
 
+P0 now has a [cross-engine MCP acceptance example](../examples/agent-p0/README.md)
+and disposable fixture recipes. Local orchestration and repository tests pass;
+the P0 live-build gate remains open until the three provisioned services and
+their native-denial/cancellation tests run and the evidence is recorded.
+
 Qdrant is the default first specialist vector database because it offers a
 locally deployable service, a native hybrid Query API and collection-scoped
 read-only keys. Milvus is a reasonable alternative for a role centered on

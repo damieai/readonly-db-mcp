@@ -24,6 +24,8 @@ repository.
 
 For agent application use cases and the next connector priorities, see the
 [data connector roadmap](docs/AGENT-APPLICATION-DATA-ROADMAP.md).
+The [P0 cross-engine acceptance example](examples/agent-p0/README.md) exercises
+one grounded PostgreSQL/pgvector, Redis Search and Elasticsearch workflow.
 
 ## What it provides
 

@@ -1,4 +1,5 @@
 tools/pgvector-proof/build.sh text eol=lf
+examples/agent-p0/*.sh text eol=lf
 # Preserve the exact bytes used by the pinned EQL parser integrity checks.
 tools/es-language-parser/upstream/* text eol=lf
 tools/es-language-parser/manifest.json text eol=lf
