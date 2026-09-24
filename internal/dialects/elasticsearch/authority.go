@@ -115,6 +115,14 @@ func (t *Target) attest(ctx context.Context) error {
 				_, _ = digest.Write([]byte(config.ElasticsearchEnrichScope))
 				_, _ = digest.Write(inventory.digest[:])
 			}
+			if len(t.cfg.Elasticsearch.RemoteClusters) != 0 {
+				remote, err := t.attestRemoteTopology(ctx, i)
+				if err != nil {
+					return err
+				}
+				_, _ = digest.Write([]byte("remote-topology"))
+				_, _ = digest.Write(remote)
+			}
 			continue
 		}
 		var user struct {
@@ -149,6 +157,14 @@ func (t *Target) attest(ctx context.Context) error {
 			}
 			_, _ = digest.Write([]byte(config.ElasticsearchEnrichScope))
 			_, _ = digest.Write(inventory.digest[:])
+		}
+		if len(t.cfg.Elasticsearch.RemoteClusters) != 0 {
+			remote, err := t.attestRemoteTopology(ctx, i)
+			if err != nil {
+				return err
+			}
+			_, _ = digest.Write([]byte("remote-topology"))
+			_, _ = digest.Write(remote)
 		}
 	}
 	var hash [32]byte

@@ -1,7 +1,7 @@
 # Native metadata/query/batch/PIT/scroll/SQL/synchronous-EQL/ES|QL profile. Replace endpoint, UUID and secret/CA locations.
 # ENRICH requires a separate explicit cluster snapshot data grant (disabled below).
 # Experimental ES|QL pragmas require an explicit per-target resource profile (disabled below).
-# API keys, finer ENRICH isolation and attestors remain later stages.
+# Cross-cluster query execution and finer ENRICH isolation remain later stages.
 server:
   transport: stdio
   strict_startup: true
@@ -31,6 +31,15 @@ targets:
       # Optional exact IDs exposed by es_metadata.operation=get_script.
       # Script/template query execution remains independently available.
       # readable_script_ids: [report-template]
+      # Optional remote connection topology proof. This verifies an existing
+      # local-cluster alias and API-key security model; remote queries remain
+      # unavailable until remote key and index-scope execution proof is added.
+      # remote_clusters:
+      #   - alias: archive
+      #     mode: proxy
+      #     proxy_address: archive-proxy.example.invalid:9443
+      #     allowed_indices: [logs-*]
+      #     denied_indices: [logs-private-*]
       # Optional broad data grant: ALL past/current/future enrichment snapshots
       # in this cluster, independently of allowed_indices/denied_indices/DLS/FLS.
       # Also requires explicit monitor_enrich; never grant manage_enrich.

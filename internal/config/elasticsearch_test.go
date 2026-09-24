@@ -66,6 +66,39 @@ func TestElasticsearchEnrichRequiresExplicitSeparateDataScope(t *testing.T) {
 	}
 }
 
+func TestElasticsearchRemoteTopologyConfiguration(t *testing.T) {
+	for _, profile := range []ElasticsearchRemoteCluster{
+		{Alias: "archive", Mode: "proxy", ProxyAddress: "proxy.example.invalid:9443", AllowedIndices: []string{"logs-*"}},
+		{Alias: "_archive", Mode: "sniff", Seeds: []string{"seed-a.example.invalid:9443", "seed-b.example.invalid:9443"}, AllowedIndices: []string{"logs-*"}, DeniedIndices: []string{"logs-private-*"}},
+	} {
+		c := validESConfig()
+		c.Targets["test"].Elasticsearch.RemoteClusters = []ElasticsearchRemoteCluster{profile}
+		if err := c.Validate(); err != nil {
+			t.Fatalf("valid remote topology rejected: %v", err)
+		}
+	}
+	for _, profile := range []ElasticsearchRemoteCluster{
+		{Alias: "archive*", Mode: "proxy", ProxyAddress: "proxy.example.invalid:9443", AllowedIndices: []string{"logs-*"}},
+		{Alias: "archive", Mode: "proxy", ProxyAddress: "https://proxy.example.invalid:9443", AllowedIndices: []string{"logs-*"}},
+		{Alias: "archive", Mode: "proxy", ProxyAddress: "proxy.example.invalid:9443", Seeds: []string{"seed.example.invalid:9443"}, AllowedIndices: []string{"logs-*"}},
+		{Alias: "archive", Mode: "sniff", Seeds: []string{"seed.example.invalid:9443", "seed.example.invalid:9443"}, AllowedIndices: []string{"logs-*"}},
+		{Alias: "archive", Mode: "sniff", Seeds: []string{"seed.example.invalid:9443"}, AllowedIndices: []string{"logs-*/_search"}},
+		{Alias: "archive", Mode: "proxy", ProxyAddress: "proxy.example.invalid:9443"},
+	} {
+		c := validESConfig()
+		c.Targets["test"].Elasticsearch.RemoteClusters = []ElasticsearchRemoteCluster{profile}
+		if err := c.Validate(); err == nil {
+			t.Fatalf("invalid remote topology accepted: %+v", profile)
+		}
+	}
+	c := validESConfig()
+	profile := ElasticsearchRemoteCluster{Alias: "archive", Mode: "proxy", ProxyAddress: "proxy.example.invalid:9443", AllowedIndices: []string{"logs-*"}}
+	c.Targets["test"].Elasticsearch.RemoteClusters = []ElasticsearchRemoteCluster{profile, profile}
+	if err := c.Validate(); err == nil {
+		t.Fatal("duplicate remote aliases accepted")
+	}
+}
+
 func TestElasticsearchStandaloneExampleLoads(t *testing.T) {
 	if _, err := Load("../../configs/elasticsearch.example.yaml"); err != nil {
 		t.Fatal(err)

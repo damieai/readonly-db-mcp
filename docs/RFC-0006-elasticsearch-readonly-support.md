@@ -59,6 +59,14 @@ scope; their native intersection cannot add authority. Key revocation and
 descriptor changes invalidate the proof. See
 [API-key evidence and live gate](qualification/2026-09-23-elasticsearch-api-key.md).
 
+Implementation update (2026-09-24, remote topology): optional
+`elasticsearch.remote_clusters` profiles now pin exact aliases, proxy/sniff
+addresses and future index scopes. Each local endpoint attests `/_remote/info`
+for the API-key security model and topology during startup and privilege
+refresh. That response redacts the credential and does not identify the remote
+cluster, so it cannot by itself authorize remote queries. See
+[remote topology evidence](qualification/2026-09-24-elasticsearch-remote-topology.md).
+
 Implementation update (2026-09-23, remote grants): local query identities may
 now carry native read-only `remote_indices` and `remote_cluster` grants. Their
 effective realm-user or API-key descriptors are validated field by field;

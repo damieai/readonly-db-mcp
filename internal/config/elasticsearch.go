@@ -2,8 +2,10 @@ package config
 
 import (
 	"fmt"
+	"net"
 	"net/url"
 	"regexp"
+	"strconv"
 	"strings"
 	"time"
 	"unicode"
@@ -25,6 +27,7 @@ type ElasticsearchConfig struct {
 	AllowedIndices        []string                       `yaml:"allowed_indices"`
 	DeniedIndices         []string                       `yaml:"denied_indices"`
 	ReadableScriptIDs     []string                       `yaml:"readable_script_ids"`
+	RemoteClusters        []ElasticsearchRemoteCluster   `yaml:"remote_clusters"`
 	PrivilegeRecheck      time.Duration                  `yaml:"privilege_recheck_interval"`
 	MaxRequestBytes       int                            `yaml:"max_request_bytes"`
 	MaxJSONDepth          int                            `yaml:"max_json_depth"`
@@ -39,6 +42,17 @@ type ElasticsearchConfig struct {
 	MaxLanguageTokens     int                            `yaml:"max_language_tokens"`
 	MaxLanguageDepth      int                            `yaml:"max_language_depth"`
 	MaxEQLFetchSize       int                            `yaml:"max_eql_fetch_size"`
+}
+
+// Operator-owned remote profiles pin a local-cluster alias and its connection
+// topology. They do not authorize remote query execution by themselves.
+type ElasticsearchRemoteCluster struct {
+	Alias          string   `yaml:"alias"`
+	Mode           string   `yaml:"mode"`
+	ProxyAddress   string   `yaml:"proxy_address"`
+	Seeds          []string `yaml:"seeds"`
+	AllowedIndices []string `yaml:"allowed_indices"`
+	DeniedIndices  []string `yaml:"denied_indices"`
 }
 
 type ElasticsearchAPIKeyConfig struct {
@@ -238,6 +252,45 @@ func validateElasticsearch(t *TargetConfig, limits Limits) []string {
 	if len(e.ReadableScriptIDs) > 128 {
 		add("elasticsearch.readable_script_ids exceeds 128 entries")
 	}
+	if len(e.RemoteClusters) > 32 {
+		add("elasticsearch.remote_clusters exceeds 32 configured aliases")
+	}
+	seenRemote := map[string]bool{}
+	for _, remote := range e.RemoteClusters {
+		if !regexp.MustCompile(`^[A-Za-z0-9_][A-Za-z0-9_.-]{0,254}$`).MatchString(remote.Alias) || seenRemote[remote.Alias] {
+			add("elasticsearch.remote_clusters requires distinct concrete aliases")
+		}
+		seenRemote[remote.Alias] = true
+		switch remote.Mode {
+		case "proxy":
+			if !validElasticsearchRemoteAddress(remote.ProxyAddress) || len(remote.Seeds) != 0 {
+				add("elasticsearch proxy remote requires one host:port address and no seeds")
+			}
+		case "sniff":
+			if remote.ProxyAddress != "" || len(remote.Seeds) == 0 || len(remote.Seeds) > 32 {
+				add("elasticsearch sniff remote requires 1-32 seeds and no proxy address")
+			}
+			seenSeed := map[string]bool{}
+			for _, seed := range remote.Seeds {
+				if !validElasticsearchRemoteAddress(seed) || seenSeed[seed] {
+					add("elasticsearch sniff remote contains an invalid or duplicate seed")
+				}
+				seenSeed[seed] = true
+			}
+		default:
+			add("elasticsearch remote mode must be proxy or sniff")
+		}
+		if len(remote.AllowedIndices) == 0 || len(remote.AllowedIndices) > 64 || len(remote.DeniedIndices) > 64 {
+			add("elasticsearch remote requires 1-64 allowed index patterns and at most 64 denied patterns")
+		}
+		for _, group := range [][]string{remote.AllowedIndices, remote.DeniedIndices} {
+			for _, pattern := range group {
+				if !ValidElasticsearchPattern(pattern) {
+					add("invalid Elasticsearch remote index scope pattern")
+				}
+			}
+		}
+	}
 	seenScripts := map[string]bool{}
 	for _, id := range e.ReadableScriptIDs {
 		if id == "" || len(id) > 1024 || seenScripts[id] || strings.ContainsFunc(id, unicode.IsControl) {
@@ -299,4 +352,16 @@ func validateElasticsearch(t *TargetConfig, limits Limits) []string {
 		}
 	}
 	return p
+}
+
+func validElasticsearchRemoteAddress(value string) bool {
+	if value == "" || len(value) > 512 || strings.ContainsAny(value, "/\\@?#% ") {
+		return false
+	}
+	host, port, err := net.SplitHostPort(value)
+	if err != nil || host == "" || strings.HasPrefix(host, "-") || strings.ContainsAny(host, ":\r\n\t") && net.ParseIP(host) == nil {
+		return false
+	}
+	n, err := strconv.Atoi(port)
+	return err == nil && n >= 1 && n <= 65535
 }
