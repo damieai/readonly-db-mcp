@@ -4,7 +4,7 @@
 - Authors: readonly-db-mcp maintainers
 - Created: 2026-09-12
 - Depends on: RFC-0001 resource governance and the common architecture contract
-- Target release: staged; advanced query acceptance is a completion gate
+- Target release: staged; core read-only query acceptance is the completion gate
 - Scope: Elasticsearch over HTTPS through the existing stdio MCP transport
 
 Implementation update (2026-09-23, index metadata): `es_metadata` now reads
@@ -312,7 +312,24 @@ no general read-only transaction flag: do not set `ServerReadOnly=true` merely
 because the principal is attested. Lifecycle tools get operation-appropriate
 MCP idempotency annotations; advancing a scroll is not idempotent.
 
-### Required operation and advanced-feature coverage
+### Coverage map and delivery priorities
+
+The table below is a coverage map, not a requirement to implement every
+Elasticsearch query API before the adapter is useful. The core release contract
+is scoped Search API/Query DSL (including native aggregations and supplied-vector
+search), document and metadata reads, bounded pagination, and proof of read-only
+authority, source scope and complete results. Preserve native query structure
+within that contract; do not reject an advanced read merely because it is
+complex or lacks a dedicated convenience tool.
+
+SQL, ES|QL, EQL, templates and owned cursors already implemented remain
+supported and must pass their own regression and live acceptance checks.
+Cross-cluster search, inference, custom plugins and persistent async lifecycles
+are separate opt-in profiles driven by an actual deployment requirement. Their
+absence does not hold up the core release. Each new profile needs the specific
+source, authority, cost and effect proof described in its row before dispatch.
+The next general acceptance priority is running the existing native operations
+against the pinned Elasticsearch builds, rather than expanding the API count.
 
 | Family | Included behavior | Effect/scope boundary |
 | --- | --- | --- |
@@ -779,10 +796,10 @@ evidence; a missing integration environment is an explicit skip.
 1. Implement config, transport, attestation, operation catalog and disposable
    hostile fixtures. Validate target-wide socket and memory accounting first.
 2. Deliver native DSL/metadata/document reads with advanced scripts, aggregation,
-   templates and vector positives. Label this a partial implementation.
-3. Deliver context lifecycles/batches and language parsers/tools, scope visitors,
-   ENRICH and configured cross-cluster profiles. Publish per-profile capability
-   and license requirements. Keep unfulfilled mandatory gates visible.
+   templates and vector positives. Qualify the core read-only profile.
+3. Qualify already implemented contexts, batches and language tools. Add ENRICH,
+   cross-cluster and other opt-in profiles when deployment needs justify their
+   separate proofs. Publish per-profile capability and license requirements.
 4. Run real cancellation/saturation/soak/version matrices; provision read-only
    reporting targets with verified TLS and capacity for the common budgets.
 5. Canary with explicit target aliases; monitor task recovery, context counts,
@@ -815,14 +832,15 @@ use a separately provisioned reporting cluster when isolation is required.
 
 - [ ] Draft reviewed for endpoint effects, privileges, source scope and budgets.
 - [ ] Elasticsearch config, registry, native core capabilities and MCP tools land.
-- [ ] Every mandatory advanced query family above has passing positive and
-  hostile tests on its supported profile; simple search alone is insufficient.
-- [ ] Language parser/helper choice and deployment are implemented and tested.
+- [ ] The core Search API, metadata/document reads and pagination have passing
+  positive and hostile tests; supported advanced DSL stays native and scoped.
+- [ ] Each advertised language or optional profile has its own positive,
+  hostile and version-specific acceptance evidence.
 - [ ] Runtime user/API-key proof and bounded re-attestation work without writes.
 - [ ] Pagination, batch consistency, cancellation and cleanup are proven on real
   servers with hard connection/memory/response bounds.
-- [ ] Exact version/license/CCS matrices pass; remaining optional inference,
-  plugin or async effect profiles are explicitly documented.
+- [ ] Exact version and license matrices pass for the advertised profiles;
+  cross-cluster, inference, plugin or async profiles remain explicitly optional.
 - [ ] Example configuration, architecture, security policy, operational guidance
   and measured release results agree with actual implemented capabilities.
 - [ ] Canary exit gates pass; ES support is advertised only to that proven scope.
