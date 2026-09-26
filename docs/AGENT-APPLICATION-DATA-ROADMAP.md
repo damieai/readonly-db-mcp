@@ -31,6 +31,10 @@ and disposable fixture recipes. Local orchestration and repository tests pass;
 the P0 live-build gate remains open until the three provisioned services and
 their native-denial/cancellation tests run and the evidence is recorded.
 
+P1 now has the [Qdrant read-only connector](QDRANT-READONLY.md) and local
+policy/transport tests. Its live mutation-denial and retrieval measurements
+remain open until a provisioned Qdrant 1.19.1 fixture is available.
+
 Qdrant is the default first specialist vector database because it offers a
 locally deployable service, a native hybrid Query API and collection-scoped
 read-only keys. Milvus is a reasonable alternative for a role centered on

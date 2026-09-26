@@ -1,0 +1,31 @@
+# Qdrant 1.19.1 collection-scoped, read-only JWT profile.
+# Provision the collection and mint the JWT outside this MCP process.
+server:
+  transport: stdio
+  strict_startup: true
+
+limits:
+  global_concurrency: 16
+  per_target_concurrency: 8
+  default_timeout: 5m
+  max_timeout: 10m
+  max_rows: 5000
+  max_result_bytes: 8388608
+
+targets:
+  vector-docs:
+    engine: qdrant
+    environment: production
+    consistency: eventual
+    tls:
+      mode: verify-full
+      ca_file: /etc/readonly-db-mcp/qdrant-ca.pem
+    qdrant:
+      endpoint: https://qdrant.example.invalid:6333
+      version: 1.19.1
+      collections: [agent_docs]
+      key_env: READONLY_QDRANT_JWT
+      privilege_recheck_interval: 1m
+      max_request_bytes: 1048576
+      max_json_depth: 128
+      max_json_nodes: 100000

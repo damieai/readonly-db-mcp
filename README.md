@@ -21,6 +21,9 @@ repository.
 > ENRICH supports explicit cluster snapshot scope; finer isolation, inference and other advanced profiles remain tracked by
 > [RFC-0006](docs/RFC-0006-elasticsearch-readonly-support.md); ES is not yet
 > advertised as a complete or live-server-certified query adapter.
+> Qdrant 1.19.1 has a collection-scoped read-only connector with native
+> query, batch, groups, scroll, retrieve, count and facet operations. Its
+> [live-server mutation-denial gate](docs/QDRANT-READONLY.md) remains open.
 
 For agent application use cases and the next connector priorities, see the
 [data connector roadmap](docs/AGENT-APPLICATION-DATA-ROADMAP.md).
@@ -209,6 +212,10 @@ API-key mode requires a separate realm attestor whose only effective cluster
 privilege is `read_security`; its credentials are used solely for key descriptor
 proof. See [API-key qualification](docs/qualification/2026-09-23-elasticsearch-api-key.md).
 Do not grant the query key security-management privileges.
+
+For Qdrant, configure one pinned HTTPS origin, exact collection names and an
+expiring collection-scoped `r` JWT. Startup verifies both authenticated access
+and unauthenticated denial. See [Qdrant configuration and live acceptance](docs/QDRANT-READONLY.md).
 
 Stored script/template inspection additionally accepts the narrowly scoped
 `cluster:admin/script/get` action grant. Do not replace it with `manage` or
@@ -495,6 +502,7 @@ Use target inventory-test. Inspect the schema and verify whether transaction
 | `es_cursor` | Opens, advances and closes session-owned PIT/scroll/SQL handles with bounded lifetimes and cleanup. |
 | `redis_command` | Runs one attested advanced read-only Redis command vector. |
 | `redis_batch` | Runs a bounded read-only Redis batch; non-atomic commands execute sequentially to bound retained reply memory. |
+| `qdrant_read` | Executes scoped native Qdrant metadata, dense/sparse/hybrid queries, query batches/groups, scroll, retrieve, count and facet reads. |
 
 Every database tool requires an exact target alias. There is deliberately no
 stateful `USE DATABASE` tool and no tool accepts a host, DSN, username or

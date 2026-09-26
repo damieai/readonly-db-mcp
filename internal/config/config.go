@@ -23,6 +23,7 @@ const (
 	EngineSQLServer     = "sqlserver"
 	EngineRedis         = "redis"
 	EngineElasticsearch = "elasticsearch"
+	EngineQdrant        = "qdrant"
 	TransportStdio      = "stdio"
 	TLSDisabled         = "disabled"
 	TLSRequired         = "required"
@@ -98,6 +99,7 @@ type TargetConfig struct {
 	SQLServer      SQLServerConfig      `yaml:"sqlserver"`
 	Redis          RedisConfig          `yaml:"redis"`
 	Elasticsearch  *ElasticsearchConfig `yaml:"elasticsearch"`
+	Qdrant         *QdrantConfig        `yaml:"qdrant"`
 	MetadataCache  MetadataCacheConfig  `yaml:"metadata_cache"`
 	ResultCache    ResultCacheConfig    `yaml:"result_cache"`
 }
@@ -331,14 +333,17 @@ func applyDefaults(cfg *Config) {
 		}
 		if target.Consistency == "" {
 			target.Consistency = ConsistencyCurrent
-			if target.Engine == EngineElasticsearch {
+			if target.Engine == EngineElasticsearch || target.Engine == EngineQdrant {
 				target.Consistency = ConsistencyEventual
 			}
 		}
 		if target.Engine == EngineElasticsearch {
 			defaultElasticsearch(target)
 		}
-		if target.Port == 0 && target.Engine != EngineElasticsearch {
+		if target.Engine == EngineQdrant {
+			defaultQdrant(target)
+		}
+		if target.Port == 0 && target.Engine != EngineElasticsearch && target.Engine != EngineQdrant {
 			if target.Engine == EnginePostgreSQL {
 				target.Port = 5432
 			} else if target.Engine == EngineSQLServer {
@@ -480,7 +485,7 @@ func applyDefaults(cfg *Config) {
 				target.Redis.Cluster.RequireFullSlotCoverage = &value
 			}
 		}
-		if target.Engine != EngineRedis {
+		if target.Engine != EngineRedis && target.Engine != EngineQdrant {
 			if target.MetadataCache.TableListTTL == 0 {
 				target.MetadataCache.TableListTTL = 20 * time.Minute
 			}
@@ -524,6 +529,9 @@ func resolveRelativePaths(target *TargetConfig, configDir string) {
 	}
 	if target.Elasticsearch != nil && target.Elasticsearch.APIKey != nil {
 		paths = append(paths, &target.Elasticsearch.APIKey.KeyFile, &target.Elasticsearch.APIKey.Attestor.PasswordFile)
+	}
+	if target.Qdrant != nil {
+		paths = append(paths, &target.Qdrant.KeyFile)
 	}
 	for _, path := range paths {
 		if *path != "" && !filepath.IsAbs(*path) {
@@ -638,11 +646,17 @@ func (cfg *Config) Validate() error {
 func (cfg *Config) ResourceForecastBytes() int64 {
 	total := int64(cfg.Limits.GlobalConcurrency) * (int64(cfg.Limits.MaxResultBytes)*3 + int64(cfg.Limits.MaxParameterBytes))
 	var esNodes, esRequest, esTargets int
+	var qdrantNodes, qdrantRequest, qdrantTargets int
 	for _, target := range cfg.Targets {
 		if target != nil && target.Engine == EngineElasticsearch && target.Elasticsearch != nil {
 			esTargets++
 			esNodes = max(esNodes, target.Elasticsearch.MaxJSONNodes)
 			esRequest = max(esRequest, target.Elasticsearch.MaxRequestBytes)
+		}
+		if target != nil && target.Engine == EngineQdrant && target.Qdrant != nil {
+			qdrantTargets++
+			qdrantNodes = max(qdrantNodes, target.Qdrant.MaxJSONNodes)
+			qdrantRequest = max(qdrantRequest, target.Qdrant.MaxRequestBytes)
 		}
 	}
 	if esNodes > 0 {
@@ -655,9 +669,13 @@ func (cfg *Config) ResourceForecastBytes() int64 {
 		extraRequest := max(0, 7*esRequest-cfg.Limits.MaxParameterBytes)
 		total += int64(active) * (int64(cfg.Limits.MaxResultBytes)*3 + int64(esNodes)*64 + int64(extraRequest) + (2 << 20))
 	}
+	if qdrantNodes > 0 {
+		active := min(cfg.Limits.GlobalConcurrency, qdrantTargets*cfg.Limits.PerTargetConcurrency)
+		total += int64(active) * (int64(cfg.Limits.MaxResultBytes)*2 + int64(qdrantNodes)*64 + int64(qdrantRequest)*3)
+	}
 	for _, target := range cfg.Targets {
 		if target != nil {
-			if target.Engine != EngineRedis && target.Engine != EngineElasticsearch {
+			if target.Engine != EngineRedis && target.Engine != EngineElasticsearch && target.Engine != EngineQdrant {
 				total += int64(target.MetadataCache.MaxBytes) + int64(target.ResultCache.MaxBytes)
 			}
 			if target.Engine == EngineRedis && target.Redis.Mode == "cluster" {
@@ -676,11 +694,17 @@ func validateTarget(name string, target *TargetConfig, limits Limits) []string {
 	if target.Engine == EngineElasticsearch {
 		return append(problems, validateElasticsearch(target, limits)...)
 	}
+	if target.Engine == EngineQdrant {
+		return append(problems, validateQdrant(target, limits)...)
+	}
 	if target.Elasticsearch != nil {
 		problems = append(problems, "elasticsearch settings are valid only for elasticsearch targets")
 	}
+	if target.Qdrant != nil {
+		problems = append(problems, "qdrant settings are valid only for qdrant targets")
+	}
 	if target.Engine != EngineMySQL && target.Engine != EnginePostgreSQL && target.Engine != EngineSQLServer && target.Engine != EngineRedis {
-		problems = append(problems, "engine must be mysql, postgresql, sqlserver, redis, or elasticsearch")
+		problems = append(problems, "engine must be mysql, postgresql, sqlserver, redis, elasticsearch, or qdrant")
 	}
 	if !safeName.MatchString(target.Environment) {
 		problems = append(problems, "environment is required and must be a safe identifier")
