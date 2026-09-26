@@ -129,6 +129,7 @@ func (s *Server) registerTools() {
 	mcp.AddTool(s.mcp, tool("redis_batch", "Execute a bounded batch of attested read-only Redis commands."), s.redisBatch)
 	s.registerElasticsearchTools()
 	s.registerQdrantTools()
+	s.registerMongoDBTools()
 }
 
 func tool(name, description string) *mcp.Tool {

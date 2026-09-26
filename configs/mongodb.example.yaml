@@ -1,0 +1,36 @@
+# MongoDB 8.0.32+ collection-scoped document reads. The version must match exactly.
+# Create a custom role with find + listIndexes on each listed collection only.
+server:
+  transport: stdio
+  strict_startup: true
+
+limits:
+  global_concurrency: 16
+  per_target_concurrency: 8
+  default_timeout: 5m
+  max_timeout: 10m
+  max_rows: 5000
+  max_result_bytes: 8388608
+
+targets:
+  agent-documents:
+    engine: mongodb
+    environment: production
+    consistency: eventual
+    host: mongodb.example.invalid
+    port: 27017
+    database: agent_data
+    username: agent_ro
+    password_env: READONLY_MONGODB_PASSWORD
+    tls:
+      mode: verify-full
+      ca_file: /etc/readonly-db-mcp/mongodb-ca.pem
+    mongodb:
+      version: 8.0.32
+      auth_source: admin
+      collections: [docs, sources]
+      privilege_recheck_interval: 1m
+      max_request_bytes: 1048576
+      max_json_depth: 128
+      max_json_nodes: 100000
+      max_pipeline_stages: 100

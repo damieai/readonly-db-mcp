@@ -62,7 +62,7 @@ func validateQdrant(t *TargetConfig, limits Limits) []string {
 	if t.Host != "" || t.Port != 0 || t.Database != "" || t.Username != "" || t.PasswordFile != "" || t.PasswordEnv != "" || len(t.AllowedSchemas) != 0 || len(t.DeniedTables) != 0 {
 		add("Qdrant uses endpoint, collections and scoped key; omit SQL identity and scope fields")
 	}
-	if t.Elasticsearch != nil || t.MySQL != (MySQLConfig{}) || t.PostgreSQL != (PostgreSQLConfig{}) || t.SQLServer != (SQLServerConfig{}) || !redisConfigEmpty(t.Redis) {
+	if t.Elasticsearch != nil || t.MongoDB != nil || t.MySQL != (MySQLConfig{}) || t.PostgreSQL != (PostgreSQLConfig{}) || t.SQLServer != (SQLServerConfig{}) || !redisConfigEmpty(t.Redis) {
 		add("Qdrant rejects other engine settings")
 	}
 	u, err := url.Parse(q.Endpoint)

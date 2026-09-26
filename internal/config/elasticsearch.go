@@ -181,7 +181,7 @@ func validateElasticsearch(t *TargetConfig, limits Limits) []string {
 	if t.Host != "" || t.Port != 0 || t.Database != "" || len(t.AllowedSchemas) != 0 || len(t.DeniedTables) != 0 {
 		add("Elasticsearch uses endpoints and index scopes; omit SQL host/port/database/schema fields")
 	}
-	if t.MySQL != (MySQLConfig{}) || t.PostgreSQL != (PostgreSQLConfig{}) || t.SQLServer != (SQLServerConfig{}) || !redisConfigEmpty(t.Redis) {
+	if t.MongoDB != nil || t.Qdrant != nil || t.MySQL != (MySQLConfig{}) || t.PostgreSQL != (PostgreSQLConfig{}) || t.SQLServer != (SQLServerConfig{}) || !redisConfigEmpty(t.Redis) {
 		add("Elasticsearch rejects SQL/Redis settings")
 	}
 	if t.Elasticsearch != nil && t.Elasticsearch.APIKey != nil {

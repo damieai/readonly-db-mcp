@@ -115,8 +115,10 @@ recovery. Operators may always choose stricter values for a particular target.
 ## Adding a database engine
 
 A new engine gets its own `internal/dialects/<engine>` package. It implements the
-minimal `core.Target` plus `core.SQLTarget` or `core.RedisTarget`, and an
-appropriate batch capability. It must not reuse another engine's parser or
+minimal `core.Target` plus its engine-specific read interface (currently
+`core.SQLTarget`, `core.RedisTarget`, `core.ElasticsearchTarget`,
+`core.QdrantTarget`, or `core.MongoDBTarget`) and any appropriate batch
+capability. It must not reuse another engine's parser or
 privilege assumptions.
 
 An engine is considered complete only when it has:

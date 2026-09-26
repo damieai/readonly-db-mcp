@@ -1,7 +1,7 @@
 # readonly-db-mcp
 
 A local-first Model Context Protocol server that lets AI clients run advanced,
-read-only SQL against explicitly configured database targets.
+read-only queries against explicitly configured database targets.
 
 The project is designed to be copied into its own GitHub repository. It is a
 standalone Go module and does not import code or configuration from its parent
@@ -24,6 +24,9 @@ repository.
 > Qdrant 1.19.1 has a collection-scoped read-only connector with native
 > query, batch, groups, scroll, retrieve, count and facet operations. Its
 > [live-server mutation-denial gate](docs/QDRANT-READONLY.md) remains open.
+> MongoDB 8.0 has collection-scoped document reads and reviewed native
+> aggregation. Its [live-server qualification](docs/MONGODB-READONLY.md)
+> remains open until a provisioned fixture is tested.
 
 For agent application use cases and the next connector priorities, see the
 [data connector roadmap](docs/AGENT-APPLICATION-DATA-ROADMAP.md).
@@ -216,6 +219,11 @@ Do not grant the query key security-management privileges.
 For Qdrant, configure one pinned HTTPS origin, exact collection names and an
 expiring collection-scoped `r` JWT. Startup verifies both authenticated access
 and unauthenticated denial. See [Qdrant configuration and live acceptance](docs/QDRANT-READONLY.md).
+
+For MongoDB, configure an exact 8.0 patch build, one direct host and a custom
+role with `find` and `listIndexes` only on configured collections. Startup
+checks effective privileges and the authorized collection catalog. See
+[MongoDB configuration and live acceptance](docs/MONGODB-READONLY.md).
 
 Stored script/template inspection additionally accepts the narrowly scoped
 `cluster:admin/script/get` action grant. Do not replace it with `manage` or
@@ -503,6 +511,7 @@ Use target inventory-test. Inspect the schema and verify whether transaction
 | `redis_command` | Runs one attested advanced read-only Redis command vector. |
 | `redis_batch` | Runs a bounded read-only Redis batch; non-atomic commands execute sequentially to bound retained reply memory. |
 | `qdrant_read` | Executes scoped native Qdrant metadata, dense/sparse/hybrid queries, query batches/groups, scroll, retrieve, count and facet reads. |
+| `mongodb_read` | Reads scoped MongoDB collection metadata, native find/count and reviewed read-only aggregation in Extended JSON. |
 
 Every database tool requires an exact target alias. There is deliberately no
 stateful `USE DATABASE` tool and no tool accepts a host, DSN, username or

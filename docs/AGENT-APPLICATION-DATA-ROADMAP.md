@@ -35,6 +35,10 @@ P1 now has the [Qdrant read-only connector](QDRANT-READONLY.md) and local
 policy/transport tests. Its live mutation-denial and retrieval measurements
 remain open until a provisioned Qdrant 1.19.1 fixture is available.
 
+P2 now has the [MongoDB document connector](MONGODB-READONLY.md) with local
+policy and cursor tests. Its live authority, mutation-denial and cancellation
+gate remains open until a disposable MongoDB 8.0.32 fixture is run.
+
 Qdrant is the default first specialist vector database because it offers a
 locally deployable service, a native hybrid Query API and collection-scoped
 read-only keys. Milvus is a reasonable alternative for a role centered on

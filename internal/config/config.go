@@ -24,6 +24,7 @@ const (
 	EngineRedis         = "redis"
 	EngineElasticsearch = "elasticsearch"
 	EngineQdrant        = "qdrant"
+	EngineMongoDB       = "mongodb"
 	TransportStdio      = "stdio"
 	TLSDisabled         = "disabled"
 	TLSRequired         = "required"
@@ -100,6 +101,7 @@ type TargetConfig struct {
 	Redis          RedisConfig          `yaml:"redis"`
 	Elasticsearch  *ElasticsearchConfig `yaml:"elasticsearch"`
 	Qdrant         *QdrantConfig        `yaml:"qdrant"`
+	MongoDB        *MongoDBConfig       `yaml:"mongodb"`
 	MetadataCache  MetadataCacheConfig  `yaml:"metadata_cache"`
 	ResultCache    ResultCacheConfig    `yaml:"result_cache"`
 }
@@ -333,7 +335,7 @@ func applyDefaults(cfg *Config) {
 		}
 		if target.Consistency == "" {
 			target.Consistency = ConsistencyCurrent
-			if target.Engine == EngineElasticsearch || target.Engine == EngineQdrant {
+			if target.Engine == EngineElasticsearch || target.Engine == EngineQdrant || target.Engine == EngineMongoDB {
 				target.Consistency = ConsistencyEventual
 			}
 		}
@@ -342,6 +344,9 @@ func applyDefaults(cfg *Config) {
 		}
 		if target.Engine == EngineQdrant {
 			defaultQdrant(target)
+		}
+		if target.Engine == EngineMongoDB {
+			defaultMongoDB(target)
 		}
 		if target.Port == 0 && target.Engine != EngineElasticsearch && target.Engine != EngineQdrant {
 			if target.Engine == EnginePostgreSQL {
@@ -352,6 +357,8 @@ func applyDefaults(cfg *Config) {
 				if target.Redis.Mode != "sentinel" && target.Redis.Mode != "cluster" {
 					target.Port = 6379
 				}
+			} else if target.Engine == EngineMongoDB {
+				target.Port = 27017
 			} else {
 				target.Port = 3306
 			}
@@ -485,7 +492,7 @@ func applyDefaults(cfg *Config) {
 				target.Redis.Cluster.RequireFullSlotCoverage = &value
 			}
 		}
-		if target.Engine != EngineRedis && target.Engine != EngineQdrant {
+		if target.Engine != EngineRedis && target.Engine != EngineQdrant && target.Engine != EngineMongoDB {
 			if target.MetadataCache.TableListTTL == 0 {
 				target.MetadataCache.TableListTTL = 20 * time.Minute
 			}
@@ -647,6 +654,7 @@ func (cfg *Config) ResourceForecastBytes() int64 {
 	total := int64(cfg.Limits.GlobalConcurrency) * (int64(cfg.Limits.MaxResultBytes)*3 + int64(cfg.Limits.MaxParameterBytes))
 	var esNodes, esRequest, esTargets int
 	var qdrantNodes, qdrantRequest, qdrantTargets int
+	var mongoRequest, mongoNodes, mongoTargets int
 	for _, target := range cfg.Targets {
 		if target != nil && target.Engine == EngineElasticsearch && target.Elasticsearch != nil {
 			esTargets++
@@ -657,6 +665,11 @@ func (cfg *Config) ResourceForecastBytes() int64 {
 			qdrantTargets++
 			qdrantNodes = max(qdrantNodes, target.Qdrant.MaxJSONNodes)
 			qdrantRequest = max(qdrantRequest, target.Qdrant.MaxRequestBytes)
+		}
+		if target != nil && target.Engine == EngineMongoDB && target.MongoDB != nil {
+			mongoTargets++
+			mongoRequest = max(mongoRequest, target.MongoDB.MaxRequestBytes)
+			mongoNodes = max(mongoNodes, target.MongoDB.MaxJSONNodes)
 		}
 	}
 	if esNodes > 0 {
@@ -673,9 +686,15 @@ func (cfg *Config) ResourceForecastBytes() int64 {
 		active := min(cfg.Limits.GlobalConcurrency, qdrantTargets*cfg.Limits.PerTargetConcurrency)
 		total += int64(active) * (int64(cfg.Limits.MaxResultBytes)*2 + int64(qdrantNodes)*64 + int64(qdrantRequest)*3)
 	}
+	if mongoTargets > 0 {
+		active := min(cfg.Limits.GlobalConcurrency, mongoTargets*cfg.Limits.PerTargetConcurrency)
+		// The wire protocol can deliver a 16 MiB BSON batch even for a small
+		// requested result; account for it separately from final JSON copies.
+		total += int64(active) * (16<<20 + int64(cfg.Limits.MaxResultBytes)*2 + int64(mongoRequest)*3 + int64(mongoNodes)*64)
+	}
 	for _, target := range cfg.Targets {
 		if target != nil {
-			if target.Engine != EngineRedis && target.Engine != EngineElasticsearch && target.Engine != EngineQdrant {
+			if target.Engine != EngineRedis && target.Engine != EngineElasticsearch && target.Engine != EngineQdrant && target.Engine != EngineMongoDB {
 				total += int64(target.MetadataCache.MaxBytes) + int64(target.ResultCache.MaxBytes)
 			}
 			if target.Engine == EngineRedis && target.Redis.Mode == "cluster" {
@@ -697,14 +716,20 @@ func validateTarget(name string, target *TargetConfig, limits Limits) []string {
 	if target.Engine == EngineQdrant {
 		return append(problems, validateQdrant(target, limits)...)
 	}
+	if target.Engine == EngineMongoDB {
+		return append(problems, validateMongoDB(target, limits)...)
+	}
 	if target.Elasticsearch != nil {
 		problems = append(problems, "elasticsearch settings are valid only for elasticsearch targets")
 	}
 	if target.Qdrant != nil {
 		problems = append(problems, "qdrant settings are valid only for qdrant targets")
 	}
+	if target.MongoDB != nil {
+		problems = append(problems, "mongodb settings are valid only for mongodb targets")
+	}
 	if target.Engine != EngineMySQL && target.Engine != EnginePostgreSQL && target.Engine != EngineSQLServer && target.Engine != EngineRedis {
-		problems = append(problems, "engine must be mysql, postgresql, sqlserver, redis, elasticsearch, or qdrant")
+		problems = append(problems, "engine must be mysql, postgresql, sqlserver, redis, elasticsearch, qdrant, or mongodb")
 	}
 	if !safeName.MatchString(target.Environment) {
 		problems = append(problems, "environment is required and must be a safe identifier")

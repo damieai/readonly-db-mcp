@@ -12,6 +12,7 @@ import (
 	"github.com/your-org/readonly-db-mcp/internal/config"
 	"github.com/your-org/readonly-db-mcp/internal/core"
 	estarget "github.com/your-org/readonly-db-mcp/internal/dialects/elasticsearch"
+	mongodbtarget "github.com/your-org/readonly-db-mcp/internal/dialects/mongodb"
 	mysqltarget "github.com/your-org/readonly-db-mcp/internal/dialects/mysql"
 	postgresqltarget "github.com/your-org/readonly-db-mcp/internal/dialects/postgresql"
 	qdranttarget "github.com/your-org/readonly-db-mcp/internal/dialects/qdrant"
@@ -49,6 +50,8 @@ func Open(ctx context.Context, cfg *config.Config, auditor audit.Auditor, record
 			target, err = estarget.Open(ctx, targetCfg, cfg.Limits, controller, auditor, recorder)
 		case config.EngineQdrant:
 			target, err = qdranttarget.Open(ctx, targetCfg, cfg.Limits, controller, auditor, recorder)
+		case config.EngineMongoDB:
+			target, err = mongodbtarget.Open(ctx, targetCfg, cfg.Limits, controller, auditor, recorder)
 		case config.EngineMySQL:
 			target, err = mysqltarget.Open(ctx, targetCfg, cfg.Limits, controller, auditor, recorder)
 		case config.EnginePostgreSQL:
@@ -67,6 +70,18 @@ func Open(ctx context.Context, cfg *config.Config, auditor audit.Auditor, record
 		registry.targets[name] = target
 	}
 	return registry, nil
+}
+
+func (r *Registry) GetMongoDB(name string) (core.MongoDBTarget, error) {
+	target, err := r.Get(name)
+	if err != nil {
+		return nil, err
+	}
+	m, ok := target.(core.MongoDBTarget)
+	if !ok {
+		return nil, errors.New("selected target is not MongoDB")
+	}
+	return m, nil
 }
 
 func (r *Registry) GetQdrant(name string) (core.QdrantTarget, error) {
