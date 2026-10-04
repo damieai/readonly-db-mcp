@@ -77,7 +77,8 @@ Only Neo4j Enterprise 2026.03+ with a dedicated native-auth query user is admitt
 The user is assigned a custom graph-read role scoped to one exact database.
 A separate attestor identity, limited to fixed system-directory reads, collects
 `SHOW USER`, `SHOW USER PRIVILEGES`, and `SHOW AUTH RULES` at startup and on
-expiry. Refuse missing roles (Community), unknown fields,
+expiry. The query identity separately runs `SHOW CURRENT USER`; its reported
+user and roles must match the attestor's view. Refuse missing roles (Community), unknown fields,
 unassigned-role rows, broad graph/database grants, any granted write/admin/
 `LOAD`/unreviewed procedure or boosted-execution action, and future unreviewed actions.
 `DENIED` rows may narrow authority, but do not excuse an unsafe `GRANTED` row

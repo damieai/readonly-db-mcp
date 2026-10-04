@@ -2,6 +2,7 @@ package neo4j
 
 import (
 	"context"
+	"errors"
 	"os"
 	"testing"
 	"time"
@@ -84,16 +85,46 @@ func TestNeo4jDisposableEnterpriseGate(t *testing.T) {
 	if _, err := target.Read(ctx, core.Neo4jReadRequest{Cypher: "CREATE (:Neo4jMCPWriteProbe)"}); err == nil {
 		t.Fatal("connector admitted a write")
 	}
-	// Driver read mode is routing, not an authorization boundary. Exercise the
-	// query account directly to prove that server-side grants reject mutation.
-	session := target.query.NewSession(ctx, driver.SessionConfig{DatabaseName: targetCfg.Database, AccessMode: driver.AccessModeWrite})
-	defer session.Close(ctx)
-	result, err := session.Run(ctx, "CREATE (:Neo4jMCPWriteProbe)", nil)
-	if err == nil {
-		_, err = result.Consume(ctx)
+	// Use write routing for these direct calls: driver read mode is not an
+	// authorization boundary. A generic error is insufficient evidence.
+	for _, tc := range []struct{ name, cypher string }{
+		{"create", "CREATE (:Neo4jMCPWriteProbe)"},
+		{"merge", "MERGE (:Neo4jMCPWriteProbe {id: 'merge'})"},
+		{"set", "MATCH (n:Neo4jMCPDocument {id: 'neo4j-fixture-doc'}) SET n.title = 'changed'"},
+		{"delete", "MATCH (n:Neo4jMCPDocument {id: 'neo4j-fixture-doc'}) DETACH DELETE n"},
+		{"schema", "CREATE INDEX neo4j_mcp_write_probe IF NOT EXISTS FOR (n:Neo4jMCPWriteProbe) ON (n.id)"},
+		{"load", "LOAD CSV FROM 'file:///neo4j-mcp-does-not-exist.csv' AS row RETURN row"},
+		{"admin", "SHOW USERS"},
+	} {
+		t.Run("native_denial_"+tc.name, func(t *testing.T) {
+			assertNativeForbidden(t, runNativeCypher(ctx, target.query, targetCfg.Database, tc.cypher))
+		})
 	}
-	if err == nil {
-		t.Fatal("Neo4j query account has native write authority")
+	unchanged, err := target.Read(ctx, core.Neo4jReadRequest{
+		Cypher:  "MATCH (d:Neo4jMCPDocument {id: 'neo4j-fixture-doc'}) RETURN d.title AS title, COUNT { MATCH (:Neo4jMCPWriteProbe) } AS write_probes",
+		MaxRows: 1,
+	})
+	if err != nil || unchanged.RowCount != 1 || unchanged.Rows[0]["title"] != "Graph retrieval handbook" || unchanged.Rows[0]["write_probes"] != int64(0) {
+		t.Fatalf("write-denial recovery or unchanged-data check failed: result=%+v err=%v", unchanged, err)
+	}
+}
+
+func runNativeCypher(ctx context.Context, connection driver.Driver, database, cypher string) error {
+	session := connection.NewSession(ctx, driver.SessionConfig{DatabaseName: database, AccessMode: driver.AccessModeWrite})
+	defer session.Close(ctx)
+	result, err := session.Run(ctx, cypher, nil)
+	if err != nil {
+		return err
+	}
+	_, err = result.Consume(ctx)
+	return err
+}
+
+func assertNativeForbidden(t *testing.T, err error) {
+	t.Helper()
+	var neo4jErr *driver.Neo4jError
+	if !errors.As(err, &neo4jErr) || neo4jErr.Code != "Neo.ClientError.Security.Forbidden" {
+		t.Fatalf("expected native Security.Forbidden, got %v", err)
 	}
 }
 

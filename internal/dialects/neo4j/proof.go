@@ -41,6 +41,16 @@ func (t *Target) prove(ctx context.Context) error {
 		}
 	}
 	name := t.cfg.Username // The config validator restricts this to a safe identifier.
+	querySession := t.query.NewSession(ctx, driver.SessionConfig{DatabaseName: "system", AccessMode: driver.AccessModeRead, FetchSize: 2})
+	currentRows, currentErr := readFixed(ctx, querySession, "SHOW CURRENT USER YIELD user, roles, passwordChangeRequired, suspended RETURN user, roles, passwordChangeRequired, suspended", 2)
+	closeErr := querySession.Close(ctx)
+	if currentErr != nil || closeErr != nil {
+		return errors.New("permission_denied: Neo4j query identity inspection failed")
+	}
+	currentRoles, err := readCurrentIdentity(currentRows, name)
+	if err != nil {
+		return err
+	}
 	userQuery := "SHOW USER `" + name + "` YIELD user, roles RETURN user, roles"
 	privQuery := "SHOW USER `" + name + "` PRIVILEGES YIELD access, action, resource, graph, segment, role RETURN access, action, resource, graph, segment, role"
 	session := t.attestor.NewSession(ctx, driver.SessionConfig{DatabaseName: "system", AccessMode: driver.AccessModeRead, FetchSize: 128})
@@ -63,6 +73,9 @@ func (t *Target) prove(ctx context.Context) error {
 	roles, err := readRoles(userRows[0]["roles"])
 	if err != nil {
 		return err
+	}
+	if !sameRoles(currentRoles, roles) {
+		return errors.New("profile_mismatch: Neo4j query and attestor roles differ")
 	}
 	privRows, err := readFixed(ctx, session, privQuery, 1001)
 	if err != nil || len(privRows) == 0 || len(privRows) > 1000 {
@@ -90,6 +103,30 @@ func (t *Target) prove(ctx context.Context) error {
 	}
 	t.checked = time.Now()
 	return nil
+}
+
+func readCurrentIdentity(rows []map[string]any, expectedUser string) ([]string, error) {
+	if len(rows) != 1 || rows[0]["user"] != expectedUser || rows[0]["passwordChangeRequired"] != false || rows[0]["suspended"] != false {
+		return nil, errors.New("profile_mismatch: Neo4j query identity is unavailable or inactive")
+	}
+	return readRoles(rows[0]["roles"])
+}
+
+func sameRoles(left, right []string) bool {
+	if len(left) != len(right) {
+		return false
+	}
+	counts := make(map[string]int, len(left))
+	for _, role := range left {
+		counts[role]++
+	}
+	for _, role := range right {
+		counts[role]--
+		if counts[role] < 0 {
+			return false
+		}
+	}
+	return true
 }
 
 // An enabled auth rule may grant roles at login or after a metadata change.

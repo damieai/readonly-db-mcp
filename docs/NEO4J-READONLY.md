@@ -46,8 +46,10 @@ Start from [the configuration example](../configs/neo4j.example.yaml). Pin
 environment variables (or POSIX-protected secret files). Use `bolt+s` with
 verified TLS for production; local loopback can use plaintext for a disposable
 fixture. The startup proof fails if the server version, user directory,
-privilege rows or auth-rule catalog cannot be read in full. It rechecks before
-new calls when `privilege_recheck_interval` expires.
+privilege rows or auth-rule catalog cannot be read in full. The query connection
+also runs `SHOW CURRENT USER` and must report the same native user and roles
+as the attestor sees, with an active account and no pending password change.
+It rechecks before new calls when `privilege_recheck_interval` expires.
 
 ## Reproducible Enterprise gate
 
@@ -68,14 +70,16 @@ NEO4J_DISPOSABLE_CONFIG=/absolute/path/to/neo4j-test.yaml \
 That opt-in test proves startup attestation, parameterized bounded reads,
 index metadata, cited graph traversal, tenant-filtered vector `SEARCH`,
 full-text `SEARCH` on 2026.09+, connector write rejection and direct
-**native** write denial under the query account. It may create
+**native** denial of `CREATE`, `MERGE`, `SET`, `DELETE`, index creation,
+`LOAD CSV` and `SHOW USERS` under the query account. The test requires
+Neo4j's `Security.Forbidden` code and then checks that the fixture is unchanged
+and another read succeeds. It may create
 `Neo4jMCPWriteProbe` if the account is misconfigured, so use a disposable graph.
 
 Then exercise `neo4j_read` through the MCP client with a `CALL {}` read
 subquery and a low row cap. Inspect `element_id`, returned scores, truncation
-and metadata. Submit `MERGE`, `SET`, `DELETE`, schema changes,
-`LOAD CSV`, a cross-graph `USE` and an admin command directly as the query
-account; confirm native denial and unchanged data. Revoke the read role and
+and metadata. Submit a cross-graph `USE` directly as the query account;
+confirm native denial. Revoke the read role and
 add a write grant in separate runs; once the proof interval expires, a new
 tool call must fail. Exercise a long traversal with a short deadline and
 confirm the next request succeeds. Record the server image digest, exact
