@@ -12,7 +12,7 @@ require (
 	github.com/jackc/pgx/v5 v5.10.0
 	github.com/mattn/go-sqlite3 v1.14.32
 	github.com/microsoft/go-mssqldb v1.9.6
-	github.com/modelcontextprotocol/go-sdk v1.6.1
+	github.com/modelcontextprotocol/go-sdk v1.8.0
 	github.com/pganalyze/pg_query_go/v6 v6.2.2
 	github.com/redis/go-redis/v9 v9.22.0
 	go.mongodb.org/mongo-driver/v2 v2.9.1
@@ -71,6 +71,7 @@ require (
 	golang.org/x/sys v0.46.0 // indirect
 	golang.org/x/telemetry v0.0.0-20260625142307-59b4966ccb57 // indirect
 	golang.org/x/text v0.39.0 // indirect
+	golang.org/x/time v0.15.0 // indirect
 	golang.org/x/tools v0.47.0 // indirect
 	golang.org/x/xerrors v0.0.0-20240903120638-7835f813f4da // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20260414002931-afd174a4e478 // indirect
