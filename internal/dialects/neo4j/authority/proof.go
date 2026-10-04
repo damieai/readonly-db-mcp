@@ -1,7 +1,7 @@
 // Package authority validates a Neo4j Enterprise query identity's reported
-// privileges before any untrusted Cypher is admitted. It does not connect to
-// Neo4j; the future connector must collect SHOW CURRENT USER and SHOW USER
-// PRIVILEGES from the server and recheck them periodically.
+// privileges before any untrusted Cypher is admitted. The connector collects
+// SHOW USER and SHOW USER PRIVILEGES through a separate attestor identity and
+// rechecks them periodically.
 package authority
 
 import (
@@ -70,10 +70,6 @@ func Validate(database, expectedUser string, proof Proof) error {
 		case "show_index", "show_constraint":
 			if p.Resource != "database" || p.Graph != database {
 				return errors.New("permission_denied: Neo4j metadata grant is out of scope")
-			}
-		case "show_privilege", "show_user":
-			if p.Resource != "dbms" {
-				return errors.New("permission_denied: Neo4j identity-inspection grant is malformed")
 			}
 		default:
 			return fmt.Errorf("permission_denied: Neo4j action %q is outside the reviewed read profile", p.Action)

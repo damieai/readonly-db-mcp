@@ -130,6 +130,7 @@ func (s *Server) registerTools() {
 	s.registerElasticsearchTools()
 	s.registerQdrantTools()
 	s.registerMongoDBTools()
+	s.registerNeo4jTools()
 }
 
 func tool(name, description string) *mcp.Tool {

@@ -1,0 +1,41 @@
+server:
+  transport: stdio
+  strict_startup: true
+
+limits:
+  global_concurrency: 16
+  per_target_concurrency: 8
+  default_timeout: 5m
+  max_timeout: 10m
+  max_rows: 5000
+  max_result_bytes: 8388608
+  max_cell_bytes: 1048576
+  max_sql_bytes: 262144
+  max_parameters: 1000
+  max_parameter_bytes: 8388608
+  max_parameter_value_bytes: 2097152
+  max_queued_requests: 256
+  queue_timeout: 1m
+
+targets:
+  knowledge-graph:
+    engine: neo4j
+    environment: production
+    consistency: current
+    host: neo4j.example.invalid
+    port: 7687
+    database: knowledge
+    username: agent_graph_ro
+    password_env: NEO4J_QUERY_PASSWORD
+    tls:
+      mode: verify-full
+      ca_file: /etc/readonly-db-mcp/neo4j-ca.pem
+    neo4j:
+      version: 2026.09.0
+      privilege_recheck_interval: 1m
+      attestor:
+        username: agent_graph_attestor
+        password_env: NEO4J_ATTESTOR_PASSWORD
+    connection:
+      max_open: 8
+      max_idle: 4

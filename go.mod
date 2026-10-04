@@ -13,6 +13,7 @@ require (
 	github.com/mattn/go-sqlite3 v1.14.32
 	github.com/microsoft/go-mssqldb v1.9.6
 	github.com/modelcontextprotocol/go-sdk v1.6.1
+	github.com/neo4j/neo4j-go-driver/v6 v6.2.0
 	github.com/pganalyze/pg_query_go/v6 v6.2.2
 	github.com/redis/go-redis/v9 v9.22.0
 	go.mongodb.org/mongo-driver/v2 v2.9.1

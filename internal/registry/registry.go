@@ -15,6 +15,7 @@ import (
 	estarget "github.com/your-org/readonly-db-mcp/internal/dialects/elasticsearch"
 	mongodbtarget "github.com/your-org/readonly-db-mcp/internal/dialects/mongodb"
 	mysqltarget "github.com/your-org/readonly-db-mcp/internal/dialects/mysql"
+	neo4jtarget "github.com/your-org/readonly-db-mcp/internal/dialects/neo4j"
 	postgresqltarget "github.com/your-org/readonly-db-mcp/internal/dialects/postgresql"
 	qdranttarget "github.com/your-org/readonly-db-mcp/internal/dialects/qdrant"
 	redistarget "github.com/your-org/readonly-db-mcp/internal/dialects/redis"
@@ -66,6 +67,8 @@ func Open(ctx context.Context, cfg *config.Config, auditor audit.Auditor, record
 			target, err = sqlitetarget.Open(ctx, targetCfg, cfg.Limits, controller, auditor, recorder)
 		case config.EngineDuckDB:
 			target, err = duckdbtarget.Open(ctx, targetCfg, cfg.Limits, controller, auditor, recorder)
+		case config.EngineNeo4j:
+			target, err = neo4jtarget.Open(ctx, targetCfg, cfg.Limits, controller, auditor, recorder)
 		default:
 			err = fmt.Errorf("unsupported database engine %q", targetCfg.Engine)
 		}
@@ -76,6 +79,18 @@ func Open(ctx context.Context, cfg *config.Config, auditor audit.Auditor, record
 		registry.targets[name] = target
 	}
 	return registry, nil
+}
+
+func (r *Registry) GetNeo4j(name string) (core.Neo4jTarget, error) {
+	target, err := r.Get(name)
+	if err != nil {
+		return nil, err
+	}
+	n, ok := target.(core.Neo4jTarget)
+	if !ok {
+		return nil, errors.New("selected target is not Neo4j")
+	}
+	return n, nil
 }
 
 func (r *Registry) GetMongoDB(name string) (core.MongoDBTarget, error) {

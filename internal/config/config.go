@@ -27,6 +27,7 @@ const (
 	EngineMongoDB       = "mongodb"
 	EngineSQLite        = "sqlite"
 	EngineDuckDB        = "duckdb"
+	EngineNeo4j         = "neo4j"
 	TransportStdio      = "stdio"
 	TLSDisabled         = "disabled"
 	TLSRequired         = "required"
@@ -106,6 +107,7 @@ type TargetConfig struct {
 	MongoDB        *MongoDBConfig       `yaml:"mongodb"`
 	SQLite         *SQLiteConfig        `yaml:"sqlite"`
 	DuckDB         *DuckDBConfig        `yaml:"duckdb"`
+	Neo4j          *Neo4jConfig         `yaml:"neo4j"`
 	MetadataCache  MetadataCacheConfig  `yaml:"metadata_cache"`
 	ResultCache    ResultCacheConfig    `yaml:"result_cache"`
 }
@@ -358,6 +360,9 @@ func applyDefaults(cfg *Config) {
 		if target.Engine == EngineDuckDB {
 			defaultDuckDB(target)
 		}
+		if target.Engine == EngineNeo4j {
+			defaultNeo4j(target)
+		}
 		if target.Port == 0 && target.Engine != EngineElasticsearch && target.Engine != EngineQdrant && target.Engine != EngineSQLite && target.Engine != EngineDuckDB {
 			if target.Engine == EnginePostgreSQL {
 				target.Port = 5432
@@ -369,6 +374,8 @@ func applyDefaults(cfg *Config) {
 				}
 			} else if target.Engine == EngineMongoDB {
 				target.Port = 27017
+			} else if target.Engine == EngineNeo4j {
+				target.Port = 7687
 			} else {
 				target.Port = 3306
 			}
@@ -506,7 +513,7 @@ func applyDefaults(cfg *Config) {
 				target.Redis.Cluster.RequireFullSlotCoverage = &value
 			}
 		}
-		if target.Engine != EngineRedis && target.Engine != EngineQdrant && target.Engine != EngineMongoDB {
+		if target.Engine != EngineRedis && target.Engine != EngineQdrant && target.Engine != EngineMongoDB && target.Engine != EngineNeo4j {
 			if target.MetadataCache.TableListTTL == 0 {
 				target.MetadataCache.TableListTTL = 20 * time.Minute
 			}
@@ -559,6 +566,9 @@ func resolveRelativePaths(target *TargetConfig, configDir string) {
 	}
 	if target.DuckDB != nil {
 		paths = append(paths, &target.DuckDB.Root, &target.DuckDB.File, &target.DuckDB.WorkerPath)
+	}
+	if target.Neo4j != nil && target.Neo4j.Attestor != nil {
+		paths = append(paths, &target.Neo4j.Attestor.PasswordFile)
 	}
 	for _, path := range paths {
 		if *path != "" && !filepath.IsAbs(*path) {
@@ -745,6 +755,9 @@ func validateTarget(name string, target *TargetConfig, limits Limits) []string {
 	if target.Engine == EngineDuckDB {
 		return append(problems, validateDuckDB(target, limits)...)
 	}
+	if target.Engine == EngineNeo4j {
+		return append(problems, validateNeo4j(target, limits)...)
+	}
 	if target.Elasticsearch != nil {
 		problems = append(problems, "elasticsearch settings are valid only for elasticsearch targets")
 	}
@@ -760,8 +773,11 @@ func validateTarget(name string, target *TargetConfig, limits Limits) []string {
 	if target.DuckDB != nil {
 		problems = append(problems, "duckdb settings are valid only for duckdb targets")
 	}
+	if target.Neo4j != nil {
+		problems = append(problems, "neo4j settings are valid only for neo4j targets")
+	}
 	if target.Engine != EngineMySQL && target.Engine != EnginePostgreSQL && target.Engine != EngineSQLServer && target.Engine != EngineRedis {
-		problems = append(problems, "engine must be mysql, postgresql, sqlserver, redis, elasticsearch, qdrant, mongodb, sqlite, or duckdb")
+		problems = append(problems, "engine must be mysql, postgresql, sqlserver, redis, elasticsearch, qdrant, mongodb, sqlite, duckdb, or neo4j")
 	}
 	if !safeName.MatchString(target.Environment) {
 		problems = append(problems, "environment is required and must be a safe identifier")

@@ -7,8 +7,6 @@ func readerProof() Proof {
 		{Access: "GRANTED", Action: "access", Resource: "database", Graph: "knowledge", Segment: "database", Role: "agent_graph_ro"},
 		{Access: "GRANTED", Action: "match", Resource: "all_properties", Graph: "knowledge", Segment: "NODE(*)", Role: "agent_graph_ro"},
 		{Access: "GRANTED", Action: "show_index", Resource: "database", Graph: "knowledge", Segment: "database", Role: "agent_graph_ro"},
-		{Access: "GRANTED", Action: "show_privilege", Resource: "dbms", Graph: "*", Segment: "dbms", Role: "agent_graph_ro"},
-		{Access: "GRANTED", Action: "show_user", Resource: "dbms", Graph: "*", Segment: "dbms", Role: "agent_graph_ro"},
 	}}
 }
 
@@ -34,6 +32,9 @@ func TestReadOnlyProof(t *testing.T) {
 		}},
 		{"boosted procedure", func(p *Proof) {
 			p.Privileges = append(p.Privileges, Privilege{Access: "GRANTED", Action: "execute_boosted_procedure", Resource: "dbms", Graph: "*", Role: "PUBLIC"})
+		}},
+		{"inspection grant", func(p *Proof) {
+			p.Privileges = append(p.Privileges, Privilege{Access: "GRANTED", Action: "show_user", Resource: "dbms", Graph: "*", Role: "agent_graph_ro"})
 		}},
 		{"unknown grant", func(p *Proof) {
 			p.Privileges = append(p.Privileges, Privilege{Access: "GRANTED", Action: "future_admin_action", Resource: "dbms", Role: "PUBLIC"})

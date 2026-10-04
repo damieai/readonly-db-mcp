@@ -32,6 +32,9 @@ repository.
 > DuckDB reads one existing database and Parquet files in a dedicated data
 > directory through an isolated Linux worker. Its [local acceptance suite](docs/DUCKDB-READONLY.md)
 > covers native read-only mode, filesystem scope and cancellation.
+> Neo4j has a locally tested Enterprise-only graph connector with native
+> Cypher, metadata, and periodic privilege proof. Its
+> [Enterprise live gate](docs/NEO4J-READONLY.md) remains open.
 
 For agent application use cases and the next connector priorities, see the
 [data connector roadmap](docs/AGENT-APPLICATION-DATA-ROADMAP.md).
@@ -45,6 +48,8 @@ one grounded PostgreSQL/pgvector, Redis Search and Elasticsearch workflow.
   attestation.
 - Redis command-vector tools with live read-only command, key-scope, ACL,
   Sentinel quorum, Cluster slot-map and signed module attestation.
+- Neo4j `neo4j_read` and `neo4j_metadata` tools for one configured graph,
+  with independent native privilege inspection and bounded results.
 - Full read-only analytical SQL: CTEs, joins, subqueries, unions, aggregates,
   window functions, JSON expressions and ordinary `USE INDEX`/`FORCE INDEX`
   clauses supported by MySQL/Vitess. Optimizer comment hints are rejected.
@@ -83,6 +88,11 @@ See [SQLite configuration and acceptance](docs/SQLITE-READONLY.md).
 DuckDB executes SQL in a separate bubblewrap process with no network and a
 read-only bind of one configured data directory. See
 [DuckDB configuration and acceptance](docs/DUCKDB-READONLY.md).
+
+Neo4j uses a dedicated Enterprise graph-read identity and a separate catalog
+attestor. Startup and periodic proof reject out-of-scope or write grants,
+including inherited `PUBLIC` grants and dynamic auth rules. See
+[Neo4j configuration and acceptance](docs/NEO4J-READONLY.md).
 
 Application validation is defense in depth. Do not connect this server using
 an application account, administrator account, migration account, or an

@@ -49,9 +49,9 @@ disposable local acceptance suite covers mutation denial, file and network
 scope, batching and cancellation. It requires a Linux bubblewrap sandbox.
 
 For the conditional graph workload, [RFC-0008](RFC-0008-neo4j-readonly-graphrag.md)
-defines an Enterprise-only Neo4j GraphRAG connector and its native-authority
-and live-denial gates. A privilege-proof policy package is implemented; no
-Neo4j target or MCP tool is registered yet.
+defines an Enterprise-only Neo4j GraphRAG connector. The target and MCP tools
+are implemented locally; the [native-denial live gate](NEO4J-READONLY.md)
+remains open until a provisioned Enterprise fixture is tested.
 
 Qdrant is the default first specialist vector database because it offers a
 locally deployable service, a native hybrid Query API and collection-scoped

@@ -1,6 +1,6 @@
 # RFC-0008: Neo4j read-only GraphRAG connector
 
-- Status: Draft; authority-policy foundation implemented, connector and live gate pending
+- Status: Local connector implemented; Enterprise live gate pending
 - Created: 2026-10-04
 - Depends on: RFC-0001 and the agent application data roadmap
 - Workload: vector or full-text retrieval followed by bounded graph traversal and source citation
@@ -13,8 +13,7 @@ database, credentials, or index creation request. Preserve Cypher's read
 surface: pattern matching, variable-length traversal, subqueries, aggregation,
 full-text reads, and native vector `SEARCH` with filters. This is a graph
 connector, not a SQL dialect. Native Enterprise privileges are the persistent
-write and graph-scope boundary; driver read routing and query-shape checks are
-additional controls.
+write and graph-scope boundary; driver read routing is only a performance hint.
 
 ## Context and problem
 
@@ -55,7 +54,7 @@ variable-length paths, `WITH`, `CALL {}` subqueries, union, aggregation, vector
 
 Use the official Go driver v6, pinned to one reviewed release, with TLS
 verification and one operator-configured Bolt origin. Pin an exact Enterprise
-server patch after the first live fixture is available. No URI or database
+server patch in configuration. No URI or database
 switching comes from tool arguments. One session and read transaction serve a
 request; the request context covers admission, privilege recheck, execution,
 streaming and cleanup. Parameter values are passed through the driver without
@@ -64,7 +63,7 @@ nodes and relationships carry element IDs, labels/types and selected
 properties; paths preserve ordered elements. Large integers retain decimal
 precision in JSON. The connector must not silently stringify every value.
 
-The target reports labels, relationship types, property keys and index
+The target reports labels, relationship types and index/constraint
 metadata through fixed native read commands. Vector index name, labels,
 properties, dimension, similarity, state and provider are surfaced so clients
 can form a valid native `SEARCH` query. Metadata reads use the same database
@@ -74,38 +73,39 @@ added after snapshot and byte accounting are proved.
 
 ## Security and trust boundaries
 
-Only Neo4j Enterprise with a dedicated native-auth query user is admitted.
-The user is assigned a custom graph-read role scoped to one exact database,
-plus the minimum metadata privileges needed to inspect its own effective
-roles and privileges. At startup, collect `SHOW CURRENT USER` and `SHOW USER
-PRIVILEGES` from the server. Refuse missing roles (Community), unknown fields,
+Only Neo4j Enterprise 2026.03+ with a dedicated native-auth query user is admitted.
+The user is assigned a custom graph-read role scoped to one exact database.
+A separate attestor identity, limited to fixed system-directory reads, collects
+`SHOW USER`, `SHOW USER PRIVILEGES`, and `SHOW AUTH RULES` at startup and on
+expiry. Refuse missing roles (Community), unknown fields,
 unassigned-role rows, broad graph/database grants, any granted write/admin/
 `LOAD`/unreviewed procedure or boosted-execution action, and future unreviewed actions.
 `DENIED` rows may narrow authority, but do not excuse an unsafe `GRANTED` row
 under this initial profile. The first policy implementation is
 [`authority.Validate`](../internal/dialects/neo4j/authority/proof.go); the live
-connector must bind it to server-reported records and versioned output tests.
+connector binds it to server-reported records; versioned live output tests remain pending.
 Neo4j documents `SHOW USER PRIVILEGES` and its required inspection privileges
 in the [RBAC manual](https://neo4j.com/docs/operations-manual/current/authentication-authorization/manage-privileges/).
 
 Administrators must remove any broad `PUBLIC` grants that make the query
-identity fail the proof. The connector must not silently ignore `PUBLIC`,
-inherited roles, an auth-rule grant, or a grant on another graph. Proof expires
+identity fail the proof. The connector does not silently ignore `PUBLIC`,
+inherited roles, an auth-rule grant, or a grant on another graph. Enabled auth
+rules with assigned roles are rejected because they can change effective roles
+without changing the native user's assigned roles. Proof expires
 on a bounded timer; failed recheck makes the target unhealthy and blocks new
 queries. The live gate must demonstrate that revoking the read role and adding
 a write grant both stop new calls. The query account itself remains unable to
-persist writes even when a caller submits write Cypher. The public tool should
-reject multi-statement envelopes and administrative commands early, but a
-keyword allowlist must not be the security boundary: native grants decide.
+persist writes even when a caller submits write Cypher. The driver accepts one
+statement per call; administrative statements are denied by native grants.
+No keyword allowlist is the security boundary.
 
-`LOAD CSV` needs native load privileges, so none may be granted. The vector
-path uses Cypher `SEARCH`, so it needs no procedure grant. Full-text retrieval
-does require the built-in `db.index.fulltext.queryNodes` and
-`queryRelationships` procedures. Before shipping that path, extend the proof
-to accept only those exact names after checking the installed procedures'
-READ mode and absence of boosted execution; a wildcard execute grant remains
-invalid. Other procedures and user-defined functions require a separate
-versioned profile and installed-code review. Ordinary `CALL {}` read
+`LOAD CSV` needs native load privileges, so none may be granted. Current
+vector and full-text retrieval use native Cypher `SEARCH`, so neither needs a
+procedure grant. Legacy `db.index.fulltext.queryNodes` and
+`queryRelationships` procedures remain outside this profile until their exact
+installed READ mode and absence of boosted execution are proved; a wildcard
+execute grant remains invalid. Other procedures and user-defined functions
+require a separate versioned profile and installed-code review. Ordinary `CALL {}` read
 subqueries remain available because they are not procedure grants. See Neo4j's
 [procedure privileges](https://neo4j.com/docs/operations-manual/current/authentication-authorization/manage-execute-permissions/)
 and [full-text syntax](https://neo4j.com/docs/cypher-manual/current/indexes/syntax/).
@@ -121,7 +121,7 @@ outlive the remaining request deadline. The query deadline includes proof
 checks, result streaming and cleanup. Driver fetch-size is bounded. Agent
 reasoning between calls holds no session, permit or transaction. Cancellation
 must stop server work and release a permit; a subsequent query must succeed.
-The live fixture will measure an ordinary and a multi-minute graph traversal
+The live fixture must measure an ordinary and a multi-minute graph traversal
 before any tighter default is proposed.
 
 ## Resource and response budget
@@ -159,7 +159,7 @@ without exposing usernames or the raw privilege catalog.
    pool limits, value codecs, metadata bounds and tool argument rejection.
 3. Run a disposable pinned Enterprise fixture with a data graph and a private
    graph. Exercise variable-length traversal, subqueries, filtering, vector
-   `SEARCH`, full-text read procedures, metadata and citation IDs through MCP.
+   and full-text `SEARCH`, metadata and citation IDs through MCP.
 4. Submit `CREATE`, `MERGE`, `SET`, `DELETE`, schema changes, `LOAD CSV`, a
    remote URL, cross-database `USE`, admin commands and boosted procedures;
    show native denial and unchanged data. Change grants after startup and
@@ -193,5 +193,5 @@ The chosen Enterprise proof retains native read syntax under exact grants.
 The connector is complete only after the registered MCP tool, versioned
 authority proof/recheck, native metadata, typed results, resource and
 cancellation tests, documentation and the pinned Enterprise live gate all pass.
-The current authority-policy package is preparatory and must not be presented
-as an operational connector.
+The local connector and tests are implemented. It must not be described as
+Enterprise-qualified until the live gate passes on the configured patch.
