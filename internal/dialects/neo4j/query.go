@@ -94,7 +94,16 @@ func (t *Target) Read(parent context.Context, request core.Neo4jReadRequest) (ou
 	if err != nil {
 		return nil, errors.New("query_error: Neo4j result keys failed")
 	}
+	for _, key := range keys {
+		if len(key) > t.limits.MaxCellBytes {
+			return nil, errors.New("resource_limit: Neo4j column name exceeds max_cell_bytes")
+		}
+	}
 	out = &core.Neo4jReadResult{QueryID: queryID, Target: t.cfg.Name, Database: t.cfg.Database, Keys: keys, Rows: []map[string]any{}}
+	budget, err := newResponseBudget(out, t.limits.MaxResultBytes)
+	if err != nil {
+		return nil, err
+	}
 	for result.Next(ctx) {
 		if len(out.Rows) >= maxRows {
 			out.Truncated = true
@@ -103,19 +112,16 @@ func (t *Target) Read(parent context.Context, request core.Neo4jReadRequest) (ou
 		record := result.Record()
 		row := make(map[string]any, len(record.Keys))
 		for i, key := range record.Keys {
-			if len(key) > t.limits.MaxCellBytes {
-				return nil, errors.New("resource_limit: Neo4j column name exceeds max_cell_bytes")
-			}
 			value, e := normalize(record.Values[i], t.limits.MaxCellBytes, 0)
 			if e != nil {
 				return nil, e
 			}
 			row[key] = value
 		}
-		out.Rows = append(out.Rows, row)
-		if tooLarge(out, t.limits.MaxResultBytes) {
-			return nil, errors.New("resource_limit: Neo4j result exceeds max_result_bytes")
+		if err := budget.add(row); err != nil {
+			return nil, err
 		}
+		out.Rows = append(out.Rows, row)
 	}
 	if result.Err() != nil || ctx.Err() != nil {
 		return nil, errors.New("deadline_exceeded: Neo4j query interrupted")
@@ -157,6 +163,10 @@ func (t *Target) Metadata(parent context.Context, kind string) (*core.Neo4jMetad
 		return nil, errors.New("query_error: Neo4j metadata query failed")
 	}
 	out := &core.Neo4jMetadataResult{Target: t.cfg.Name, Database: t.cfg.Database, Kind: kind, Rows: []map[string]any{}}
+	budget, err := newResponseBudget(out, t.limits.MaxResultBytes)
+	if err != nil {
+		return nil, err
+	}
 	for result.Next(ctx) {
 		if len(out.Rows) >= t.limits.MaxRows {
 			return nil, errors.New("resource_limit: Neo4j metadata row cap exceeded")
@@ -169,13 +179,16 @@ func (t *Target) Metadata(parent context.Context, kind string) (*core.Neo4jMetad
 			}
 			row[key] = value
 		}
-		out.Rows = append(out.Rows, row)
-		if tooLarge(out, t.limits.MaxResultBytes) {
-			return nil, errors.New("resource_limit: Neo4j metadata exceeds max_result_bytes")
+		if err := budget.add(row); err != nil {
+			return nil, err
 		}
+		out.Rows = append(out.Rows, row)
 	}
 	if result.Err() != nil || ctx.Err() != nil {
 		return nil, errors.New("query_error: Neo4j metadata interrupted")
+	}
+	if tooLarge(out, t.limits.MaxResultBytes) {
+		return nil, errors.New("resource_limit: Neo4j metadata exceeds max_result_bytes")
 	}
 	return out, nil
 }

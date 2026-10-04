@@ -2,6 +2,7 @@ package neo4j
 
 import (
 	"encoding/json"
+	"strconv"
 	"strings"
 	"testing"
 
@@ -25,8 +26,23 @@ func TestGraphValuePreservesStructureAndPrecision(t *testing.T) {
 			t.Fatalf("graph result lost %s: %s", expected, encoded)
 		}
 	}
+	if strconv.IntSize == 64 {
+		large := int64(9007199254740993)
+		if value, err := normalize(int(large), 1<<20, 0); err != nil || value != "9007199254740993" {
+			t.Fatalf("Go int response lost JSON precision: %#v, %v", value, err)
+		}
+	}
 	if _, err := normalize("too long", 3, 0); err == nil {
 		t.Fatal("oversized cell accepted")
+	}
+	for _, value := range []any{
+		dbtype.Node{ElementId: "long-element-id"},
+		dbtype.Node{ElementId: "id", Labels: []string{"LongLabel"}},
+		dbtype.Relationship{ElementId: "id", Type: "LongType"},
+	} {
+		if _, err := normalize(value, 5, 0); err == nil {
+			t.Fatalf("oversized graph identity accepted: %#v", value)
+		}
 	}
 }
 
@@ -38,5 +54,11 @@ func TestNamedParameterBudget(t *testing.T) {
 	}
 	if _, err := validateParameters(map[string]any{"one": 1, "two": 2, "three": 3}, limits); err == nil {
 		t.Fatal("parameter count cap ignored")
+	}
+	if _, err := validateParameters(map[string]any{"id": json.Number("9223372036854775808")}, limits); err == nil {
+		t.Fatal("out-of-range integer silently changed to float")
+	}
+	if _, err := validateParameters(map[string]any{"id": float64(9007199254740992)}, limits); err == nil {
+		t.Fatal("unsafe JSON float was accepted as an exact integer")
 	}
 }

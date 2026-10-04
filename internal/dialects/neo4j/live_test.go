@@ -45,8 +45,41 @@ func TestNeo4jDisposableEnterpriseGate(t *testing.T) {
 	if err != nil || read.RowCount != 1 || read.Rows[0]["value"] != int64(7) {
 		t.Fatalf("bounded parameterized read failed: result=%+v err=%v", read, err)
 	}
-	if _, err := target.Metadata(ctx, "indexes"); err != nil {
+	indexes, err := target.Metadata(ctx, "indexes")
+	if err != nil {
 		t.Fatalf("native index metadata failed: %v", err)
+	}
+	online := map[string]bool{}
+	for _, row := range indexes.Rows {
+		if name, ok := row["name"].(string); ok && row["state"] == "ONLINE" {
+			online[name] = true
+		}
+	}
+	if !online["neo4j_mcp_doc_vector"] || !online["neo4j_mcp_doc_text"] {
+		t.Fatal("apply examples/neo4j/fixture.cypher and wait for both indexes to become ONLINE")
+	}
+	traversal, err := target.Read(ctx, core.Neo4jReadRequest{
+		Cypher:     "MATCH (d:Neo4jMCPDocument {id: $id})-[:NEO4J_MCP_CITES]->(s:Neo4jMCPSource) RETURN d.id AS id, s.id AS source_id, elementId(s) AS element_id",
+		Parameters: map[string]any{"id": "neo4j-fixture-doc"}, MaxRows: 5,
+	})
+	if err != nil || traversal.RowCount != 1 || traversal.Rows[0]["source_id"] != "neo4j-fixture-source" || traversal.Rows[0]["element_id"] == "" {
+		t.Fatalf("cited traversal failed: result=%+v err=%v", traversal, err)
+	}
+	vector, err := target.Read(ctx, core.Neo4jReadRequest{
+		Cypher:     "CYPHER 25 MATCH (d:Neo4jMCPDocument) SEARCH d IN (VECTOR INDEX neo4j_mcp_doc_vector FOR $embedding WHERE d.tenant = $tenant LIMIT 5) SCORE AS score RETURN d.id AS id, score",
+		Parameters: map[string]any{"embedding": []any{1.0, 0.0}, "tenant": "public"}, MaxRows: 5,
+	})
+	if err != nil || !hasNeo4jFixtureID(vector, "neo4j-fixture-doc") || hasNeo4jFixtureID(vector, "neo4j-fixture-private") {
+		t.Fatalf("filtered vector SEARCH failed: result=%+v err=%v", vector, err)
+	}
+	if targetCfg.Neo4j.Version >= "2026.09.0" {
+		fullText, err := target.Read(ctx, core.Neo4jReadRequest{
+			Cypher:     "CYPHER 25 MATCH (d:Neo4jMCPDocument) SEARCH d IN (FULLTEXT INDEX neo4j_mcp_doc_text FOR $term LIMIT 5) SCORE AS score RETURN d.id AS id, score",
+			Parameters: map[string]any{"term": "cited"}, MaxRows: 5,
+		})
+		if err != nil || !hasNeo4jFixtureID(fullText, "neo4j-fixture-doc") {
+			t.Fatalf("full-text SEARCH failed: result=%+v err=%v", fullText, err)
+		}
 	}
 	if _, err := target.Read(ctx, core.Neo4jReadRequest{Cypher: "CREATE (:Neo4jMCPWriteProbe)"}); err == nil {
 		t.Fatal("connector admitted a write")
@@ -62,4 +95,16 @@ func TestNeo4jDisposableEnterpriseGate(t *testing.T) {
 	if err == nil {
 		t.Fatal("Neo4j query account has native write authority")
 	}
+}
+
+func hasNeo4jFixtureID(result *core.Neo4jReadResult, id string) bool {
+	if result == nil {
+		return false
+	}
+	for _, row := range result.Rows {
+		if row["id"] == id {
+			return true
+		}
+	}
+	return false
 }

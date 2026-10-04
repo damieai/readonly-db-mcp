@@ -5,6 +5,7 @@ import (
 	"errors"
 	"math"
 	"strconv"
+	"strings"
 	"unicode/utf8"
 
 	"github.com/your-org/readonly-db-mcp/internal/config"
@@ -47,10 +48,16 @@ func convertParameter(value any, depth int) (any, error) {
 		if math.IsNaN(v) || math.IsInf(v, 0) {
 			return nil, errors.New("invalid_request: Neo4j float is not finite")
 		}
+		if math.Trunc(v) == v && math.Abs(v) > maxSafeInteger {
+			return nil, errors.New("invalid_request: Neo4j integer-valued JSON number exceeds exact float range; pass a decimal string and use toInteger")
+		}
 		return v, nil
 	case json.Number:
 		if i, err := strconv.ParseInt(string(v), 10, 64); err == nil {
 			return i, nil
+		}
+		if !strings.ContainsAny(string(v), ".eE") {
+			return nil, errors.New("invalid_request: Neo4j integer exceeds int64 range")
 		}
 		f, err := strconv.ParseFloat(string(v), 64)
 		if err != nil || math.IsInf(f, 0) || math.IsNaN(f) {

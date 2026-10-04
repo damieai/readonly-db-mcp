@@ -8,6 +8,7 @@ import (
 	"math"
 	"reflect"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/neo4j/neo4j-go-driver/v6/neo4j/dbtype"
@@ -20,8 +21,12 @@ func normalize(value any, maxCell, depth int) (any, error) {
 		return nil, errors.New("resource_limit: Neo4j value nesting exceeds limit")
 	}
 	switch v := value.(type) {
-	case nil, bool, int, int8, int16, int32, uint8, uint16, uint32:
+	case nil, bool, int8, int16, int32, uint8, uint16, uint32:
 		return v, nil
+	case int:
+		return normalize(int64(v), maxCell, depth+1)
+	case uint:
+		return normalize(uint64(v), maxCell, depth+1)
 	case int64:
 		if v > maxSafeInteger || v < -maxSafeInteger {
 			return strconv.FormatInt(v, 10), nil
@@ -35,6 +40,9 @@ func normalize(value any, maxCell, depth int) (any, error) {
 	case json.Number:
 		if i, err := v.Int64(); err == nil {
 			return normalize(i, maxCell, depth)
+		}
+		if !strings.ContainsAny(string(v), ".eE") {
+			return nil, errors.New("invalid_response: Neo4j integer exceeds int64 range")
 		}
 		f, err := v.Float64()
 		if err != nil || math.IsNaN(f) || math.IsInf(f, 0) {
@@ -59,9 +67,9 @@ func normalize(value any, maxCell, depth int) (any, error) {
 		}
 		return map[string]any{"base64": base64.StdEncoding.EncodeToString(v)}, nil
 	case time.Time:
-		return v.Format(time.RFC3339Nano), nil
+		return normalize(v.Format(time.RFC3339Nano), maxCell, depth+1)
 	case dbtype.Date, dbtype.Time, dbtype.LocalTime, dbtype.LocalDateTime, dbtype.Duration, dbtype.UUID:
-		return fmt.Sprint(v), nil
+		return normalize(fmt.Sprint(v), maxCell, depth+1)
 	case dbtype.Point2D:
 		return map[string]any{"type": "point2d", "srid": v.SpatialRefId, "x": v.X, "y": v.Y}, nil
 	case dbtype.Point3D:
@@ -71,11 +79,25 @@ func normalize(value any, maxCell, depth int) (any, error) {
 		if err != nil {
 			return nil, err
 		}
-		return map[string]any{"type": "node", "element_id": v.ElementId, "labels": v.Labels, "properties": props}, nil
+		id, err := normalize(v.ElementId, maxCell, depth+1)
+		if err != nil {
+			return nil, err
+		}
+		labels, err := normalize(v.Labels, maxCell, depth+1)
+		if err != nil {
+			return nil, err
+		}
+		return map[string]any{"type": "node", "element_id": id, "labels": labels, "properties": props}, nil
 	case dbtype.Relationship:
 		props, err := normalize(v.Props, maxCell, depth+1)
 		if err != nil {
 			return nil, err
+		}
+		ids := []string{v.ElementId, v.StartElementId, v.EndElementId, v.Type}
+		for _, id := range ids {
+			if _, err := normalize(id, maxCell, depth+1); err != nil {
+				return nil, err
+			}
 		}
 		return map[string]any{"type": "relationship", "element_id": v.ElementId, "start_element_id": v.StartElementId, "end_element_id": v.EndElementId, "relationship_type": v.Type, "properties": props}, nil
 	case dbtype.Path:
