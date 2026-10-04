@@ -121,6 +121,9 @@ minimal `core.Target` plus its engine-specific read interface (currently
 capability. It must not reuse another engine's parser or
 privilege assumptions.
 
+SQLite implements `core.SQLTarget` and `core.BatchTarget` with a native
+read-only file open and connection authorizer in place of account grants.
+
 An engine is considered complete only when it has:
 
 1. A maintained dialect parser or live command capability catalog and a

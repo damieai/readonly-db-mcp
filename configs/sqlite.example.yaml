@@ -1,0 +1,31 @@
+server:
+  transport: stdio
+  strict_startup: true
+
+limits:
+  global_concurrency: 8
+  per_target_concurrency: 4
+  default_timeout: 30s
+  max_timeout: 2m
+  max_rows: 1000
+  max_result_bytes: 4194304
+  max_cell_bytes: 1048576
+  max_sql_bytes: 65536
+  max_batch_queries: 20
+  max_parameters: 1000
+  max_parameter_bytes: 8388608
+  max_parameter_value_bytes: 2097152
+  max_queued_requests: 64
+  queue_timeout: 15s
+
+targets:
+  local-documents:
+    engine: sqlite
+    environment: local
+    consistency: current
+    sqlite:
+      root: /absolute/path/to/data
+      file: /absolute/path/to/data/documents.db
+    connection:
+      max_open: 4
+      max_idle: 2

@@ -80,7 +80,7 @@ type DescribeTableInput struct {
 type QueryInput struct {
 	PostgreSQLOptions *core.PostgreSQLQueryOptions `json:"postgresql_options,omitempty" jsonschema:"Transaction-local pgvector retrieval controls for an enabled PostgreSQL target"`
 	Target            string                       `json:"target" jsonschema:"Exact target alias returned by list_targets"`
-	SQL               string                       `json:"sql" jsonschema:"One read-only SELECT in the target dialect; MySQL uses question marks and PostgreSQL uses $1, $2 placeholders"`
+	SQL               string                       `json:"sql" jsonschema:"One read-only SELECT in the target dialect; MySQL and SQLite use question marks, PostgreSQL uses $1, $2 placeholders"`
 	Parameters        []any                        `json:"parameters,omitempty" jsonschema:"Positional JSON scalar values matching the selected target's placeholder style"`
 	TimeoutMS         int                          `json:"timeout_ms,omitempty" jsonschema:"Optional query timeout in milliseconds, capped by server configuration"`
 	MaxRows           int                          `json:"max_rows,omitempty" jsonschema:"Optional result row cap, capped by server configuration"`

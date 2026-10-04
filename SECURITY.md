@@ -5,12 +5,18 @@
 The server must be unable to persistently modify a configured database through
 any public MCP tool, even when a caller supplies hostile SQL, Redis commands or Elasticsearch tool arguments.
 
-This objective depends on a dedicated database identity whose effective grants
+For network engines, this objective depends on a dedicated database identity whose effective grants
 are limited to engine-specific read permissions (including attested T-SQL
 functions for SQL Server), or on a Redis ACL limited to attested read commands
 and `%R~` document-key patterns. Parsing, command classification, tool
 annotations and read-only execution modes are additional controls, not
 substitutes for database permissions.
+
+SQLite has no server identity or grants. Its native `mode=ro` file open,
+`query_only` connection setting, SQLite authorizer and operator-controlled
+file path form the write and scope boundary. The configured file identity is
+pinned for the lifetime of the target; [SQLite acceptance](docs/SQLITE-READONLY.md)
+tests native mutation denial and file-scope escapes.
 
 ## Trust boundaries
 

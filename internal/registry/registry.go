@@ -17,6 +17,7 @@ import (
 	postgresqltarget "github.com/your-org/readonly-db-mcp/internal/dialects/postgresql"
 	qdranttarget "github.com/your-org/readonly-db-mcp/internal/dialects/qdrant"
 	redistarget "github.com/your-org/readonly-db-mcp/internal/dialects/redis"
+	sqlitetarget "github.com/your-org/readonly-db-mcp/internal/dialects/sqlite"
 	sqlservertarget "github.com/your-org/readonly-db-mcp/internal/dialects/sqlserver"
 	"github.com/your-org/readonly-db-mcp/internal/metrics"
 )
@@ -60,6 +61,8 @@ func Open(ctx context.Context, cfg *config.Config, auditor audit.Auditor, record
 			target, err = sqlservertarget.Open(ctx, targetCfg, cfg.Limits, controller, auditor, recorder)
 		case config.EngineRedis:
 			target, err = redistarget.Open(ctx, targetCfg, cfg.Limits, controller, auditor, recorder)
+		case config.EngineSQLite:
+			target, err = sqlitetarget.Open(ctx, targetCfg, cfg.Limits, controller, auditor, recorder)
 		default:
 			err = fmt.Errorf("unsupported database engine %q", targetCfg.Engine)
 		}

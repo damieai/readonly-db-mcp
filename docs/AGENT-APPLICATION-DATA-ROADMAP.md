@@ -39,6 +39,10 @@ P2 now has the [MongoDB document connector](MONGODB-READONLY.md) with local
 policy and cursor tests. Its live authority, mutation-denial and cancellation
 gate remains open until a disposable MongoDB 8.0.32 fixture is run.
 
+P3 now has the [SQLite connector](SQLITE-READONLY.md) with a disposable local
+database acceptance suite covering native read-only enforcement, file scope,
+advanced reads, metadata and cancellation. It needs no external service.
+
 Qdrant is the default first specialist vector database because it offers a
 locally deployable service, a native hybrid Query API and collection-scoped
 read-only keys. Milvus is a reasonable alternative for a role centered on

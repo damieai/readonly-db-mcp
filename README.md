@@ -27,6 +27,8 @@ repository.
 > MongoDB 8.0 has collection-scoped document reads and reviewed native
 > aggregation. Its [live-server qualification](docs/MONGODB-READONLY.md)
 > remains open until a provisioned fixture is tested.
+> SQLite reads operator-configured existing files through the common SQL tools;
+> its [local acceptance suite](docs/SQLITE-READONLY.md) needs no service.
 
 For agent application use cases and the next connector priorities, see the
 [data connector roadmap](docs/AGENT-APPLICATION-DATA-ROADMAP.md).
@@ -65,11 +67,15 @@ one grounded PostgreSQL/pgvector, Redis Search and Elasticsearch workflow.
 
 ## Security boundary
 
-The database account is the final write-protection boundary. Every target must
+For network databases, the database account is the final write-protection boundary. Every target must
 use a dedicated account whose effective grants contain only `USAGE` and
 `SELECT` on the configured schemas. The process refuses to start when it sees
 an extra privilege, a role it cannot verify, a global `SELECT`, or access to an
 unconfigured schema.
+
+SQLite has no database account. Its boundary is an operator-configured existing
+file opened in native read-only mode, plus a per-connection SQLite authorizer.
+See [SQLite configuration and acceptance](docs/SQLITE-READONLY.md).
 
 Application validation is defense in depth. Do not connect this server using
 an application account, administrator account, migration account, or an
@@ -224,6 +230,10 @@ For MongoDB, configure an exact 8.0 patch build, one direct host and a custom
 role with `find` and `listIndexes` only on configured collections. Startup
 checks effective privileges and the authorized collection catalog. See
 [MongoDB configuration and live acceptance](docs/MONGODB-READONLY.md).
+
+For SQLite, configure one existing file beneath an operator-controlled root.
+The SQL schema, query, explain and batch tools apply. See
+[SQLite configuration and local acceptance](docs/SQLITE-READONLY.md).
 
 Stored script/template inspection additionally accepts the narrowly scoped
 `cluster:admin/script/get` action grant. Do not replace it with `manage` or
