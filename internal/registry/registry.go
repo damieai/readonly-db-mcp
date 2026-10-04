@@ -11,6 +11,7 @@ import (
 	"github.com/your-org/readonly-db-mcp/internal/audit"
 	"github.com/your-org/readonly-db-mcp/internal/config"
 	"github.com/your-org/readonly-db-mcp/internal/core"
+	duckdbtarget "github.com/your-org/readonly-db-mcp/internal/dialects/duckdb"
 	estarget "github.com/your-org/readonly-db-mcp/internal/dialects/elasticsearch"
 	mongodbtarget "github.com/your-org/readonly-db-mcp/internal/dialects/mongodb"
 	mysqltarget "github.com/your-org/readonly-db-mcp/internal/dialects/mysql"
@@ -63,6 +64,8 @@ func Open(ctx context.Context, cfg *config.Config, auditor audit.Auditor, record
 			target, err = redistarget.Open(ctx, targetCfg, cfg.Limits, controller, auditor, recorder)
 		case config.EngineSQLite:
 			target, err = sqlitetarget.Open(ctx, targetCfg, cfg.Limits, controller, auditor, recorder)
+		case config.EngineDuckDB:
+			target, err = duckdbtarget.Open(ctx, targetCfg, cfg.Limits, controller, auditor, recorder)
 		default:
 			err = fmt.Errorf("unsupported database engine %q", targetCfg.Engine)
 		}

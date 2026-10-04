@@ -18,6 +18,12 @@ file path form the write and scope boundary. The configured file identity is
 pinned for the lifetime of the target; [SQLite acceptance](docs/SQLITE-READONLY.md)
 tests native mutation denial and file-scope escapes.
 
+DuckDB has no database grants. The connector launches a pinned DuckDB worker
+inside bubblewrap with a read-only data-directory mount, isolated network,
+read-only database connection and locked file-access settings. Its SQL policy
+allows one native SELECT statement. The data directory and worker binary must
+be controlled by the operator; see [DuckDB acceptance](docs/DUCKDB-READONLY.md).
+
 ## Trust boundaries
 
 Trusted:

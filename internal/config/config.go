@@ -26,6 +26,7 @@ const (
 	EngineQdrant        = "qdrant"
 	EngineMongoDB       = "mongodb"
 	EngineSQLite        = "sqlite"
+	EngineDuckDB        = "duckdb"
 	TransportStdio      = "stdio"
 	TLSDisabled         = "disabled"
 	TLSRequired         = "required"
@@ -104,6 +105,7 @@ type TargetConfig struct {
 	Qdrant         *QdrantConfig        `yaml:"qdrant"`
 	MongoDB        *MongoDBConfig       `yaml:"mongodb"`
 	SQLite         *SQLiteConfig        `yaml:"sqlite"`
+	DuckDB         *DuckDBConfig        `yaml:"duckdb"`
 	MetadataCache  MetadataCacheConfig  `yaml:"metadata_cache"`
 	ResultCache    ResultCacheConfig    `yaml:"result_cache"`
 }
@@ -353,7 +355,10 @@ func applyDefaults(cfg *Config) {
 		if target.Engine == EngineSQLite {
 			defaultSQLite(target)
 		}
-		if target.Port == 0 && target.Engine != EngineElasticsearch && target.Engine != EngineQdrant && target.Engine != EngineSQLite {
+		if target.Engine == EngineDuckDB {
+			defaultDuckDB(target)
+		}
+		if target.Port == 0 && target.Engine != EngineElasticsearch && target.Engine != EngineQdrant && target.Engine != EngineSQLite && target.Engine != EngineDuckDB {
 			if target.Engine == EnginePostgreSQL {
 				target.Port = 5432
 			} else if target.Engine == EngineSQLServer {
@@ -390,7 +395,7 @@ func applyDefaults(cfg *Config) {
 			target.Connection.MaxIdleTime = 10 * time.Minute
 		}
 		if target.TLS.Mode == "" {
-			if target.Engine == EngineSQLite {
+			if target.Engine == EngineSQLite || target.Engine == EngineDuckDB {
 				target.TLS.Mode = TLSDisabled
 			} else {
 				target.TLS.Mode = TLSVerifyFull
@@ -551,6 +556,9 @@ func resolveRelativePaths(target *TargetConfig, configDir string) {
 	}
 	if target.SQLite != nil {
 		paths = append(paths, &target.SQLite.Root, &target.SQLite.File)
+	}
+	if target.DuckDB != nil {
+		paths = append(paths, &target.DuckDB.Root, &target.DuckDB.File, &target.DuckDB.WorkerPath)
 	}
 	for _, path := range paths {
 		if *path != "" && !filepath.IsAbs(*path) {
@@ -734,6 +742,9 @@ func validateTarget(name string, target *TargetConfig, limits Limits) []string {
 	if target.Engine == EngineSQLite {
 		return append(problems, validateSQLite(target, limits)...)
 	}
+	if target.Engine == EngineDuckDB {
+		return append(problems, validateDuckDB(target, limits)...)
+	}
 	if target.Elasticsearch != nil {
 		problems = append(problems, "elasticsearch settings are valid only for elasticsearch targets")
 	}
@@ -746,8 +757,11 @@ func validateTarget(name string, target *TargetConfig, limits Limits) []string {
 	if target.SQLite != nil {
 		problems = append(problems, "sqlite settings are valid only for sqlite targets")
 	}
+	if target.DuckDB != nil {
+		problems = append(problems, "duckdb settings are valid only for duckdb targets")
+	}
 	if target.Engine != EngineMySQL && target.Engine != EnginePostgreSQL && target.Engine != EngineSQLServer && target.Engine != EngineRedis {
-		problems = append(problems, "engine must be mysql, postgresql, sqlserver, redis, elasticsearch, qdrant, mongodb, or sqlite")
+		problems = append(problems, "engine must be mysql, postgresql, sqlserver, redis, elasticsearch, qdrant, mongodb, sqlite, or duckdb")
 	}
 	if !safeName.MatchString(target.Environment) {
 		problems = append(problems, "environment is required and must be a safe identifier")

@@ -29,6 +29,9 @@ repository.
 > remains open until a provisioned fixture is tested.
 > SQLite reads operator-configured existing files through the common SQL tools;
 > its [local acceptance suite](docs/SQLITE-READONLY.md) needs no service.
+> DuckDB reads one existing database and Parquet files in a dedicated data
+> directory through an isolated Linux worker. Its [local acceptance suite](docs/DUCKDB-READONLY.md)
+> covers native read-only mode, filesystem scope and cancellation.
 
 For agent application use cases and the next connector priorities, see the
 [data connector roadmap](docs/AGENT-APPLICATION-DATA-ROADMAP.md).
@@ -76,6 +79,10 @@ unconfigured schema.
 SQLite has no database account. Its boundary is an operator-configured existing
 file opened in native read-only mode, plus a per-connection SQLite authorizer.
 See [SQLite configuration and acceptance](docs/SQLITE-READONLY.md).
+
+DuckDB executes SQL in a separate bubblewrap process with no network and a
+read-only bind of one configured data directory. See
+[DuckDB configuration and acceptance](docs/DUCKDB-READONLY.md).
 
 Application validation is defense in depth. Do not connect this server using
 an application account, administrator account, migration account, or an
@@ -234,6 +241,11 @@ checks effective privileges and the authorized collection catalog. See
 For SQLite, configure one existing file beneath an operator-controlled root.
 The SQL schema, query, explain and batch tools apply. See
 [SQLite configuration and local acceptance](docs/SQLITE-READONLY.md).
+
+For DuckDB, build the separate worker with `make build-duckdb-worker` and
+configure an existing database and dedicated data directory on Linux with
+bubblewrap installed. The common SQL tools support analytical queries and
+Parquet reads. See [DuckDB configuration and local acceptance](docs/DUCKDB-READONLY.md).
 
 Stored script/template inspection additionally accepts the narrowly scoped
 `cluster:admin/script/get` action grant. Do not replace it with `manage` or

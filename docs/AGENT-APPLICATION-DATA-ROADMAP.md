@@ -43,6 +43,11 @@ P3 now has the [SQLite connector](SQLITE-READONLY.md) with a disposable local
 database acceptance suite covering native read-only enforcement, file scope,
 advanced reads, metadata and cancellation. It needs no external service.
 
+After P3, the [DuckDB local analytics connector](DUCKDB-READONLY.md) adds
+isolated read-only SQL over an existing database and Parquet files. Its
+disposable local acceptance suite covers mutation denial, file and network
+scope, batching and cancellation. It requires a Linux bubblewrap sandbox.
+
 Qdrant is the default first specialist vector database because it offers a
 locally deployable service, a native hybrid Query API and collection-scoped
 read-only keys. Milvus is a reasonable alternative for a role centered on

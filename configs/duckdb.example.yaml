@@ -1,0 +1,35 @@
+server:
+  transport: stdio
+  strict_startup: true
+
+limits:
+  global_concurrency: 4
+  per_target_concurrency: 2
+  default_timeout: 30s
+  max_timeout: 2m
+  max_rows: 1000
+  max_result_bytes: 4194304
+  max_cell_bytes: 1048576
+  max_sql_bytes: 65536
+  max_batch_queries: 20
+  max_parameters: 1000
+  max_parameter_bytes: 8388608
+  max_parameter_value_bytes: 2097152
+  max_queued_requests: 64
+  queue_timeout: 15s
+
+targets:
+  local-analytics:
+    engine: duckdb
+    environment: local
+    consistency: current
+    duckdb:
+      root: /absolute/path/to/analytics-data
+      file: /absolute/path/to/analytics-data/warehouse.duckdb
+      worker_path: /absolute/path/to/readonly-duckdb-worker
+      version: 1.5.6
+      memory_mb: 256
+      threads: 2
+    connection:
+      max_open: 2
+      max_idle: 1

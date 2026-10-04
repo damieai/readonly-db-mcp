@@ -123,6 +123,10 @@ privilege assumptions.
 
 SQLite implements `core.SQLTarget` and `core.BatchTarget` with a native
 read-only file open and connection authorizer in place of account grants.
+DuckDB implements the same interfaces with a one-request Linux sandbox worker,
+native read-only connection and locked file-access profile. Its database file
+has no account grant to attest; startup instead probes the worker, native mode,
+version and file-access settings.
 
 An engine is considered complete only when it has:
 
