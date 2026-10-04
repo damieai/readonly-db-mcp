@@ -51,7 +51,8 @@ make test-duckdb-local
 The test creates a disposable DuckDB database and Parquet file. It verifies
 advanced SELECT, parameters, metadata, EXPLAIN, batching, native mutation
 denial, multi-statement denial, file and network isolation, query cancellation
-and recovery. No database service or Docker container is needed. If the host
+and recovery. It also loads a real target through the registry and rejects a
+write through that path. No database service or Docker container is needed. If the host
 cannot create bubblewrap namespaces, startup fails closed and this live test
 cannot pass; grant the process the OS namespace capability in its deployment
 environment before enabling a target.

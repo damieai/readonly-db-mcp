@@ -23,7 +23,7 @@ build-duckdb-worker:
 	go build -trimpath -o bin/readonly-duckdb-worker ./cmd/readonly-duckdb-worker
 
 test-duckdb-local: build-duckdb-worker
-	READONLY_DB_MCP_DUCKDB_WORKER="$(CURDIR)/bin/readonly-duckdb-worker" go test ./internal/dialects/duckdb -run TestLocalDuckDBSandbox -count=1 -v
+	READONLY_DB_MCP_DUCKDB_WORKER="$(CURDIR)/bin/readonly-duckdb-worker" go test ./internal/dialects/duckdb ./internal/registry -run 'TestLocalDuckDBSandbox|TestDuckDBThroughRegistry' -count=1 -v
 
 # SQL Server uses a separately packaged, self-contained ScriptDom process.
 DOTNET ?= dotnet

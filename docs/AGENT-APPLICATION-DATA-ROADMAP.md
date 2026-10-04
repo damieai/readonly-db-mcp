@@ -1,6 +1,6 @@
 # Agent application data connector roadmap
 
-- Updated: 2026-09-24
+- Updated: 2026-10-04
 - Scope: read-only MCP access to application and retrieval data
 - Priority basis: coverage of distinct agent workloads, current repository gaps,
   and the cost of proving a useful read-only security boundary. This is a project
@@ -47,6 +47,11 @@ After P3, the [DuckDB local analytics connector](DUCKDB-READONLY.md) adds
 isolated read-only SQL over an existing database and Parquet files. Its
 disposable local acceptance suite covers mutation denial, file and network
 scope, batching and cancellation. It requires a Linux bubblewrap sandbox.
+
+For the conditional graph workload, [RFC-0008](RFC-0008-neo4j-readonly-graphrag.md)
+defines an Enterprise-only Neo4j GraphRAG connector and its native-authority
+and live-denial gates. A privilege-proof policy package is implemented; no
+Neo4j target or MCP tool is registered yet.
 
 Qdrant is the default first specialist vector database because it offers a
 locally deployable service, a native hybrid Query API and collection-scoped
