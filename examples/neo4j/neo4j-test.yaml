@@ -1,0 +1,40 @@
+server:
+  transport: stdio
+  strict_startup: true
+
+limits:
+  global_concurrency: 2
+  per_target_concurrency: 2
+  default_timeout: 10s
+  max_timeout: 30s
+  max_rows: 1000
+  max_result_bytes: 1048576
+  max_cell_bytes: 65536
+  max_sql_bytes: 16384
+  max_parameters: 100
+  max_parameter_bytes: 1048576
+  max_parameter_value_bytes: 65536
+  max_queued_requests: 8
+  queue_timeout: 2s
+
+targets:
+  knowledge-graph:
+    engine: neo4j
+    environment: local
+    consistency: current
+    host: 127.0.0.1
+    port: 7687
+    database: knowledge
+    username: agent_graph_ro
+    password_env: NEO4J_QUERY_PASSWORD
+    tls:
+      mode: disabled
+    neo4j:
+      version: 2026.09.0
+      privilege_recheck_interval: 1s
+      attestor:
+        username: agent_graph_attestor
+        password_env: NEO4J_ATTESTOR_PASSWORD
+    connection:
+      max_open: 2
+      max_idle: 1

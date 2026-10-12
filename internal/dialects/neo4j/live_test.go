@@ -34,6 +34,7 @@ func TestNeo4jDisposableEnterpriseGate(t *testing.T) {
 	if targetCfg.Engine != config.EngineNeo4j {
 		t.Fatal("disposable gate requires a Neo4j target")
 	}
+	requireDisposableFixture(t, targetCfg)
 	controller := admission.New(admission.Config{Global: cfg.Limits.GlobalConcurrency, PerTarget: cfg.Limits.PerTargetConcurrency, MaxQueued: cfg.Limits.MaxQueuedRequests, QueueTimeout: cfg.Limits.QueueTimeout})
 	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Minute)
 	defer cancel()
@@ -106,6 +107,13 @@ func TestNeo4jDisposableEnterpriseGate(t *testing.T) {
 	})
 	if err != nil || unchanged.RowCount != 1 || unchanged.Rows[0]["title"] != "Graph retrieval handbook" || unchanged.Rows[0]["write_probes"] != int64(0) {
 		t.Fatalf("write-denial recovery or unchanged-data check failed: result=%+v err=%v", unchanged, err)
+	}
+}
+
+func requireDisposableFixture(t *testing.T, targetCfg *config.TargetConfig) {
+	t.Helper()
+	if targetCfg.Engine != config.EngineNeo4j || targetCfg.Neo4j == nil || targetCfg.Neo4j.Attestor == nil || targetCfg.Environment != "local" || targetCfg.Host != "127.0.0.1" || targetCfg.Database != "knowledge" || targetCfg.Username != "agent_graph_ro" || targetCfg.Neo4j.Attestor.Username != "agent_graph_attestor" {
+		t.Fatal("disposable gate requires the local examples/neo4j fixture and dedicated identities")
 	}
 }
 

@@ -5,6 +5,7 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 )
 
 func TestNeo4jConfigAndAttestorScope(t *testing.T) {
@@ -30,5 +31,15 @@ func TestNeo4jConfigAndAttestorScope(t *testing.T) {
 	target.Neo4j.Version = "2026.02.0"
 	if err := cfg.Validate(); err == nil || !strings.Contains(err.Error(), "2026.03") {
 		t.Fatalf("pre-auth-rule server version accepted: %v", err)
+	}
+}
+
+func TestNeo4jDisposableExampleConfig(t *testing.T) {
+	cfg, err := Load("../../examples/neo4j/neo4j-test.yaml")
+	if err != nil {
+		t.Fatalf("disposable Neo4j example must remain valid: %v", err)
+	}
+	if len(cfg.Targets) != 1 || cfg.Targets["knowledge-graph"] == nil || cfg.Targets["knowledge-graph"].Neo4j.PrivilegeRecheck != time.Second {
+		t.Fatalf("unexpected Neo4j disposable example: %#v", cfg.Targets)
 	}
 }
