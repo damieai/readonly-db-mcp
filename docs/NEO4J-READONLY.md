@@ -54,7 +54,19 @@ It rechecks before new calls when `privilege_recheck_interval` expires.
 
 ## Reproducible Enterprise gate
 
-Provision an isolated Enterprise fixture. Create the native users
+For a local disposable server, use the pinned official image after reviewing
+[Neo4j's Enterprise license requirement](https://neo4j.com/docs/operations-manual/current/docker/introduction/).
+Set `NEO4J_AUTH` to `neo4j/<admin-password>` and explicitly set
+`NEO4J_ACCEPT_LICENSE_AGREEMENT=yes` if you accept that agreement. Then run:
+
+```bash
+docker run --rm --detach --name neo4j-mcp-disposable \
+  --publish 127.0.0.1:7687:7687 \
+  --env NEO4J_AUTH --env NEO4J_ACCEPT_LICENSE_AGREEMENT \
+  neo4j:2026.09.0-enterprise
+```
+
+Provision the isolated Enterprise fixture. Create the native users
 `agent_graph_ro` and `agent_graph_attestor` with separate passwords, then run
 [the system provisioning script](../examples/neo4j/provision.cypher) as an
 administrator against `system`. This script creates the `knowledge` and
@@ -77,8 +89,8 @@ The opt-in tests accept only the fixture's `local` environment,
 `NEO4J_QUERY_PASSWORD`, `NEO4J_ATTESTOR_PASSWORD`,
 `NEO4J_DISPOSABLE_ADMIN_USER` and `NEO4J_DISPOSABLE_ADMIN_PASSWORD` in the
 test process environment. The admin credentials are used only by the opt-in
-test to verify the private database and temporarily change the dedicated
-fixture role. Run:
+tests to verify the private database, temporarily change the dedicated
+fixture role, and observe running transactions. Run:
 
 ```bash
 NEO4J_DISPOSABLE_CONFIG=/absolute/path/to/neo4j-test.yaml \
@@ -87,7 +99,7 @@ NEO4J_DISPOSABLE_CONFIG=/absolute/path/to/neo4j-test.yaml \
 
 That opt-in test proves startup attestation, parameterized bounded reads,
 index metadata, cited graph traversal, tenant-filtered vector `SEARCH`,
-full-text `SEARCH` on 2026.09+, connector write rejection and direct
+full-text `SEARCH` on 2026.09+, result byte limits, connector write rejection and direct
 **native** denial of `CREATE`, `MERGE`, `SET`, `DELETE`, index creation,
 `LOAD CSV` and `SHOW USERS` under the query account. The test requires
 Neo4j's `Security.Forbidden` code and then checks that the fixture is unchanged
@@ -102,12 +114,16 @@ can leave a temporary grant in place, so discard the disposable instance
 after qualification. The MCP test exercises `neo4j_read` with a `CALL {}`
 subquery, parameterized vector `SEARCH`, a low row cap, and index metadata.
 It checks the cited `element_id` and truncation marker.
+The cancellation test observes a running, computation-heavy read in
+`SHOW TRANSACTIONS`, cancels its request, verifies that its server transaction
+disappears, and checks that a new read succeeds. It repeats the recovery check
+after a short query deadline.
 
 Also submit a cross-graph `USE` directly as the query account and confirm
-native denial. Exercise a long traversal with a short deadline and
-confirm the next request succeeds. Record the server image digest, exact
-patch, driver version, roles, test logs, native denials and cancellation
-timings before marking this connector live-qualified.
+native denial. Measure five-minute and multi-minute reads and concurrency
+saturation on the pinned server. Record
+the server image digest, exact patch, driver version, roles, test logs, native
+denials and cancellation timings before marking this connector live-qualified.
 
 The local test suite cannot establish those server behaviors without a
 provisioned Enterprise fixture. The [Neo4j user](https://neo4j.com/docs/operations-manual/current/authentication-authorization/manage-users/),

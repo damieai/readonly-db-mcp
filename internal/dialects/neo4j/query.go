@@ -83,15 +83,24 @@ func (t *Target) Read(parent context.Context, request core.Neo4jReadRequest) (ou
 	// execution query is read-only; it can also reject valid Cypher prefixes.
 	tx, err := session.BeginTransaction(ctx, driver.WithTxTimeout(remaining(ctx)))
 	if err != nil {
+		if neo4jReadInterrupted(ctx, err) {
+			return nil, errors.New("deadline_exceeded: Neo4j query interrupted")
+		}
 		return nil, errors.New("transport_error: Neo4j read transaction failed")
 	}
 	defer closeTransaction(tx)
 	result, err := tx.Run(ctx, cypher, params)
 	if err != nil {
+		if neo4jReadInterrupted(ctx, err) {
+			return nil, errors.New("deadline_exceeded: Neo4j query interrupted")
+		}
 		return nil, errors.New("query_error: Neo4j query failed")
 	}
 	keys, err := result.Keys()
 	if err != nil {
+		if neo4jReadInterrupted(ctx, err) {
+			return nil, errors.New("deadline_exceeded: Neo4j query interrupted")
+		}
 		return nil, errors.New("query_error: Neo4j result keys failed")
 	}
 	for _, key := range keys {
@@ -123,8 +132,12 @@ func (t *Target) Read(parent context.Context, request core.Neo4jReadRequest) (ou
 		}
 		out.Rows = append(out.Rows, row)
 	}
-	if result.Err() != nil || ctx.Err() != nil {
+	iterationErr := result.Err()
+	if neo4jReadInterrupted(ctx, iterationErr) {
 		return nil, errors.New("deadline_exceeded: Neo4j query interrupted")
+	}
+	if iterationErr != nil {
+		return nil, errors.New("query_error: Neo4j result iteration failed")
 	}
 	out.RowCount = len(out.Rows)
 	out.DurationMS = time.Since(start).Milliseconds()
@@ -132,6 +145,20 @@ func (t *Target) Read(parent context.Context, request core.Neo4jReadRequest) (ou
 		return nil, errors.New("resource_limit: Neo4j result exceeds max_result_bytes")
 	}
 	return out, nil
+}
+
+func neo4jReadInterrupted(ctx context.Context, err error) bool {
+	if ctx.Err() != nil {
+		return true
+	}
+	var neo4jErr *driver.Neo4jError
+	if errors.As(err, &neo4jErr) {
+		switch neo4jErr.Code {
+		case "Neo.ClientError.Transaction.TransactionTimedOut", "Neo.ClientError.Transaction.TransactionTimedOutClientConfiguration":
+			return true
+		}
+	}
+	return false
 }
 
 func (t *Target) Metadata(parent context.Context, kind string) (*core.Neo4jMetadataResult, error) {

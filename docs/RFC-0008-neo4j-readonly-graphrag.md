@@ -170,8 +170,9 @@ without exposing usernames or the raw privilege catalog.
    response byte enforcement. Record the image digest, server patch, driver
    version, role descriptors and test output before labeling live-qualified.
 
-This workspace currently has no Neo4j service or Docker integration, so the
-live gate is pending. Policy tests do not substitute for native-denial evidence.
+The reproducible live gate is implemented, but no pinned Neo4j Enterprise
+fixture has been run in this workspace. Policy tests do not substitute for
+native-denial and cancellation evidence.
 
 ## Rollout and operations
 

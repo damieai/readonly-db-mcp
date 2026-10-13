@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"os"
+	"strings"
 	"testing"
 	"time"
 
@@ -46,6 +47,14 @@ func TestNeo4jDisposableEnterpriseGate(t *testing.T) {
 	read, err := target.Read(ctx, core.Neo4jReadRequest{Cypher: "RETURN $value AS value", Parameters: map[string]any{"value": int64(7)}, MaxRows: 1})
 	if err != nil || read.RowCount != 1 || read.Rows[0]["value"] != int64(7) {
 		t.Fatalf("bounded parameterized read failed: result=%+v err=%v", read, err)
+	}
+	_, err = target.Read(ctx, core.Neo4jReadRequest{
+		Cypher:     "UNWIND range(1, 200) AS n RETURN $payload AS payload",
+		Parameters: map[string]any{"payload": strings.Repeat("x", 8192)},
+		MaxRows:    200,
+	})
+	if err == nil || !strings.HasPrefix(err.Error(), "resource_limit:") {
+		t.Fatalf("Neo4j result byte cap did not reject an oversized response: %v", err)
 	}
 	indexes, err := target.Metadata(ctx, "indexes")
 	if err != nil {
