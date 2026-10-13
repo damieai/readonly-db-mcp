@@ -51,7 +51,7 @@ func (t *Target) prove(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	userQuery := "SHOW USER `" + name + "` YIELD user, roles RETURN user, roles"
+	userQuery := "SHOW USERS YIELD user, roles WHERE user = $name RETURN user, roles"
 	privQuery := "SHOW USER `" + name + "` PRIVILEGES YIELD access, action, resource, graph, segment, role RETURN access, action, resource, graph, segment, role"
 	session := t.attestor.NewSession(ctx, driver.SessionConfig{DatabaseName: "system", AccessMode: driver.AccessModeRead, FetchSize: 128})
 	defer session.Close(ctx)
@@ -62,7 +62,7 @@ func (t *Target) prove(ctx context.Context) error {
 	if err := validateAuthRules(authRules); err != nil {
 		return err
 	}
-	userRows, err := readFixed(ctx, session, userQuery, 2)
+	userRows, err := readFixedParams(ctx, session, userQuery, map[string]any{"name": name}, 2)
 	if err != nil || len(userRows) != 1 {
 		return errors.New("permission_denied: Neo4j user/role inspection failed")
 	}
@@ -196,7 +196,11 @@ func readRoles(raw any) ([]string, error) {
 }
 
 func readFixed(ctx context.Context, session driver.Session, query string, maxRows int) ([]map[string]any, error) {
-	result, err := session.Run(ctx, query, nil, driver.WithTxTimeout(30*time.Second))
+	return readFixedParams(ctx, session, query, nil, maxRows)
+}
+
+func readFixedParams(ctx context.Context, session driver.Session, query string, params map[string]any, maxRows int) ([]map[string]any, error) {
+	result, err := session.Run(ctx, query, params, driver.WithTxTimeout(30*time.Second))
 	if err != nil {
 		return nil, err
 	}

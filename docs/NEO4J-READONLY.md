@@ -1,8 +1,9 @@
 # Neo4j read-only connector
 
 The Neo4j target exposes `neo4j_read` for native Cypher and `neo4j_metadata`
-for indexes, constraints, labels and relationship types. It is locally tested,
-but **not yet qualified against a live Enterprise server**. The pinned server
+for indexes, constraints, labels and relationship types. The disposable
+Enterprise 2026.09.0 gate [passed locally on 2026-10-13](NEO4J-ACCEPTANCE-2026-10-13.md).
+Production TLS and sustained-read qualification remain open. The pinned server
 patch must be Neo4j Enterprise 2026.03 or newer; the example uses 2026.09.0.
 See [RFC-0008](RFC-0008-neo4j-readonly-graphrag.md) for the security model.
 
@@ -101,7 +102,8 @@ That opt-in test proves startup attestation, parameterized bounded reads,
 index metadata, cited graph traversal, tenant-filtered vector `SEARCH`,
 full-text `SEARCH` on 2026.09+, result byte limits, connector write rejection and direct
 **native** denial of `CREATE`, `MERGE`, `SET`, `DELETE`, index creation,
-`LOAD CSV` and `SHOW USERS` under the query account. The test requires
+local and remote `LOAD CSV`, cross-database `USE`, procedure execution and
+`SHOW USERS` under the query account. The test requires
 Neo4j's `Security.Forbidden` code and then checks that the fixture is unchanged
 and another read succeeds. It may create
 `Neo4jMCPWriteProbe` if the account is misconfigured, so use a disposable graph.
@@ -117,11 +119,10 @@ It checks the cited `element_id` and truncation marker.
 The cancellation test observes a running, computation-heavy read in
 `SHOW TRANSACTIONS`, cancels its request, verifies that its server transaction
 disappears, and checks that a new read succeeds. It repeats the recovery check
-after a short query deadline.
+after a short query deadline and after an active query saturates the one-permit
+test controller's queue.
 
-Also submit a cross-graph `USE` directly as the query account and confirm
-native denial. Measure five-minute and multi-minute reads and concurrency
-saturation on the pinned server. Record
+Measure five-minute and multi-minute reads on the pinned server. Record
 the server image digest, exact patch, driver version, roles, test logs, native
 denials and cancellation timings before marking this connector live-qualified.
 

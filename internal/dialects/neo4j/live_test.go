@@ -104,6 +104,9 @@ func TestNeo4jDisposableEnterpriseGate(t *testing.T) {
 		{"delete", "MATCH (n:Neo4jMCPDocument {id: 'neo4j-fixture-doc'}) DETACH DELETE n"},
 		{"schema", "CREATE INDEX neo4j_mcp_write_probe IF NOT EXISTS FOR (n:Neo4jMCPWriteProbe) ON (n.id)"},
 		{"load", "LOAD CSV FROM 'file:///neo4j-mcp-does-not-exist.csv' AS row RETURN row"},
+		{"remote_load", "LOAD CSV FROM 'https://example.invalid/neo4j-mcp.csv' AS row RETURN row LIMIT 1"},
+		{"cross_database_use", "USE `private` MATCH (n) RETURN count(n) AS count"},
+		{"procedure", "CALL dbms.listConfig() YIELD name RETURN name LIMIT 1"},
 		{"admin", "SHOW USERS"},
 	} {
 		t.Run("native_denial_"+tc.name, func(t *testing.T) {

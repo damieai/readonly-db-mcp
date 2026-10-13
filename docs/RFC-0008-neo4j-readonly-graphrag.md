@@ -1,6 +1,6 @@
 # RFC-0008: Neo4j read-only GraphRAG connector
 
-- Status: Local connector implemented; Enterprise live gate pending
+- Status: Disposable Enterprise 2026.09.0 gate passed; production TLS and sustained-read checks pending
 - Created: 2026-10-04
 - Depends on: RFC-0001 and the agent application data roadmap
 - Workload: vector or full-text retrieval followed by bounded graph traversal and source citation
@@ -170,9 +170,10 @@ without exposing usernames or the raw privilege catalog.
    response byte enforcement. Record the image digest, server patch, driver
    version, role descriptors and test output before labeling live-qualified.
 
-The reproducible live gate is implemented, but no pinned Neo4j Enterprise
-fixture has been run in this workspace. Policy tests do not substitute for
-native-denial and cancellation evidence.
+The [disposable 2026.09.0 Enterprise gate](NEO4J-ACCEPTANCE-2026-10-13.md)
+passed on 2026-10-13, including native-denial and cancellation evidence.
+Production TLS and five-minute sustained reads remain to be qualified on the
+intended deployment endpoint.
 
 ## Rollout and operations
 
@@ -195,5 +196,6 @@ The chosen Enterprise proof retains native read syntax under exact grants.
 The connector is complete only after the registered MCP tool, versioned
 authority proof/recheck, native metadata, typed results, resource and
 cancellation tests, documentation and the pinned Enterprise live gate all pass.
-The local connector and tests are implemented. It must not be described as
-Enterprise-qualified until the live gate passes on the configured patch.
+The local connector and disposable Enterprise gate are implemented and have
+passed on 2026.09.0. A different patch or deployment endpoint requires a new
+qualification run before claiming those results for it.

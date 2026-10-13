@@ -2,6 +2,7 @@ package neo4j
 
 import (
 	"context"
+	"errors"
 	"os"
 	"strings"
 	"testing"
@@ -40,7 +41,9 @@ func TestNeo4jDisposableCancellationRecovery(t *testing.T) {
 	if cfg.Limits.MaxTimeout < 10*time.Second || targetCfg.Connection.MaxOpen < 2 {
 		t.Fatal("cancellation gate requires a 10s query allowance and at least two pooled connections")
 	}
-	controller := admission.New(admission.Config{Global: cfg.Limits.GlobalConcurrency, PerTarget: cfg.Limits.PerTargetConcurrency, MaxQueued: cfg.Limits.MaxQueuedRequests, QueueTimeout: cfg.Limits.QueueTimeout})
+	// One permit makes the pool/queue recovery check deterministic while the
+	// driver still has a second connection for the admin observer.
+	controller := admission.New(admission.Config{Global: 1, PerTarget: 1, MaxQueued: 1, QueueTimeout: cfg.Limits.QueueTimeout})
 	ctx, stop := context.WithTimeout(context.Background(), 30*time.Second)
 	defer stop()
 	target, err := Open(ctx, targetCfg, cfg.Limits, controller, nil, nil)
@@ -121,5 +124,37 @@ func TestNeo4jDisposableCancellationRecovery(t *testing.T) {
 	poll(false, 5*time.Second)
 	if _, err := target.Read(ctx, core.Neo4jReadRequest{Cypher: "RETURN 2 AS value", MaxRows: 1}); err != nil {
 		t.Fatalf("pool did not recover after query deadline: %v", err)
+	}
+	saturationCtx, cancelSaturation := context.WithCancel(ctx)
+	defer cancelSaturation()
+	saturationDone := make(chan error, 1)
+	go func() {
+		_, err := target.Read(saturationCtx, core.Neo4jReadRequest{Cypher: expensive, Timeout: 10 * time.Second, MaxRows: 1})
+		saturationDone <- err
+	}()
+	poll(true, 5*time.Second)
+	queuedCtx, cancelQueued := context.WithTimeout(ctx, 100*time.Millisecond)
+	_, queuedErr := target.Read(queuedCtx, core.Neo4jReadRequest{Cypher: "RETURN 3 AS value", MaxRows: 1})
+	cancelQueued()
+	if !errors.Is(queuedErr, context.DeadlineExceeded) && !errors.Is(queuedErr, admission.ErrOverloaded) {
+		t.Fatalf("saturated target did not reject the queued read: %v", queuedErr)
+	}
+	select {
+	case err := <-saturationDone:
+		t.Fatalf("active query ended before queue saturation check: %v", err)
+	default:
+	}
+	cancelSaturation()
+	select {
+	case err := <-saturationDone:
+		if err == nil || !strings.HasPrefix(err.Error(), "deadline_exceeded:") {
+			t.Fatalf("saturation query did not cancel cleanly: %v", err)
+		}
+	case <-time.After(5 * time.Second):
+		t.Fatal("saturation query did not return after cancellation")
+	}
+	poll(false, 5*time.Second)
+	if _, err := target.Read(ctx, core.Neo4jReadRequest{Cypher: "RETURN 4 AS value", MaxRows: 1}); err != nil {
+		t.Fatalf("permit or pool did not recover after saturation: %v", err)
 	}
 }
