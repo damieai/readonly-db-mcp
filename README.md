@@ -490,8 +490,8 @@ See [ES|QL qualification and remaining gates](docs/qualification/2026-09-22-elas
 
 ### 3. Build and verify
 
-The module currently requires Go 1.26.6 or newer because of the maintained
-MySQL parser dependency.
+The module requires Go 1.26.9 or newer to include standard-library security
+fixes and support the maintained MySQL parser dependency.
 
 ```bash
 make test
