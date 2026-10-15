@@ -62,26 +62,11 @@ func Open(ctx context.Context, cfg *config.TargetConfig, limits config.Limits, c
 			return nil, errors.New("configuration_error: invalid Neo4j CA file")
 		}
 	}
-	newDriver := func(username, password string, pool int) (driver.Driver, error) {
-		return driver.NewDriver(uri, driver.BasicAuth(username, password, ""), func(c *neo4jconfig.Config) {
-			c.MaxConnectionPoolSize = pool
-			c.ConnectionAcquisitionTimeout = limits.MaxTimeout + time.Minute
-			c.SocketConnectTimeout = cfg.Connection.ConnectTimeout
-			c.MaxConnectionLifetime = cfg.Connection.MaxLifetime
-			c.MaxTransactionRetryTime = 0
-			c.DisableAutoCommitRetries = true
-			c.FetchSize = min(limits.MaxRows+1, 256)
-			c.TelemetryDisabled = true
-			if cfg.TLS.Mode == config.TLSVerifyFull {
-				c.TlsConfig = &tls.Config{MinVersion: tls.VersionTLS12, RootCAs: roots}
-			}
-		})
-	}
-	query, err := newDriver(cfg.Username, queryPassword, cfg.Connection.MaxOpen)
+	query, err := newNeo4jDriver(uri, cfg, limits, roots, cfg.Username, queryPassword, cfg.Connection.MaxOpen)
 	if err != nil {
 		return nil, errors.New("configuration_error: cannot initialize Neo4j query driver")
 	}
-	attestor, err := newDriver(cfg.Neo4j.Attestor.Username, attestorPassword, 1)
+	attestor, err := newNeo4jDriver(uri, cfg, limits, roots, cfg.Neo4j.Attestor.Username, attestorPassword, 1)
 	if err != nil {
 		_ = query.Close(ctx)
 		return nil, errors.New("configuration_error: cannot initialize Neo4j attestor driver")
@@ -95,6 +80,22 @@ func Open(ctx context.Context, cfg *config.TargetConfig, limits config.Limits, c
 		return nil, fmt.Errorf("Neo4j target %q startup proof: %w", cfg.Name, err)
 	}
 	return t, nil
+}
+
+func newNeo4jDriver(uri string, cfg *config.TargetConfig, limits config.Limits, roots *x509.CertPool, username, password string, pool int) (driver.Driver, error) {
+	return driver.NewDriver(uri, driver.BasicAuth(username, password, ""), func(c *neo4jconfig.Config) {
+		c.MaxConnectionPoolSize = pool
+		c.ConnectionAcquisitionTimeout = limits.MaxTimeout + time.Minute
+		c.SocketConnectTimeout = cfg.Connection.ConnectTimeout
+		c.MaxConnectionLifetime = cfg.Connection.MaxLifetime
+		c.MaxTransactionRetryTime = 0
+		c.DisableAutoCommitRetries = true
+		c.FetchSize = min(limits.MaxRows+1, 256)
+		c.TelemetryDisabled = true
+		if cfg.TLS.Mode == config.TLSVerifyFull {
+			c.TlsConfig = &tls.Config{MinVersion: tls.VersionTLS12, RootCAs: roots}
+		}
+	})
 }
 
 func (t *Target) Info() core.TargetInfo {

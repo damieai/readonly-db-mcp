@@ -57,6 +57,14 @@ Remaining deployment checks are verified TLS against the intended production
 endpoint, five-minute and other sustained reads under its resource limits,
 and a new authority/hostile-query run after any server or driver upgrade.
 
+On 2026-10-15, a local `bolt+s` driver-handshake test passed for a trusted
+CA and matching host, and rejected an untrusted CA and mismatched hostname.
+This is a client-side test against a temporary TLS listener, not a Neo4j
+server gate. An opt-in five-minute single-read gate and an eight-minute
+disposable test configuration are now available. Neither the live TLS gate
+nor the sustained-read gate ran on 2026-10-15 because Docker Desktop's WSL
+integration was unavailable in the workspace.
+
 ## Captured gate log
 
 ```text

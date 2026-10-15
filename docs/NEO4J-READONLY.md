@@ -3,8 +3,10 @@
 The Neo4j target exposes `neo4j_read` for native Cypher and `neo4j_metadata`
 for indexes, constraints, labels and relationship types. The disposable
 Enterprise 2026.09.0 gate [passed locally on 2026-10-13](NEO4J-ACCEPTANCE-2026-10-13.md).
-Production TLS and sustained-read qualification remain open. The pinned server
-patch must be Neo4j Enterprise 2026.03 or newer; the example uses 2026.09.0.
+Production TLS and sustained-read qualification remain open. A local driver
+TLS handshake test covers trusted CA, untrusted CA and wrong-host rejection.
+The pinned server patch must be Neo4j Enterprise 2026.03 or newer; the example
+uses 2026.09.0.
 See [RFC-0008](RFC-0008-neo4j-readonly-graphrag.md) for the security model.
 
 ## Provisioning contract
@@ -121,6 +123,30 @@ The cancellation test observes a running, computation-heavy read in
 disappears, and checks that a new read succeeds. It repeats the recovery check
 after a short query deadline and after an active query saturates the one-permit
 test controller's queue.
+
+For a verified-TLS disposable gate, configure Neo4j's Bolt SSL policy with a
+certificate whose SAN includes `127.0.0.1`, change the local test target's
+`tls.mode` to `verify-full` and set `tls.ca_file` to the issuing CA PEM. Keep
+the host and dedicated identities unchanged, then rerun the disposable gate.
+The [Neo4j SSL framework guide](https://neo4j.com/docs/operations-manual/current/security/ssl-framework/)
+documents Bolt TLS setup. The unit TLS test checks the driver handshake; only
+this live gate can establish that the provisioned server accepts it.
+
+For a single five-minute read, start from
+[the sustained test configuration](../examples/neo4j/neo4j-sustained-test.yaml).
+Set `NEO4J_DISPOSABLE_SUSTAINED_CYPHER` to an aggregate read returning one row,
+sized to take at least five minutes on that server. For example, start with
+`UNWIND range(1, 100000) AS i UNWIND range(1, 100000) AS j RETURN sum(toFloat(i * j)) AS total`
+and adjust the bounds after measuring its runtime. The gate requires a
+successful result after at least five minutes and a subsequent recovery read;
+it fails if the query finishes sooner. Run it alone with a ten-minute Go test
+deadline:
+
+```bash
+NEO4J_DISPOSABLE_CONFIG=/absolute/path/to/neo4j-sustained-test.yaml \
+NEO4J_DISPOSABLE_SUSTAINED_CYPHER='UNWIND range(1, 100000) AS i UNWIND range(1, 100000) AS j RETURN sum(toFloat(i * j)) AS total' \
+  go test ./internal/dialects/neo4j -run '^TestNeo4jDisposableSustainedRead$' -count=1 -v -timeout 10m
+```
 
 Measure five-minute and multi-minute reads on the pinned server. Record
 the server image digest, exact patch, driver version, roles, test logs, native
