@@ -23,6 +23,22 @@ type Neo4jReadResult struct {
 	DurationMS int64            `json:"duration_ms"`
 }
 
+type Neo4jBatchRequest struct {
+	Queries []Neo4jReadRequest
+	Timeout time.Duration
+}
+
+type Neo4jBatchResult struct {
+	BatchID          string            `json:"batch_id"`
+	Target           string            `json:"target"`
+	Database         string            `json:"database"`
+	Results          []Neo4jReadResult `json:"results"`
+	CompletedQueries int               `json:"completed_queries"`
+	Truncated        bool              `json:"truncated"`
+	TruncationReason string            `json:"truncation_reason,omitempty"`
+	DurationMS       int64             `json:"duration_ms"`
+}
+
 type Neo4jMetadataResult struct {
 	Target   string           `json:"target"`
 	Database string           `json:"database"`
@@ -33,5 +49,6 @@ type Neo4jMetadataResult struct {
 type Neo4jTarget interface {
 	Target
 	Read(context.Context, Neo4jReadRequest) (*Neo4jReadResult, error)
+	BatchRead(context.Context, Neo4jBatchRequest) (*Neo4jBatchResult, error)
 	Metadata(context.Context, string) (*Neo4jMetadataResult, error)
 }

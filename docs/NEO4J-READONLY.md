@@ -1,6 +1,7 @@
 # Neo4j read-only connector
 
-The Neo4j target exposes `neo4j_read` for native Cypher and `neo4j_metadata`
+The Neo4j target exposes `neo4j_read` for native Cypher,
+`neo4j_batch_read` for sequential reads in one transaction, and `neo4j_metadata`
 for indexes, constraints, labels and relationship types. The disposable
 Enterprise 2026.09.0 gate [passed locally on 2026-10-13](NEO4J-ACCEPTANCE-2026-10-13.md).
 Production TLS and sustained-read qualification remain open. A local driver
@@ -40,6 +41,24 @@ in Neo4j 2026.01; full-text `SEARCH` requires 2026.09 and Cypher 25. Earlier
 supported patches can still use graph reads and vector `SEARCH`. Only query text,
 parameters, returned rows and time are bounded. Procedure-based full-text
 access is outside the current authority profile.
+
+`neo4j_batch_read` accepts up to `limits.max_batch_queries` independent Cypher
+queries, each with its own parameters and row cap. It checks every member
+before connecting, then uses one privilege proof, admission permit, deadline
+and explicit read transaction. All members share `limits.max_result_bytes`;
+their combined parameter JSON is capped by `limits.max_parameter_bytes`.
+If a member reaches its row cap, the batch returns that truncated member and
+stops before later members. A query or byte-limit error fails the whole batch.
+Members cannot refer to earlier result values; an agent must use a later tool
+call when the next Cypher depends on a returned ID. Neo4j uses
+[read-committed isolation](https://neo4j.com/docs/operations-manual/current/database-internals/concurrent-data-access/),
+so another transaction's committed changes may become visible
+between batch members; this is not a fixed snapshot. The server's native
+privileges remain the write boundary for every member.
+
+```json
+{"target":"knowledge-graph","queries":[{"cypher":"MATCH (d:Document {id: $id}) RETURN d.title AS title","parameters":{"id":"doc-1"},"max_rows":1},{"cypher":"MATCH (d:Document {id: $id})-[:CITES]->(s:Source) RETURN s.id AS source_id","parameters":{"id":"doc-1"},"max_rows":10}],"timeout_ms":30000}
+```
 
 MCP JSON decoders can lose precision for integer tokens above 2^53−1. Pass
 such values as decimal strings and call Cypher `toInteger($id)` when needed;
@@ -117,7 +136,11 @@ fixture role after each check and verifies read recovery. A crashed process
 can leave a temporary grant in place, so discard the disposable instance
 after qualification. The MCP test exercises `neo4j_read` with a `CALL {}`
 subquery, parameterized vector `SEARCH`, a low row cap, and index metadata.
-It checks the cited `element_id` and truncation marker.
+It also exercises `neo4j_batch_read` with vector retrieval and graph traversal,
+and confirms a truncated member prevents later execution. It checks the cited
+`element_id` and truncation marker. The new batch cases are opt-in and have
+not yet run against the Enterprise fixture.
+
 The cancellation test observes a running, computation-heavy read in
 `SHOW TRANSACTIONS`, cancels its request, verifies that its server transaction
 disappears, and checks that a new read succeeds. It repeats the recovery check

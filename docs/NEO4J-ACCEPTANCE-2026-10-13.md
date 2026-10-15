@@ -65,6 +65,11 @@ disposable test configuration are now available. Neither the live TLS gate
 nor the sustained-read gate ran on 2026-10-15 because Docker Desktop's WSL
 integration was unavailable in the workspace.
 
+The later `neo4j_batch_read` tool has local validation and MCP registration
+tests, plus an added opt-in Enterprise MCP case. That new case has not run
+against the disposable server, so the 2026-10-13 captured log establishes
+only the original single-query and metadata behaviors.
+
 ## Captured gate log
 
 ```text

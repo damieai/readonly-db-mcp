@@ -95,6 +95,28 @@ func TestNeo4jDisposableMCPRoundTrip(t *testing.T) {
 			t.Fatalf("Neo4j MCP vector filter leaked another tenant: %+v", vector)
 		}
 	}
+	var batch core.Neo4jBatchResult
+	call("neo4j_batch_read", map[string]any{
+		"target": alias,
+		"queries": []map[string]any{
+			{"cypher": "CYPHER 25 MATCH (d:Neo4jMCPDocument) SEARCH d IN (VECTOR INDEX neo4j_mcp_doc_vector FOR $embedding WHERE d.tenant = $tenant LIMIT 5) SCORE AS score RETURN d.id AS id, score", "parameters": map[string]any{"embedding": []any{1.0, 0.0}, "tenant": "public"}, "max_rows": 5},
+			{"cypher": "MATCH (d:Neo4jMCPDocument {id: $id})-[:NEO4J_MCP_CITES]->(s) RETURN d.id AS id, s.id AS source_id", "parameters": map[string]any{"id": "neo4j-fixture-doc"}, "max_rows": 5},
+		},
+	}, &batch)
+	if batch.CompletedQueries != 2 || batch.Truncated || len(batch.Results) != 2 || len(batch.Results[0].Rows) != 1 || len(batch.Results[1].Rows) != 1 || batch.Results[0].Rows[0]["id"] != "neo4j-fixture-doc" || batch.Results[1].Rows[0]["source_id"] != "neo4j-fixture-source" {
+		t.Fatalf("Neo4j MCP batch retrieval/traversal failed: %+v", batch)
+	}
+	var stopped core.Neo4jBatchResult
+	call("neo4j_batch_read", map[string]any{
+		"target": alias,
+		"queries": []map[string]any{
+			{"cypher": "UNWIND [1, 2, 3] AS n RETURN n", "max_rows": 1},
+			{"cypher": "RETURN 'unreachable' AS value"},
+		},
+	}, &stopped)
+	if stopped.CompletedQueries != 1 || !stopped.Truncated || stopped.TruncationReason != "row_limit" {
+		t.Fatalf("Neo4j MCP batch did not stop after row truncation: %+v", stopped)
+	}
 	var truncated core.Neo4jReadResult
 	call("neo4j_read", map[string]any{"target": alias, "cypher": "UNWIND [1, 2, 3] AS n RETURN n", "max_rows": 1}, &truncated)
 	if truncated.RowCount != 1 || !truncated.Truncated {

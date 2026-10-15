@@ -44,20 +44,9 @@ func (t *Target) Read(parent context.Context, request core.Neo4jReadRequest) (ou
 			t.recorder.Observe("query_duration", time.Since(start), "neo4j_read")
 		}
 	}()
-	cypher := strings.TrimSpace(request.Cypher)
-	if cypher == "" || len(cypher) > t.limits.MaxSQLBytes || !utf8.ValidString(cypher) || strings.IndexByte(cypher, 0) >= 0 {
-		return nil, errors.New("invalid_request: Neo4j Cypher is empty or exceeds limit")
-	}
-	params, err := validateParameters(request.Parameters, t.limits)
+	cypher, params, maxRows, err := t.validateReadInput(request)
 	if err != nil {
 		return nil, err
-	}
-	maxRows := request.MaxRows
-	if maxRows == 0 {
-		maxRows = t.limits.MaxRows
-	}
-	if maxRows < 1 || maxRows > t.limits.MaxRows {
-		return nil, errors.New("resource_limit: Neo4j row cap exceeds maximum")
 	}
 	timeout := request.Timeout
 	if timeout == 0 {
@@ -89,6 +78,29 @@ func (t *Target) Read(parent context.Context, request core.Neo4jReadRequest) (ou
 		return nil, errors.New("transport_error: Neo4j read transaction failed")
 	}
 	defer closeTransaction(tx)
+	return t.runReadInTransaction(ctx, tx, cypher, params, maxRows, queryID, start, t.limits.MaxResultBytes)
+}
+
+func (t *Target) validateReadInput(request core.Neo4jReadRequest) (string, map[string]any, int, error) {
+	cypher := strings.TrimSpace(request.Cypher)
+	if cypher == "" || len(cypher) > t.limits.MaxSQLBytes || !utf8.ValidString(cypher) || strings.IndexByte(cypher, 0) >= 0 {
+		return "", nil, 0, errors.New("invalid_request: Neo4j Cypher is empty or exceeds limit")
+	}
+	params, err := validateParameters(request.Parameters, t.limits)
+	if err != nil {
+		return "", nil, 0, err
+	}
+	maxRows := request.MaxRows
+	if maxRows == 0 {
+		maxRows = t.limits.MaxRows
+	}
+	if maxRows < 1 || maxRows > t.limits.MaxRows {
+		return "", nil, 0, errors.New("resource_limit: Neo4j row cap exceeds maximum")
+	}
+	return cypher, params, maxRows, nil
+}
+
+func (t *Target) runReadInTransaction(ctx context.Context, tx driver.ExplicitTransaction, cypher string, params map[string]any, maxRows int, queryID string, start time.Time, byteLimit int) (*core.Neo4jReadResult, error) {
 	result, err := tx.Run(ctx, cypher, params)
 	if err != nil {
 		if neo4jReadInterrupted(ctx, err) {
@@ -108,8 +120,8 @@ func (t *Target) Read(parent context.Context, request core.Neo4jReadRequest) (ou
 			return nil, errors.New("resource_limit: Neo4j column name exceeds max_cell_bytes")
 		}
 	}
-	out = &core.Neo4jReadResult{QueryID: queryID, Target: t.cfg.Name, Database: t.cfg.Database, Keys: keys, Rows: []map[string]any{}}
-	budget, err := newResponseBudget(out, t.limits.MaxResultBytes)
+	out := &core.Neo4jReadResult{QueryID: queryID, Target: t.cfg.Name, Database: t.cfg.Database, Keys: keys, Rows: []map[string]any{}}
+	budget, err := newResponseBudget(out, byteLimit)
 	if err != nil {
 		return nil, err
 	}
@@ -141,7 +153,7 @@ func (t *Target) Read(parent context.Context, request core.Neo4jReadRequest) (ou
 	}
 	out.RowCount = len(out.Rows)
 	out.DurationMS = time.Since(start).Milliseconds()
-	if tooLarge(out, t.limits.MaxResultBytes) {
+	if tooLarge(out, byteLimit) {
 		return nil, errors.New("resource_limit: Neo4j result exceeds max_result_bytes")
 	}
 	return out, nil

@@ -68,8 +68,11 @@ metadata through fixed native read commands. Vector index name, labels,
 properties, dimension, similarity, state and provider are surfaced so clients
 can form a valid native `SEARCH` query. Metadata reads use the same database
 and admission limits. One MCP tool accepts one Cypher statement plus typed
-parameters and optional row/timeout ceilings; a separate batch tool may be
-added after snapshot and byte accounting are proved.
+parameters and optional row/timeout ceilings. `neo4j_batch_read` executes
+independent bounded reads in one read-committed transaction, with a whole-batch
+deadline and result-byte cap. It does not promise a stable snapshot across
+members, because Neo4j permits non-repeatable reads under its
+[default isolation](https://neo4j.com/docs/operations-manual/current/database-internals/).
 
 ## Security and trust boundaries
 
