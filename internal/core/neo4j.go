@@ -39,6 +39,28 @@ type Neo4jBatchResult struct {
 	DurationMS       int64             `json:"duration_ms"`
 }
 
+type Neo4jExplainResult struct {
+	QueryID    string              `json:"query_id"`
+	Target     string              `json:"target"`
+	Database   string              `json:"database"`
+	Operators  []Neo4jPlanOperator `json:"operators"`
+	DurationMS int64               `json:"duration_ms"`
+}
+
+type Neo4jExplainRequest struct {
+	Cypher     string
+	Parameters map[string]any
+	Timeout    time.Duration
+}
+
+type Neo4jPlanOperator struct {
+	ID          int            `json:"id"`
+	ParentID    int            `json:"parent_id"`
+	Operator    string         `json:"operator"`
+	Arguments   map[string]any `json:"arguments"`
+	Identifiers []string       `json:"identifiers"`
+}
+
 type Neo4jMetadataResult struct {
 	Target   string           `json:"target"`
 	Database string           `json:"database"`
@@ -50,5 +72,6 @@ type Neo4jTarget interface {
 	Target
 	Read(context.Context, Neo4jReadRequest) (*Neo4jReadResult, error)
 	BatchRead(context.Context, Neo4jBatchRequest) (*Neo4jBatchResult, error)
+	Explain(context.Context, Neo4jExplainRequest) (*Neo4jExplainResult, error)
 	Metadata(context.Context, string) (*Neo4jMetadataResult, error)
 }

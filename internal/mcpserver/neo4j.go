@@ -32,10 +32,34 @@ type Neo4jBatchQueryInput struct {
 	MaxRows    int            `json:"max_rows,omitempty" jsonschema:"Optional result row cap for this query"`
 }
 
+type Neo4jExplainInput struct {
+	Target     string         `json:"target" jsonschema:"Exact configured Neo4j target alias"`
+	Cypher     string         `json:"cypher" jsonschema:"Native Cypher query to plan without executing"`
+	Parameters map[string]any `json:"parameters,omitempty" jsonschema:"Named Cypher parameters"`
+	TimeoutMS  int            `json:"timeout_ms,omitempty" jsonschema:"Optional whole-plan deadline in milliseconds"`
+}
+
 func (s *Server) registerNeo4jTools() {
 	mcp.AddTool(s.mcp, tool("neo4j_read", "Run bounded read-only Cypher against an attested Neo4j graph target."), s.neo4jRead)
 	mcp.AddTool(s.mcp, tool("neo4j_batch_read", "Run bounded Cypher reads sequentially in one attested Neo4j read-committed transaction."), s.neo4jBatchRead)
+	mcp.AddTool(s.mcp, tool("neo4j_explain", "Return a bounded non-executing plan for native Cypher on an attested Neo4j graph."), s.neo4jExplain)
 	mcp.AddTool(s.mcp, tool("neo4j_metadata", "Inspect bounded Neo4j index, constraint, label or relationship metadata."), s.neo4jMetadata)
+}
+
+func (s *Server) neo4jExplain(ctx context.Context, _ *mcp.CallToolRequest, input Neo4jExplainInput) (*mcp.CallToolResult, core.Neo4jExplainResult, error) {
+	target, err := s.registry.GetNeo4j(input.Target)
+	if err != nil {
+		return nil, core.Neo4jExplainResult{}, err
+	}
+	timeout, err := durationMilliseconds(input.TimeoutMS)
+	if err != nil {
+		return nil, core.Neo4jExplainResult{}, err
+	}
+	result, err := target.Explain(ctx, core.Neo4jExplainRequest{Cypher: input.Cypher, Parameters: input.Parameters, Timeout: timeout})
+	if err != nil {
+		return nil, core.Neo4jExplainResult{}, err
+	}
+	return nil, *result, nil
 }
 
 func (s *Server) neo4jBatchRead(ctx context.Context, _ *mcp.CallToolRequest, input Neo4jBatchInput) (*mcp.CallToolResult, core.Neo4jBatchResult, error) {

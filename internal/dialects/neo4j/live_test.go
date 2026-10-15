@@ -39,11 +39,15 @@ func TestNeo4jDisposableEnterpriseGate(t *testing.T) {
 	controller := admission.New(admission.Config{Global: cfg.Limits.GlobalConcurrency, PerTarget: cfg.Limits.PerTargetConcurrency, MaxQueued: cfg.Limits.MaxQueuedRequests, QueueTimeout: cfg.Limits.QueueTimeout})
 	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Minute)
 	defer cancel()
-	target, err := Open(ctx, targetCfg, cfg.Limits, controller, nil, nil)
+	recorder := &proofRecorder{}
+	target, err := Open(ctx, targetCfg, cfg.Limits, controller, nil, recorder)
 	if err != nil {
 		t.Fatal(err)
 	}
 	defer target.Close()
+	if recorder.adds["neo4j_proof|"+targetCfg.Name+"|success"] != 1 {
+		t.Fatalf("startup proof success metric missing: %+v", recorder.adds)
+	}
 	read, err := target.Read(ctx, core.Neo4jReadRequest{Cypher: "RETURN $value AS value", Parameters: map[string]any{"value": int64(7)}, MaxRows: 1})
 	if err != nil || read.RowCount != 1 || read.Rows[0]["value"] != int64(7) {
 		t.Fatalf("bounded parameterized read failed: result=%+v err=%v", read, err)
@@ -82,6 +86,13 @@ func TestNeo4jDisposableEnterpriseGate(t *testing.T) {
 	})
 	if err != nil || !hasNeo4jFixtureID(vector, "neo4j-fixture-doc") || hasNeo4jFixtureID(vector, "neo4j-fixture-private") {
 		t.Fatalf("filtered vector SEARCH failed: result=%+v err=%v", vector, err)
+	}
+	plan, err := target.Explain(ctx, core.Neo4jExplainRequest{
+		Cypher:     "CYPHER 25 MATCH (d:Neo4jMCPDocument) SEARCH d IN (VECTOR INDEX neo4j_mcp_doc_vector FOR $embedding WHERE d.tenant = $tenant LIMIT 5) SCORE AS score RETURN d.id AS id, score",
+		Parameters: map[string]any{"embedding": []any{1.0, 0.0}, "tenant": "public"},
+	})
+	if err != nil || plan == nil || len(plan.Operators) == 0 || plan.Operators[0].ParentID != -1 {
+		t.Fatalf("native Cypher 25 EXPLAIN failed: plan=%+v err=%v", plan, err)
 	}
 	if targetCfg.Neo4j.Version >= "2026.09.0" {
 		fullText, err := target.Read(ctx, core.Neo4jReadRequest{

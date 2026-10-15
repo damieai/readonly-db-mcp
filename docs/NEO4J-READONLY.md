@@ -1,7 +1,8 @@
 # Neo4j read-only connector
 
 The Neo4j target exposes `neo4j_read` for native Cypher,
-`neo4j_batch_read` for sequential reads in one transaction, and `neo4j_metadata`
+`neo4j_batch_read` for sequential reads in one transaction,
+`neo4j_explain` for a non-executing plan, and `neo4j_metadata`
 for indexes, constraints, labels and relationship types. The disposable
 Enterprise 2026.09.0 gate [passed locally on 2026-10-13](NEO4J-ACCEPTANCE-2026-10-13.md).
 Production TLS and sustained-read qualification remain open. A local driver
@@ -59,6 +60,26 @@ privileges remain the write boundary for every member.
 ```json
 {"target":"knowledge-graph","queries":[{"cypher":"MATCH (d:Document {id: $id}) RETURN d.title AS title","parameters":{"id":"doc-1"},"max_rows":1},{"cypher":"MATCH (d:Document {id: $id})-[:CITES]->(s:Source) RETURN s.id AS source_id","parameters":{"id":"doc-1"},"max_rows":10}],"timeout_ms":30000}
 ```
+
+`neo4j_explain` accepts the same native Cypher and named parameters as a
+single read, applies the same privilege proof and deadline, then prepends
+`EXPLAIN` and returns the driver plan without result rows. Neo4j documents
+that [`EXPLAIN` plans without running the query](https://neo4j.com/docs/cypher-manual/25/planning-and-tuning/execution-plans/);
+this tool never adds `PROFILE`. The bounded `operators` array lists the root
+first with `parent_id: -1`; each later operator points to its parent by `id`.
+Node count, depth, cell and total response bytes are capped. For example:
+
+```json
+{"target":"knowledge-graph","cypher":"CYPHER 25 MATCH (d:Document) SEARCH d IN (VECTOR INDEX document_vector FOR $embedding LIMIT 5) SCORE AS score RETURN d.id, score","parameters":{"embedding":[1.0,0.0]},"timeout_ms":30000}
+```
+
+Proof metrics use the configured target alias as their operation label.
+`neo4j_proof` counts success or a fixed `failure:<stage>:<category>` outcome;
+`neo4j_proof_expiry` counts expired checks; `neo4j_proof_duration` records
+check time. `neo4j_proof_ready` is 1 only after a valid check, and
+`neo4j_proof_age_ms` is the sampled age of that check (`-1` after failure or
+close). Categories identify deadline, permission, profile, resource or
+transport failures without logging usernames, Cypher or privilege rows.
 
 MCP JSON decoders can lose precision for integer tokens above 2^53−1. Pass
 such values as decimal strings and call Cypher `toInteger($id)` when needed;
@@ -140,6 +161,8 @@ It also exercises `neo4j_batch_read` with vector retrieval and graph traversal,
 and confirms a truncated member prevents later execution. It checks the cited
 `element_id` and truncation marker. The new batch cases are opt-in and have
 not yet run against the Enterprise fixture.
+The extended gate also checks native Cypher 25 `EXPLAIN`, MCP plan output and
+startup proof success metrics; these additions remain to be run on the fixture.
 
 The cancellation test observes a running, computation-heavy read in
 `SHOW TRANSACTIONS`, cancels its request, verifies that its server transaction

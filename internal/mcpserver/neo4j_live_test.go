@@ -117,6 +117,11 @@ func TestNeo4jDisposableMCPRoundTrip(t *testing.T) {
 	if stopped.CompletedQueries != 1 || !stopped.Truncated || stopped.TruncationReason != "row_limit" {
 		t.Fatalf("Neo4j MCP batch did not stop after row truncation: %+v", stopped)
 	}
+	var explained core.Neo4jExplainResult
+	call("neo4j_explain", map[string]any{"target": alias, "cypher": "MATCH (d:Neo4jMCPDocument {id: $id}) RETURN d.id", "parameters": map[string]any{"id": "neo4j-fixture-doc"}}, &explained)
+	if len(explained.Operators) == 0 || explained.Operators[0].ParentID != -1 {
+		t.Fatalf("Neo4j MCP plan is missing its root: %+v", explained)
+	}
 	var truncated core.Neo4jReadResult
 	call("neo4j_read", map[string]any{"target": alias, "cypher": "UNWIND [1, 2, 3] AS n RETURN n", "max_rows": 1}, &truncated)
 	if truncated.RowCount != 1 || !truncated.Truncated {

@@ -29,7 +29,7 @@ func TestNeo4jToolsAreRegisteredReadOnly(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	want := map[string]bool{"neo4j_read": false, "neo4j_batch_read": false, "neo4j_metadata": false}
+	want := map[string]bool{"neo4j_read": false, "neo4j_batch_read": false, "neo4j_explain": false, "neo4j_metadata": false}
 	for _, tool := range listed.Tools {
 		if _, ok := want[tool.Name]; !ok {
 			continue

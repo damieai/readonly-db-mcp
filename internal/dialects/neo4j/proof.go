@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 	"time"
 
 	driver "github.com/neo4j/neo4j-go-driver/v6/neo4j"
@@ -13,33 +14,52 @@ import (
 func (t *Target) ensureProof(ctx context.Context) error {
 	t.mu.Lock()
 	ready := !t.closed && time.Since(t.checked) < t.cfg.Neo4j.PrivilegeRecheck
+	checked := t.checked
 	closed := t.closed
 	t.mu.Unlock()
+	t.recordProofAge(checked)
 	if closed {
 		return errors.New("target_closed: Neo4j target is closed")
 	}
 	if ready {
 		return nil
 	}
+	if !checked.IsZero() && t.recorder != nil {
+		t.recorder.Add("neo4j_proof_expiry", 1, t.cfg.Name, "expired")
+	}
 	return t.prove(ctx)
 }
 
-func (t *Target) prove(ctx context.Context) error {
+func (t *Target) prove(ctx context.Context) (err error) {
+	started := time.Now()
+	stage := "server_identity"
+	attempted := false
 	t.mu.Lock()
-	defer t.mu.Unlock()
+	defer func() {
+		checked := t.checked
+		t.mu.Unlock()
+		if attempted {
+			t.recordProofOutcome(ctx, started, checked, stage, err)
+		}
+	}()
 	if t.closed {
 		return errors.New("target_closed: Neo4j target is closed")
 	}
 	if !t.checked.IsZero() && time.Since(t.checked) < t.cfg.Neo4j.PrivilegeRecheck {
 		return nil
 	}
+	attempted = true
 	t.checked = time.Time{} // A failed refresh blocks new requests.
 	for _, d := range []driver.Driver{t.query, t.attestor} {
 		info, err := d.GetServerInfo(ctx)
-		if err != nil || info.Agent() != "Neo4j/"+t.cfg.Neo4j.Version {
+		if err != nil || info == nil {
+			return errors.New("transport_error: Neo4j server identity inspection failed")
+		}
+		if info.Agent() != "Neo4j/"+t.cfg.Neo4j.Version {
 			return errors.New("profile_mismatch: Neo4j server version or identity differs from configuration")
 		}
 	}
+	stage = "query_identity"
 	name := t.cfg.Username // The config validator restricts this to a safe identifier.
 	querySession := t.query.NewSession(ctx, driver.SessionConfig{DatabaseName: "system", AccessMode: driver.AccessModeRead, FetchSize: 2})
 	currentRows, currentErr := readFixed(ctx, querySession, "SHOW CURRENT USER YIELD user, roles, passwordChangeRequired, suspended RETURN user, roles, passwordChangeRequired, suspended", 2)
@@ -51,6 +71,7 @@ func (t *Target) prove(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
+	stage = "auth_rules"
 	userQuery := "SHOW USERS YIELD user, roles WHERE user = $name RETURN user, roles"
 	privQuery := "SHOW USER `" + name + "` PRIVILEGES YIELD access, action, resource, graph, segment, role RETURN access, action, resource, graph, segment, role"
 	session := t.attestor.NewSession(ctx, driver.SessionConfig{DatabaseName: "system", AccessMode: driver.AccessModeRead, FetchSize: 128})
@@ -62,6 +83,7 @@ func (t *Target) prove(ctx context.Context) error {
 	if err := validateAuthRules(authRules); err != nil {
 		return err
 	}
+	stage = "user_roles"
 	userRows, err := readFixedParams(ctx, session, userQuery, map[string]any{"name": name}, 2)
 	if err != nil || len(userRows) != 1 {
 		return errors.New("permission_denied: Neo4j user/role inspection failed")
@@ -77,6 +99,7 @@ func (t *Target) prove(ctx context.Context) error {
 	if !sameRoles(currentRoles, roles) {
 		return errors.New("profile_mismatch: Neo4j query and attestor roles differ")
 	}
+	stage = "privileges"
 	privRows, err := readFixed(ctx, session, privQuery, 1001)
 	if err != nil || len(privRows) == 0 || len(privRows) > 1000 {
 		return errors.New("permission_denied: Neo4j effective privilege inspection failed")
@@ -98,11 +121,49 @@ func (t *Target) prove(ctx context.Context) error {
 		}
 		proof.Privileges = append(proof.Privileges, authority.Privilege{Access: access, Action: action, Resource: resource, Graph: graph, Segment: segment, Role: role})
 	}
+	stage = "authority"
 	if err := authority.Validate(t.cfg.Database, name, proof); err != nil {
 		return err
 	}
 	t.checked = time.Now()
 	return nil
+}
+
+func (t *Target) recordProofAge(checked time.Time) {
+	if t.recorder == nil {
+		return
+	}
+	age := int64(-1)
+	if !checked.IsZero() {
+		age = max(0, time.Since(checked).Milliseconds())
+	}
+	t.recorder.Set("neo4j_proof_age_ms", age, t.cfg.Name)
+}
+
+func (t *Target) recordProofOutcome(ctx context.Context, started, checked time.Time, stage string, err error) {
+	if t.recorder == nil {
+		return
+	}
+	outcome, ready := "success", int64(1)
+	if err != nil {
+		ready = 0
+		category := "transport"
+		switch {
+		case ctx.Err() != nil:
+			category = "deadline"
+		case strings.HasPrefix(err.Error(), "permission_denied:"):
+			category = "permission"
+		case strings.HasPrefix(err.Error(), "profile_mismatch:"):
+			category = "profile"
+		case strings.HasPrefix(err.Error(), "resource_limit:"):
+			category = "resource"
+		}
+		outcome = "failure:" + stage + ":" + category
+	}
+	t.recorder.Add("neo4j_proof", 1, t.cfg.Name, outcome)
+	t.recorder.Observe("neo4j_proof_duration", time.Since(started), t.cfg.Name)
+	t.recorder.Set("neo4j_proof_ready", ready, t.cfg.Name)
+	t.recordProofAge(checked)
 }
 
 func readCurrentIdentity(rows []map[string]any, expectedUser string) ([]string, error) {

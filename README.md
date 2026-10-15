@@ -33,7 +33,7 @@ repository.
 > directory through an isolated Linux worker. Its [local acceptance suite](docs/DUCKDB-READONLY.md)
 > covers native read-only mode, filesystem scope and cancellation.
 > Neo4j has a locally tested Enterprise-only graph connector with native
-> Cypher, bounded batches, metadata, and periodic privilege proof. Its
+> Cypher, bounded batches, non-executing plans, metadata, and periodic privilege proof. Its
 > [production TLS and sustained-read gates](docs/NEO4J-READONLY.md) remain open.
 
 For agent application use cases and the next connector priorities, see the
@@ -48,7 +48,7 @@ one grounded PostgreSQL/pgvector, Redis Search and Elasticsearch workflow.
   attestation.
 - Redis command-vector tools with live read-only command, key-scope, ACL,
   Sentinel quorum, Cluster slot-map and signed module attestation.
-- Neo4j `neo4j_read`, `neo4j_batch_read` and `neo4j_metadata` tools for one configured graph,
+- Neo4j `neo4j_read`, `neo4j_batch_read`, `neo4j_explain` and `neo4j_metadata` tools for one configured graph,
   with independent native privilege inspection and bounded results.
 - Full read-only analytical SQL: CTEs, joins, subqueries, unions, aggregates,
   window functions, JSON expressions and ordinary `USE INDEX`/`FORCE INDEX`

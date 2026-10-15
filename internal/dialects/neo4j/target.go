@@ -101,14 +101,27 @@ func newNeo4jDriver(uri string, cfg *config.TargetConfig, limits config.Limits, 
 func (t *Target) Info() core.TargetInfo {
 	t.mu.Lock()
 	ready := !t.closed && time.Since(t.checked) < t.cfg.Neo4j.PrivilegeRecheck
+	checked := t.checked
 	t.mu.Unlock()
-	return core.TargetInfo{Name: t.cfg.Name, Engine: config.EngineNeo4j, Environment: t.cfg.Environment, Consistency: t.cfg.Consistency, Database: t.cfg.Database, Healthy: ready, ReadOnlyUser: ready, ServerReadOnly: false, ParameterStyle: "$name", ServerVersion: t.cfg.Neo4j.Version, Capabilities: map[string]string{"cypher": "read,vector_search,graph_traversal", "metadata": "indexes,constraints,labels,relationship_types"}}
+	t.recordProofAge(checked)
+	if t.recorder != nil {
+		if ready {
+			t.recorder.Set("neo4j_proof_ready", 1, t.cfg.Name)
+		} else {
+			t.recorder.Set("neo4j_proof_ready", 0, t.cfg.Name)
+		}
+	}
+	return core.TargetInfo{Name: t.cfg.Name, Engine: config.EngineNeo4j, Environment: t.cfg.Environment, Consistency: t.cfg.Consistency, Database: t.cfg.Database, Healthy: ready, ReadOnlyUser: ready, ServerReadOnly: false, ParameterStyle: "$name", ServerVersion: t.cfg.Neo4j.Version, Capabilities: map[string]string{"cypher": "read,batch,explain,vector_search,graph_traversal", "metadata": "indexes,constraints,labels,relationship_types"}}
 }
 
 func (t *Target) Close() error {
 	t.mu.Lock()
 	t.closed = true
 	t.mu.Unlock()
+	if t.recorder != nil {
+		t.recorder.Set("neo4j_proof_ready", 0, t.cfg.Name)
+		t.recorder.Set("neo4j_proof_age_ms", -1, t.cfg.Name)
+	}
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 	return errors.Join(t.query.Close(ctx), t.attestor.Close(ctx))

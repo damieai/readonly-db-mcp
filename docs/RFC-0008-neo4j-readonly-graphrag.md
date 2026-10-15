@@ -154,6 +154,11 @@ truncation, cancellation, pool acquisition and recovery. Include target and
 version labels but no Cypher or data values. Log privilege mismatch categories
 without exposing usernames or the raw privilege catalog.
 
+The connector now emits sampled proof age and readiness, proof expiry counts,
+duration and fixed failure stage/category labels. `neo4j_explain` exposes a
+bounded non-executing plan for tuning native Cypher, with the same privilege
+gate and no query text in audit or metric records.
+
 ## Test and acceptance plan
 
 1. Unit-test privilege classification against missing roles, `PUBLIC` load,

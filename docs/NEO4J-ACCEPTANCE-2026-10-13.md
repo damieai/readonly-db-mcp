@@ -70,6 +70,11 @@ tests, plus an added opt-in Enterprise MCP case. That new case has not run
 against the disposable server, so the 2026-10-13 captured log establishes
 only the original single-query and metadata behaviors.
 
+The subsequent `neo4j_explain` tool and proof metrics have local unit and MCP
+registration coverage. The extended disposable tests now assert a native
+Cypher 25 plan, MCP plan output, and a successful startup-proof metric. Those
+new assertions are not part of the captured 2026-10-13 live result.
+
 ## Captured gate log
 
 ```text

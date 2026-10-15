@@ -1,6 +1,64 @@
 package neo4j
 
-import "testing"
+import (
+	"context"
+	"errors"
+	"testing"
+	"time"
+
+	driver "github.com/neo4j/neo4j-go-driver/v6/neo4j"
+	"github.com/your-org/readonly-db-mcp/internal/config"
+)
+
+type proofRecorder struct {
+	adds      map[string]int64
+	sets      map[string]int64
+	durations map[string]int
+}
+
+func (r *proofRecorder) Add(name string, delta int64, operation, outcome string) {
+	if r.adds == nil {
+		r.adds = map[string]int64{}
+	}
+	r.adds[name+"|"+operation+"|"+outcome] += delta
+}
+func (r *proofRecorder) Observe(name string, _ time.Duration, operation string) {
+	if r.durations == nil {
+		r.durations = map[string]int{}
+	}
+	r.durations[name+"|"+operation]++
+}
+func (r *proofRecorder) Set(name string, value int64, operation string) {
+	if r.sets == nil {
+		r.sets = map[string]int64{}
+	}
+	r.sets[name+"|"+operation] = value
+}
+
+type failedServerInfoDriver struct{ driver.Driver }
+
+func (failedServerInfoDriver) GetServerInfo(context.Context) (driver.ServerInfo, error) {
+	return nil, errors.New("offline")
+}
+
+func TestNeo4jProofExpiryAndFailureMetrics(t *testing.T) {
+	recorder := &proofRecorder{}
+	target := &Target{
+		cfg:   &config.TargetConfig{Name: "graph", Neo4j: &config.Neo4jConfig{Version: "2026.09.0", PrivilegeRecheck: time.Second}},
+		query: failedServerInfoDriver{}, attestor: failedServerInfoDriver{},
+		checked: time.Now().Add(-2 * time.Second), recorder: recorder,
+	}
+	if err := target.ensureProof(t.Context()); err == nil || target.Info().Healthy {
+		t.Fatalf("failed proof did not close the target: %v", err)
+	}
+	if recorder.adds["neo4j_proof_expiry|graph|expired"] != 1 || recorder.adds["neo4j_proof|graph|failure:server_identity:transport"] != 1 || recorder.sets["neo4j_proof_ready|graph"] != 0 || recorder.sets["neo4j_proof_age_ms|graph"] != -1 || recorder.durations["neo4j_proof_duration|graph"] != 1 {
+		t.Fatalf("proof failure metrics are incomplete: adds=%v sets=%v durations=%v", recorder.adds, recorder.sets, recorder.durations)
+	}
+	target.recordProofOutcome(t.Context(), time.Now(), time.Now(), "authority", nil)
+	if recorder.adds["neo4j_proof|graph|success"] != 1 || recorder.sets["neo4j_proof_ready|graph"] != 1 {
+		t.Fatalf("proof recovery metrics are incomplete: adds=%v sets=%v", recorder.adds, recorder.sets)
+	}
+}
 
 func TestAuthRuleProof(t *testing.T) {
 	for _, tc := range []struct {
