@@ -125,6 +125,7 @@ func (s *Server) registerTools() {
 	mcp.AddTool(s.mcp, tool("query_select", "Execute one advanced read-only SELECT against an explicit target."), s.querySelect)
 	mcp.AddTool(s.mcp, tool("query_batch", "Execute multiple validated SELECT queries in one consistent transaction snapshot."), s.queryBatch)
 	mcp.AddTool(s.mcp, tool("query_explain", "Return an engine-native non-executing plan for a validated read-only SELECT."), s.queryExplain)
+	mcp.AddTool(s.mcp, tool("mysql_vector_search", "Rank a complete, bounded MySQL SELECT candidate set by exact cosine, L2 or dot-product score over a JSON embedding column."), s.mysqlVectorSearch)
 	mcp.AddTool(s.mcp, tool("redis_command", "Execute one attested advanced read-only Redis command."), s.redisCommand)
 	mcp.AddTool(s.mcp, tool("redis_batch", "Execute a bounded batch of attested read-only Redis commands."), s.redisBatch)
 	s.registerElasticsearchTools()

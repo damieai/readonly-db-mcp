@@ -15,6 +15,8 @@ repository.
 > verifiable module artifact. Search index prefixes are checked at startup and
 > before each query. Production rollout still
 > requires validation against your provisioned accounts and server builds.
+> MySQL 8 also offers bounded exact vector ranking over a JSON-embedding
+> candidate SELECT through `mysql_vector_search`; it is not index-accelerated ANN.
 > Elasticsearch implements pinned target/permission attestation, native metadata,
 > and scoped `es_query` / `es_batch` / `es_cursor` tools with advanced DSL, aggregations, scripts,
 > supplied-vector retrieval, templates, owned PIT/scroll/SQL pagination and synchronous EQL/SQL/ES|QL.
@@ -170,6 +172,7 @@ The [TLS and long-read record](docs/qualification/2026-09-22-postgresql-vector-t
 adds verified reconnects and concurrent query/metadata/privilege-recheck evidence
 on PostgreSQL 16.15.
 Installing the extension alone does not enable its permission exceptions.
+For MySQL JSON embeddings, see [bounded exact vector retrieval](docs/MYSQL-VECTOR-RETRIEVAL.md).
 
 For SQL Server, use a dedicated login and database user, grant `SELECT` only on
 curated schemas, and grant database `SHOWPLAN`, and make `VIEW DEFINITION` available through the
@@ -536,6 +539,7 @@ Use target inventory-test. Inspect the schema and verify whether transaction
 | `query_select` | Runs one validated SELECT. |
 | `query_batch` | Runs several SELECTs in one read-only transaction snapshot. |
 | `query_explain` | Returns an engine-native non-executing plan for a validated SELECT. |
+| `mysql_vector_search` | Ranks a complete, bounded MySQL SELECT candidate set by exact cosine, L2 or dot-product score over JSON embeddings. |
 | `es_metadata` | Resolves scoped Elasticsearch indices, aliases and data streams, or reads full/selected mappings, aliases, settings and allowlisted stored scripts. |
 | `es_query` | Executes scoped native Elasticsearch reads, advanced DSL, scripts, aggregations, supplied vectors, templates and synchronous EQL/SQL/ES|QL, including SQL translation. |
 | `es_batch` | Executes preflighted independent reads or compatible searches in one owned PIT, with a shared deadline and output budget. |

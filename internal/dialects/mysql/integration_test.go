@@ -8,6 +8,7 @@ import (
 	"time"
 
 	driver "github.com/go-sql-driver/mysql"
+	"github.com/your-org/readonly-db-mcp/internal/core"
 )
 
 // TestMySQLReadOnlyIntegration runs only when a disposable MySQL 8 SELECT-only
@@ -70,5 +71,45 @@ func TestMySQLCancellationIntegration(t *testing.T) {
 	}
 	if time.Since(started) > time.Second {
 		t.Fatal("driver cancellation was not prompt")
+	}
+}
+
+// TestMySQLVectorIntegration exercises the real MySQL 8 result codec and
+// read-only transaction without requiring a writeable fixture table.
+func TestMySQLVectorIntegration(t *testing.T) {
+	dsn := os.Getenv("READONLY_DB_MCP_TEST_DSN")
+	if dsn == "" {
+		t.Skip("READONLY_DB_MCP_TEST_DSN is not configured")
+	}
+	db, err := sql.Open("mysql", dsn)
+	if err != nil {
+		t.Fatal("open integration database")
+	}
+	defer db.Close()
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	cfg, err := driver.ParseDSN(dsn)
+	if err != nil {
+		t.Fatal("invalid integration DSN")
+	}
+	identity, grants, err := inspectIdentity(ctx, db)
+	if err != nil || identity.Database != cfg.DBName {
+		t.Fatal("cannot verify integration account")
+	}
+	if err := ValidateGrants(grants, []string{cfg.DBName}); err != nil {
+		t.Fatalf("integration account is not SELECT-only: %v", err)
+	}
+	target := testTarget(db)
+	target.limits.MaxParameterValueBytes = 64 << 10
+	result, err := target.VectorSearch(ctx, core.MySQLVectorRequest{
+		SQL:             "SELECT 'near' AS id, '[1,0]' AS embedding UNION ALL SELECT 'far' AS id, '[0,1]' AS embedding",
+		EmbeddingColumn: "embedding", Vector: []float64{1, 0}, Metric: "cosine",
+		TopK: 1, MaxCandidates: 2,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if result.CandidateCount != 2 || len(result.Hits) != 1 || result.Hits[0].Row["id"] != "near" {
+		t.Fatalf("unexpected live MySQL vector ranking: %+v", result)
 	}
 }

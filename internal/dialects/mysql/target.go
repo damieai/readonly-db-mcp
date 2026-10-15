@@ -110,6 +110,7 @@ func Open(ctx context.Context, cfg *config.TargetConfig, limits config.Limits, c
 			ServerReadOnly: identity.ServerReadOnly,
 			ParameterStyle: "?",
 			ServerVersion:  identity.Version,
+			Capabilities:   map[string]string{"vector_search": "bounded_exact_json"},
 		},
 		allowedSchemas:       lowerSet(cfg.AllowedSchemas),
 		deniedTables:         lowerSet(cfg.DeniedTables),

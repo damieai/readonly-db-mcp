@@ -93,6 +93,18 @@ func (r *Registry) GetNeo4j(name string) (core.Neo4jTarget, error) {
 	return n, nil
 }
 
+func (r *Registry) GetMySQLVector(name string) (core.MySQLVectorTarget, error) {
+	target, err := r.Get(name)
+	if err != nil {
+		return nil, err
+	}
+	m, ok := target.(core.MySQLVectorTarget)
+	if !ok {
+		return nil, errors.New("selected target is not MySQL")
+	}
+	return m, nil
+}
+
 func (r *Registry) GetMongoDB(name string) (core.MongoDBTarget, error) {
 	target, err := r.Get(name)
 	if err != nil {
